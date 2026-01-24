@@ -1,9 +1,12 @@
 import { jest } from "@jest/globals";
 
+export const mockStorage = {};
+
 export function mockChrome(storageInitial = {}) {
-    const mockStorage = {
-        ...storageInitial
-    };
+    for (const key in mockStorage) {
+        delete mockStorage[key];
+    }
+    Object.assign(mockStorage, storageInitial);
 
     global.chrome = {
         runtime: {
@@ -25,7 +28,7 @@ export function mockChrome(storageInitial = {}) {
         },
         storage: {
             session: {
-                get: jest.fn().mockImplementation(() => Promise.resolve(mockStorage)),
+                get: jest.fn().mockImplementation(() => Promise.resolve({ ...mockStorage })),
                 set: jest.fn().mockImplementation((val) => {
                     Object.assign(mockStorage, val);
                     return Promise.resolve();
@@ -43,10 +46,12 @@ export function mockChrome(storageInitial = {}) {
 }
 
 export function mockWebSocket() {
+    global.mockSockets = [];
     class MockWebSocket {
         constructor(url) {
             this.url = url;
             this.readyState = 0; // CONNECTING
+            global.mockSockets.push(this);
             setTimeout(() => {
                 this.readyState = 1; // OPEN
                 if (this.onopen) {
@@ -56,6 +61,7 @@ export function mockWebSocket() {
         }
         send = jest.fn();
         close = jest.fn();
+        binaryType = "blob";
     }
     global.WebSocket = MockWebSocket;
 }
