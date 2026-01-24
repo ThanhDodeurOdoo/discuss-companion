@@ -207,6 +207,12 @@ main {
     cursor: pointer;
 }
 
+.prevent-select {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 .text-btn {
     background: none;
     border: none;

@@ -1,13 +1,13 @@
 <templates xml:space="preserve">
     <t t-name="discuss.Root">
-        <header>
+        <header class="prevent-select">
             <h1>Discuss Companion</h1>
             <div class="status-indicators">
-                <div class="status-item" t-att-class="this.app.permissionGranted() ? 'granted' : ''">
+                <div class="status-item" t-att-class="this.app.permissionGranted() ? 'granted' : ''" t-att-title="'Whether the accessibility permission is granted'">
                     <div class="status-dot"></div>
                     <span t-out="this.app.permissionGranted() ? 'Accessibility Granted' : 'Permission Required'"/>
                 </div>
-                <div class="status-item" t-att-class="this.app.extensionConnected() ? 'connected' : ''">
+                <div class="status-item" t-att-class="this.app.extensionConnected() ? 'connected' : ''" t-att-title="'Whether the extension WebSocket is connected'">
                     <div class="status-dot"></div>
                     <span t-out="this.app.extensionConnected() ? 'Ext. Connected' : 'Ext. Disconnected'"/>
                 </div>
@@ -15,7 +15,7 @@
         </header>
 
         <main>
-            <div class="ptt-control">
+            <div class="ptt-control prevent-select">
                 <button 
                     class="key-display" 
                     t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }" 
@@ -29,7 +29,7 @@
             <div class="logs-section">
                 <div class="logs-header">
                     <h2>Event Logs</h2>
-                    <button class="clear-btn" t-on-click="() => this.app.clearLogs()">Clear</button>
+                    <button class="clear-btn prevent-select" t-on-click="() => this.app.clearLogs()">Clear</button>
                 </div>
                 <div class="logs-container">
                     <t t-foreach="this.app.logs()" t-as="log" t-key="log.id">
@@ -43,12 +43,12 @@
             </div>
 
             <div class="footer-controls">
-                <button class="text-btn safety-btn" t-on-click="() => this.app.forceRelease()" title="Force stop microphone">
+                <button class="text-btn safety-btn prevent-select" t-on-click="() => this.app.forceRelease()" title="Force stop microphone">
                     force release
                 </button>
                 <div class="toggle-container">
                     <input type="checkbox" id="show-symbols" t-att-checked="this.app.showSymbols()" t-on-change="(ev) => this.app.showSymbols.set(ev.target.checked)"/>
-                    <label for="show-symbols">Show icons</label>
+                    <label for="show-symbols" class="prevent-select">Show icons</label>
                 </div>
                 <a class="text-btn source-btn" href="https://github.com/ThanhDodeurOdoo/discuss-companion" target="_blank" rel="noreferrer">
                     source
