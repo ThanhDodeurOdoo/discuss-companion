@@ -1,17 +1,17 @@
-# Discuss Companion for macOS
+# Discuss Companion
 
 [![Systems](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/systems.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/systems.yml)
 [![UI](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml)
 [![Extension](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/extension.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/extension.yml)
 
-The Discuss Companion is a macOS companion app for Odoo Discuss. It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus.
+The Discuss Companion is a companion app for Odoo Discuss, currently supporting macOS (Linux support is Work in Progress). It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus.
 
 ![Discuss Companion Example](.github/assets/example.gif)
 ## Architecture
 
 The repository contains 2 parts:
 1.  **The App**:
-    -   Captures global key events using macOS Core Graphics APIs and runs a WebSocket server.
+    -   Captures global key events using platform-specific APIs (Core Graphics on macOS; Linux implementation is currently a stub) and runs a WebSocket server.
     -   front-end built with [Owl v3](https://github.com/odoo/owl).
     -   back-end built with [Rust](https://www.rust-lang.org/).
 2.  **The Extension (Chrome & Firefox)**:
@@ -31,7 +31,7 @@ The communication between the App and the Extension uses [FlatBuffers](https://g
 -  **Node.js**: Version 18+ and `npm`
 #### Main:
 -  **Browser**: Google Chrome or Mozilla Firefox required for the extension.
--  **macOS**: Required for the `CoreGraphics` event tapping.
+-  **OS**: macOS (Linux support coming soon).
 
 
 ### Running Locally
@@ -78,11 +78,18 @@ To link the app with Odoo:
 ## Deployment & Distribution
 
 ### Build for Production
-To create a signed macOS `.app` or `.dmg`:
-```bash
-npm run build:app
-```
 The output will be generated in `app/backend/target/release/bundle/`.
+
+### Choosing the Target OS
+The application automatically detects the target OS based on the build environment. If you want to build for a specific target manually using Cargo:
+
+- **macOS**: `cargo build --target x86_64-apple-darwin` or `aarch64-apple-darwin`
+- **Linux**: `cargo build --target x86_64-unknown-linux-gnu` (Note: PTT engine not yet implemented)
+
+When using Tauri, the target is determined by the host system:
+```bash
+npm run build:app # Builds for the current OS
+```
 
 ### Continuous Integration
 The project includes three main GitHub Actions suites that run on every push and pull request to `main` and `master`:

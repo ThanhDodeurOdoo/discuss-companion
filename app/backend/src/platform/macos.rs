@@ -240,7 +240,7 @@ pub fn check_accessibility_permission() -> bool {
     }
 }
 
-pub fn start_event_tap(sender: Sender<OutgoingMessage>, shutdown: &Arc<AtomicBool>) -> Result<()> {
+pub fn start_engine(sender: Sender<OutgoingMessage>, shutdown: &Arc<AtomicBool>) -> Result<()> {
     EVENT_SENDER
         .set(sender)
         .map_err(|_| anyhow!("Event sender already initialized"))?;

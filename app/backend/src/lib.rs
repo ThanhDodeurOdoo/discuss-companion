@@ -1,6 +1,6 @@
 mod commands;
-mod event_tap;
 mod messaging;
+mod platform;
 
 mod flatbuffers;
 #[allow(dead_code, unused_imports, clippy::all)]
@@ -126,7 +126,7 @@ pub fn run() {
             if let Ok(store) = app.app_handle().store("settings.json") {
                 if let Some(value) = store.get("ptt_binding") {
                     if let Ok(binding) = serde_json::from_value(value) {
-                        event_tap::set_binding(binding);
+                        platform::set_binding(binding);
                     }
                 }
             }
@@ -136,9 +136,9 @@ pub fn run() {
 
             let handle_tap = app.handle().clone();
             thread::spawn(move || {
-                if let Err(e) = event_tap::start_event_tap(event_tx, &shutdown_clone) {
-                    error!("Event tap error: {}", e);
-                    let _ = handle_tap.emit("error", format!("Event tap error: {e}"));
+                if let Err(e) = platform::start_engine(event_tx, &shutdown_clone) {
+                    error!("Platform engine error: {}", e);
+                    let _ = handle_tap.emit("error", format!("Platform engine error: {e}"));
                 }
             });
 
@@ -186,7 +186,7 @@ pub fn run() {
     }
 
     // Safety: Ensure PTT is released when app quits
-    event_tap::force_ptt_up();
+    platform::force_ptt_up();
     // Allow a brief moment for the message to traverse the channel and WS
     std::thread::sleep(std::time::Duration::from_millis(100));
 

@@ -1,4 +1,4 @@
-use crate::event_tap::{check_accessibility_permission, get_binding, set_binding, set_recording};
+use crate::platform::{check_accessibility_permission, get_binding, set_binding, set_recording};
 use crate::state::{KeyBinding, VERSION};
 use tauri_plugin_store::StoreExt;
 
@@ -44,5 +44,5 @@ pub fn is_extension_connected() -> bool {
 
 #[tauri::command]
 pub fn force_ptt_up() {
-    crate::event_tap::force_ptt_up();
+    crate::platform::force_ptt_up();
 }
