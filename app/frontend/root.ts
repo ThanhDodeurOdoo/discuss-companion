@@ -6,5 +6,8 @@ export class Root extends Component {
 
     app = plugin(AppPlugin);
 
-    keyName = computed(() => this.app.getKeyName(this.app.currentBindingCode()));
+    keyName = computed(() => {
+        const binding = this.app.currentBinding();
+        return this.app.formatKeyBinding(binding.code, binding.modifiers);
+    });
 }

@@ -25,10 +25,11 @@ describe("AppPlugin", () => {
         plugin = new AppPlugin();
     });
 
-    test("getKeyName returns correct names", () => {
-        expect(plugin.getKeyName(49)).toBe("Space");
-        expect(plugin.getKeyName(56)).toBe("Shift");
-        expect(plugin.getKeyName(999)).toBe("Key 999");
+    test("formatKeyBinding returns correct names", () => {
+        expect(plugin.formatKeyBinding(49)).toBe("Space");
+        expect(plugin.formatKeyBinding(56)).toBe("Shift");
+        expect(plugin.formatKeyBinding(999)).toBe("Key 999");
+        expect(plugin.formatKeyBinding(49, ["shift", "meta"])).toBe("Cmd+Shift+Space");
     });
 
     test("addLog adds log entries and limits to 10", () => {

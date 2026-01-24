@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest && cd app/backend && cargo test",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest && cd app/backend && cargo fmt && cargo clippy -- -D warnings && cargo test",
     "dev": "tauri dev --config app/backend/tauri.conf.json",
     "build:app": "tauri build --config app/backend/tauri.conf.json",
     "build:extension": "vite build -c extension/vite.config.ts",

@@ -32,7 +32,7 @@ export class AppPlugin extends Plugin {
     isPressed = signal(false);
     permissionGranted = signal(false);
     extensionConnected = signal(false);
-    currentBindingCode = signal(0);
+    currentBinding = signal<PttBinding>({ code: 0, modifiers: [] });
     logs = signal.Array<LogEntry>([]);
 
     logIdCounter = 0;
@@ -71,13 +71,19 @@ export class AppPlugin extends Plugin {
                 await invoke("update_binding", {
                     binding: {
                         code: payload.key.code,
-                        modifiers: []
+                        modifiers: payload.key.modifiers
                     }
                 });
-                this.currentBindingCode.set(payload.key.code);
+                this.currentBinding.set({
+                    code: payload.key.code,
+                    modifiers: payload.key.modifiers
+                });
                 this.addLog(
                     "SYSTEM",
-                    `Key binding updated to: ${this.getKeyName(payload.key.code)}`
+                    `Key binding updated to: ${this.formatKeyBinding(
+                        payload.key.code,
+                        payload.key.modifiers
+                    )}`
                 );
                 return;
             }
@@ -93,8 +99,10 @@ export class AppPlugin extends Plugin {
             }
 
             const type = payload.type === "ptt_down" ? "DOWN" : "UP";
-            this.addLog(type, `Key: ${this.getKeyName(payload.key.code)}`);
-            this.currentBindingCode.set(payload.key.code);
+            this.addLog(
+                type,
+                `Key: ${this.formatKeyBinding(payload.key.code, payload.key.modifiers)}`
+            );
         });
 
         const errorUnlisten = await listen("error", (event) => {
@@ -131,8 +139,8 @@ export class AppPlugin extends Plugin {
 
     async fetchCurrentBinding() {
         const binding = await invoke<PttBinding>("get_current_binding");
-        if (binding && binding.code) {
-            this.currentBindingCode.set(binding.code);
+        if (binding) {
+            this.currentBinding.set(binding);
         }
     }
 
@@ -168,7 +176,32 @@ export class AppPlugin extends Plugin {
         this.logs.set([]);
     }
 
-    getKeyName(code: number): string {
-        return KEY_MAP[code] || `Key ${code}`;
+    formatKeyBinding(code: number, modifiers: string[] = []): string {
+        const keyName = KEY_MAP[code] || `Key ${code}`;
+        const formattedModifiers = modifiers
+            .map((m) => {
+                switch (m) {
+                    case "meta":
+                        return "Cmd";
+                    case "alt":
+                        return "Option";
+                    case "ctrl":
+                        return "Ctrl";
+                    case "shift":
+                        return "Shift";
+                    default:
+                        return m;
+                }
+            })
+            .sort((a, b) => {
+                // Custom sort order: Cmd, Ctrl, Option, Shift
+                const order: Record<string, number> = { Cmd: 0, Ctrl: 1, Option: 2, Shift: 3 };
+                return (order[a] ?? 99) - (order[b] ?? 99);
+            });
+
+        if (formattedModifiers.length > 0) {
+            return `${formattedModifiers.join("+")}+${keyName}`;
+        }
+        return keyName;
     }
 }

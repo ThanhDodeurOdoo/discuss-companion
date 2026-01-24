@@ -15,7 +15,7 @@ use std::ptr;
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 type CGEventRef = *mut c_void;
 type CGEventTapProxy = *mut c_void;
@@ -32,6 +32,7 @@ extern "C" {
     ) -> CFMachPortRef;
 
     fn CGEventGetIntegerValueField(event: CGEventRef, field: u32) -> i64;
+    fn CGEventGetFlags(event: CGEventRef) -> u64;
 
     fn CFMachPortCreateRunLoopSource(
         allocator: *const c_void,
@@ -50,6 +51,11 @@ const K_CG_EVENT_KEY_UP: u32 = 11;
 
 const K_CG_KEYBOARD_EVENT_KEYCODE: u32 = 9;
 const K_CG_KEYBOARD_EVENT_AUTOREPEAT: u32 = 8;
+
+const K_CG_EVENT_FLAG_MASK_SHIFT: u64 = 0x0002_0000;
+const K_CG_EVENT_FLAG_MASK_CONTROL: u64 = 0x0004_0000;
+const K_CG_EVENT_FLAG_MASK_ALTERNATE: u64 = 0x0008_0000; // Option/Alt
+const K_CG_EVENT_FLAG_MASK_COMMAND: u64 = 0x0010_0000;
 
 static HELD: AtomicBool = AtomicBool::new(false);
 static TARGET_KEYCODE: AtomicU16 = AtomicU16::new(49); // Default: Space
@@ -98,6 +104,10 @@ fn send_event(msg: OutgoingMessage) {
     }
 }
 
+const K_CG_EVENT_FLAGS_CHANGED: u32 = 12;
+
+static PRIMARY_KEY_HELD: AtomicBool = AtomicBool::new(false);
+
 extern "C" fn event_callback(
     _proxy: CGEventTapProxy,
     event_type: u32,
@@ -109,66 +119,95 @@ extern "C" fn event_callback(
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     #[allow(unsafe_code)]
     let keycode = unsafe { CGEventGetIntegerValueField(event, K_CG_KEYBOARD_EVENT_KEYCODE) as u16 };
-    let target = TARGET_KEYCODE.load(Ordering::SeqCst);
-    let recording = IS_RECORDING.load(Ordering::SeqCst);
 
-    if !recording && keycode != target {
-        return event;
+    // SAFETY: CGEventGetFlags is safe with a valid event pointer.
+    #[allow(unsafe_code)]
+    let flags = unsafe { CGEventGetFlags(event) };
+    let modifiers = get_modifiers_from_flags(flags);
+
+    let target_code = TARGET_KEYCODE.load(Ordering::SeqCst);
+    let recording = IS_RECORDING.load(Ordering::SeqCst);
+    let mut is_repeat = false;
+
+    // Track primary key state
+    if event_type == K_CG_EVENT_KEY_DOWN {
+        if keycode == target_code {
+            PRIMARY_KEY_HELD.store(true, Ordering::SeqCst);
+        }
+        // SAFETY: Reading autorepeat field from valid event
+        #[allow(unsafe_code)]
+        unsafe {
+            is_repeat = CGEventGetIntegerValueField(event, K_CG_KEYBOARD_EVENT_AUTOREPEAT) != 0;
+        }
+    } else if event_type == K_CG_EVENT_KEY_UP && keycode == target_code {
+        PRIMARY_KEY_HELD.store(false, Ordering::SeqCst);
     }
 
-    // SAFETY: Reading autorepeat field from valid event
-    #[allow(unsafe_code)]
-    let is_repeat =
-        unsafe { CGEventGetIntegerValueField(event, K_CG_KEYBOARD_EVENT_AUTOREPEAT) != 0 };
-
-    let current_state = get_ptt_state();
+    let primary_held = PRIMARY_KEY_HELD.load(Ordering::SeqCst);
+    let current_ptt_state = get_ptt_state();
     let binding = get_binding();
     let ts = current_timestamp();
 
-    match event_type {
-        K_CG_EVENT_KEY_DOWN => {
-            // We send PttDown for both the initial press and all subsequent repeat events.
-            // This is required because Odoo resets its PTT timeout on every event.
-            if recording {
-                info!("PTT down matched (recording): keycode={}", keycode);
-            } else if current_state == PttState::Idle {
-                info!("PTT down matched (initial): keycode={}", keycode);
-                set_ptt_held(true);
-            } else if is_repeat {
-                debug!("PTT down matched (repeat): keycode={}", keycode);
-            }
-
+    if recording {
+        // Simple recording logic: just capture whatever keydown happens
+        if event_type == K_CG_EVENT_KEY_DOWN {
+            info!(
+                "PTT down matched (recording): keycode={} modifiers={:?}",
+                keycode, modifiers
+            );
             send_event(OutgoingMessage::PttDown {
                 ts,
-                key: if recording {
-                    KeyBinding {
-                        code: keycode,
-                        modifiers: vec![],
-                    }
-                } else {
-                    binding
+                key: KeyBinding {
+                    code: keycode,
+                    modifiers,
                 },
                 is_repeat,
             });
         }
-        K_CG_EVENT_KEY_UP => {
-            if recording || current_state == PttState::Held {
-                info!("PTT up matched: keycode={}", keycode);
-                set_ptt_held(false);
-                send_event(OutgoingMessage::PttUp {
+        return event;
+    }
+
+    // Check if we should be active based on current state
+    let mut binding_mods = binding.modifiers.clone();
+    let mut current_mods = modifiers.clone();
+    binding_mods.sort();
+    current_mods.sort();
+
+    let modifiers_match = binding_mods == current_mods;
+    let should_be_active = primary_held && modifiers_match;
+
+    match current_ptt_state {
+        PttState::Idle => {
+            if should_be_active {
+                info!(
+                    "PTT ACTIVATED: keycode={} modifiers={:?}",
+                    keycode, modifiers
+                );
+                set_ptt_held(true);
+                send_event(OutgoingMessage::PttDown {
                     ts,
-                    key: if recording {
-                        KeyBinding {
-                            code: keycode,
-                            modifiers: vec![],
-                        }
-                    } else {
-                        binding
-                    },
+                    key: binding,
+                    is_repeat: false,
                 });
             }
         }
-        _ => {}
+        PttState::Held => {
+            if !should_be_active {
+                info!(
+                    "PTT DEACTIVATED: keycode={} modifiers={:?}",
+                    keycode, modifiers
+                );
+                set_ptt_held(false);
+                send_event(OutgoingMessage::PttUp { ts, key: binding });
+            } else if is_repeat && event_type == K_CG_EVENT_KEY_DOWN {
+                // Keepalive for Odoo (it un-mutes on every PTT event)
+                send_event(OutgoingMessage::PttDown {
+                    ts,
+                    key: binding,
+                    is_repeat: true,
+                });
+            }
+        }
     }
 
     event
@@ -196,7 +235,9 @@ pub fn start_event_tap(sender: Sender<OutgoingMessage>, shutdown: &Arc<AtomicBoo
         .set(sender)
         .map_err(|_| anyhow!("Event sender already initialized"))?;
 
-    let event_mask: u64 = (1 << K_CG_EVENT_KEY_DOWN) | (1 << K_CG_EVENT_KEY_UP);
+    // We also want to listen for flags changed to update modifiers if needed,
+    let event_mask: u64 =
+        (1 << K_CG_EVENT_KEY_DOWN) | (1 << K_CG_EVENT_KEY_UP) | (1 << K_CG_EVENT_FLAGS_CHANGED);
 
     // SAFETY: CGEventTapCreate is safe when we provide a valid callback and handle NULL return
     #[allow(unsafe_code)]
@@ -249,6 +290,25 @@ pub fn start_event_tap(sender: Sender<OutgoingMessage>, shutdown: &Arc<AtomicBoo
 
     info!("Event tap stopped");
     Ok(())
+}
+
+fn get_modifiers_from_flags(flags: u64) -> Vec<String> {
+    let mut mods = Vec::new();
+
+    if (flags & K_CG_EVENT_FLAG_MASK_SHIFT) != 0 {
+        mods.push("shift".to_string());
+    }
+    if (flags & K_CG_EVENT_FLAG_MASK_CONTROL) != 0 {
+        mods.push("ctrl".to_string());
+    }
+    if (flags & K_CG_EVENT_FLAG_MASK_ALTERNATE) != 0 {
+        mods.push("alt".to_string());
+    }
+    if (flags & K_CG_EVENT_FLAG_MASK_COMMAND) != 0 {
+        mods.push("meta".to_string());
+    }
+
+    mods
 }
 
 #[cfg(test)]
