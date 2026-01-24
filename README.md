@@ -38,7 +38,7 @@ The repository contains 2 parts:
     ```
 2.  **Start the app in development mode**:
     ```bash
-    npm run tauri:dev
+    npm run dev
     ```
 
 3.  **Permissions**:
@@ -77,7 +77,7 @@ To link the app with Odoo:
 ### Build for Production
 To create a signed macOS `.app` or `.dmg`:
 ```bash
-npm run tauri:build
+npm run build:app
 ```
 The output will be generated in `app/backend/target/release/bundle/`.
 

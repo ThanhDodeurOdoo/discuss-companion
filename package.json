@@ -4,15 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest && cd app/backend && cargo test",
+    "dev": "tauri dev --config app/backend/tauri.conf.json",
+    "build:app": "tauri build --config app/backend/tauri.conf.json",
+    "build:extension": "vite build -c extension/vite.config.ts",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev --config app/backend/tauri.conf.json",
-    "tauri:build": "tauri build --config app/backend/tauri.conf.json",
     "lint": "eslint app/frontend extension/src --ext .ts",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest && cd app/backend && cargo test",
-    "build:extension": "vite build -c extension/vite.config.ts"
+    "pre:dev": "vite",
+    "pre:build": "tsc && vite build"
+
   },
   "dependencies": {
     "@odoo/owl": "file:vendor/owl",

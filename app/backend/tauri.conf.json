@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.odoo.discuss-ptt",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "npm run pre:dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run pre:build",
     "frontendDist": "../../dist"
   },
   "app": {

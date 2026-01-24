@@ -64,7 +64,9 @@ npm run build:extension
 ### If you modify the app
 
 ```bash
-npm run build
+npm run dev # for development
+# OR
+npm run build:app # for deployment
 ```
 
 
