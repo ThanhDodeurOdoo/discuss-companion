@@ -86,6 +86,9 @@ The application automatically detects the target OS based on the build environme
 - **macOS**: `cargo build --target x86_64-apple-darwin` or `aarch64-apple-darwin`
 - **Linux**: `cargo build --target x86_64-unknown-linux-gnu` (Note: PTT engine not yet implemented)
 
+> [!WARNING]  
+> LINUX TARGET IS NOT YET IMPLEMENTED, pull requests are welcome I do not have a Linux machine to test on.
+
 When using Tauri, the target is determined by the host system:
 ```bash
 npm run build:app # Builds for the current OS
