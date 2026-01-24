@@ -163,27 +163,275 @@ mod tests {
         assert!(!is_connected());
     }
 
+    use serial_test::serial;
+
     #[tokio::test]
-    async fn test_handshake_and_connection_count() {
+    #[serial]
+    async fn test_multiple_connections() {
+        CONNECTION_COUNT.store(0, Ordering::SeqCst);
+
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
         let app_handle = app.handle().clone();
 
-        // Use a random port
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let port = addr.port();
-        drop(listener); // Close it so start_ws_server can bind it
+        drop(listener);
 
         tokio::spawn(async move {
             start_ws_server(port, tx, shutdown_rx, app_handle).await;
         });
 
-        // Wait for server to start
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        // Perform handshake
+        // Connect client 1
+        let stream1 = TcpStream::connect(addr).await.unwrap();
+        let (ws1, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream1)
+            .await
+            .unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(is_connected());
+
+        // Connect client 2
+        let stream2 = TcpStream::connect(addr).await.unwrap();
+        let (ws2, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream2)
+            .await
+            .unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(is_connected());
+
+        // Drop client 1
+        drop(ws1);
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(is_connected()); // Still connected via ws2
+
+        // Drop client 2
+        drop(ws2);
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(!is_connected());
+
+        let _ = shutdown_tx.send(());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_broadcast_to_clients() {
+        CONNECTION_COUNT.store(0, Ordering::SeqCst);
+        let (tx, _) = broadcast::channel(10);
+        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let app_handle = app.handle().clone();
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let port = addr.port();
+        drop(listener);
+
+        let tx_server = tx.clone();
+        tokio::spawn(async move {
+            start_ws_server(port, tx_server, shutdown_rx, app_handle).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let stream = TcpStream::connect(addr).await.unwrap();
+        let (mut ws, _) =
+            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream)
+                .await
+                .unwrap();
+
+        // Send message to broadcast channel
+        let test_payload = vec![1, 2, 3, 4];
+        tx.send(test_payload.clone()).unwrap();
+
+        // Verify client receives it
+        let resp = ws.next().await.unwrap().unwrap();
+        if let tokio_tungstenite::tungstenite::Message::Binary(bin) = resp {
+            assert_eq!(bin.as_ref(), &test_payload);
+        } else {
+            panic!("Expected binary message");
+        }
+
+        let _ = shutdown_tx.send(());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_set_binding_message_handling() {
+        use std::sync::{Arc, Mutex};
+        use tauri::Listener;
+
+        CONNECTION_COUNT.store(0, Ordering::SeqCst);
+        let (tx, _) = broadcast::channel(10);
+        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let app_handle = app.handle().clone();
+
+        let received_event = Arc::new(Mutex::new(None));
+        let handler_received = Arc::clone(&received_event);
+        app_handle.listen_any("ws-message", move |event| {
+            let mut guard = handler_received.lock().unwrap();
+            *guard = Some(event.payload().to_string());
+        });
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let port = addr.port();
+        drop(listener);
+
+        tokio::spawn(async move {
+            start_ws_server(port, tx, shutdown_rx, app_handle).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let stream = TcpStream::connect(addr).await.unwrap();
+        let (mut ws, _) =
+            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream)
+                .await
+                .unwrap();
+
+        // Construct SetBinding flatbuffer
+        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
+            KeyBindingArgs, Message as FBMessage, MessageArgs, MessageBody, SetBinding,
+            SetBindingArgs,
+        };
+        let mut builder = flatbuffers::FlatBufferBuilder::new();
+        let mods = vec![builder.create_string("shift")];
+        let mods_vec = builder.create_vector(&mods);
+        let key_binding =
+            crate::flatbuffers::protocol_generated::discuss::flatbuffers::KeyBinding::create(
+                &mut builder,
+                &KeyBindingArgs {
+                    code: 42,
+                    modifiers: Some(mods_vec),
+                },
+            );
+        let set_binding = SetBinding::create(
+            &mut builder,
+            &SetBindingArgs {
+                binding: Some(key_binding),
+            },
+        );
+        let msg_offset = FBMessage::create(
+            &mut builder,
+            &MessageArgs {
+                body_type: MessageBody::SetBinding,
+                body: Some(set_binding.as_union_value()),
+            },
+        );
+        builder.finish(msg_offset, None);
+        let bin = builder.finished_data().to_vec();
+
+        ws.send(tokio_tungstenite::tungstenite::Message::Binary(bin.into()))
+            .await
+            .unwrap();
+
+        // Wait for event to be processed and emitted
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+        let event_payload = received_event.lock().unwrap();
+        assert!(
+            event_payload.is_some(),
+            "Expected ws-message event to be emitted"
+        );
+        let payload = event_payload.as_ref().unwrap();
+        assert!(payload.contains("\"code\":42"));
+        assert!(payload.contains("\"modifiers\":[\"shift\"]"));
+
+        let _ = shutdown_tx.send(());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_shutdown_message_handling() {
+        use std::sync::{Arc, Mutex};
+        use tauri::Listener;
+
+        CONNECTION_COUNT.store(0, Ordering::SeqCst);
+        let (tx, _) = broadcast::channel(10);
+        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let app_handle = app.handle().clone();
+
+        let received_event = Arc::new(Mutex::new(None));
+        let handler_received = Arc::clone(&received_event);
+        app_handle.listen_any("ws-message", move |event| {
+            let mut guard = handler_received.lock().unwrap();
+            *guard = Some(event.payload().to_string());
+        });
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let port = addr.port();
+        drop(listener);
+
+        tokio::spawn(async move {
+            start_ws_server(port, tx, shutdown_rx, app_handle).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let stream = TcpStream::connect(addr).await.unwrap();
+        let (mut ws, _) =
+            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream)
+                .await
+                .unwrap();
+
+        // Construct Shutdown flatbuffer
+        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
+            Message as FBMessage, MessageArgs, MessageBody, Shutdown, ShutdownArgs,
+        };
+        let mut builder = flatbuffers::FlatBufferBuilder::new();
+        let shutdown_body = Shutdown::create(&mut builder, &ShutdownArgs {});
+        let msg_offset = FBMessage::create(
+            &mut builder,
+            &MessageArgs {
+                body_type: MessageBody::Shutdown,
+                body: Some(shutdown_body.as_union_value()),
+            },
+        );
+        builder.finish(msg_offset, None);
+        let bin = builder.finished_data().to_vec();
+
+        ws.send(tokio_tungstenite::tungstenite::Message::Binary(bin.into()))
+            .await
+            .unwrap();
+
+        // Wait for event to be processed and emitted
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+        let event_payload = received_event.lock().unwrap();
+        assert!(
+            event_payload.is_some(),
+            "Expected ws-message event to be emitted"
+        );
+        let payload = event_payload.as_ref().unwrap();
+        assert!(payload.contains("\"type\":\"shutdown\""));
+
+        let _ = shutdown_tx.send(());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_handshake_and_ping_pong() {
+        CONNECTION_COUNT.store(0, Ordering::SeqCst);
+        let (tx, _) = broadcast::channel(10);
+        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let app_handle = app.handle().clone();
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let port = addr.port();
+        drop(listener);
+
+        tokio::spawn(async move {
+            start_ws_server(port, tx, shutdown_rx, app_handle).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
         let stream = TcpStream::connect(addr).await.expect("Failed to connect");
         let (mut ws_stream, _) =
             tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream)
@@ -224,11 +472,6 @@ mod tests {
         } else {
             panic!("Expected binary message (Pong)");
         }
-
-        // Close connection
-        drop(ws_stream);
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        assert!(!is_connected());
 
         let _ = shutdown_tx.send(());
     }

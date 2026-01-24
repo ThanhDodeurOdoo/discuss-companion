@@ -36,6 +36,9 @@ flatbuffers = "25.12.19"
 core-graphics = "0.24"
 core-foundation = "0.10"
 
+[dev-dependencies]
+serial_test = "3"
+
 [lints.rust]
 unsafe_code = "deny"
 
