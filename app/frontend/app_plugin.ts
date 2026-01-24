@@ -26,6 +26,7 @@ type PttBinding = {
 };
 
 const MAX_LOGS = 20;
+const MODIFIER_ORDER: Record<string, number> = { Cmd: 0, Ctrl: 1, Option: 2, Shift: 3 };
 
 export class AppPlugin extends Plugin {
     static id = "AppPlugin";
@@ -209,11 +210,7 @@ export class AppPlugin extends Plugin {
                         return m;
                 }
             })
-            .sort((a, b) => {
-                // Custom sort order: Cmd, Ctrl, Option, Shift
-                const order: Record<string, number> = { Cmd: 0, Ctrl: 1, Option: 2, Shift: 3 };
-                return (order[a] ?? 99) - (order[b] ?? 99);
-            });
+            .sort((a, b) => (MODIFIER_ORDER[a] ?? 99) - (MODIFIER_ORDER[b] ?? 99));
 
         if (formattedModifiers.length > 0) {
             return `${formattedModifiers.join("+")}+${keyName}`;
@@ -226,11 +223,7 @@ export class AppPlugin extends Plugin {
         const formattedModifiers = modifiers
             .map((m) => MODIFIER_SYMBOLS[m] || "")
             .filter((s) => s !== "")
-            .sort((a, b) => {
-                // Custom sort order: Cmd, Ctrl, Option, Shift (using symbols)
-                const order: Record<string, number> = { "⌘": 0, "⌃": 1, "⌥": 2, "⇧": 3 };
-                return (order[a] ?? 99) - (order[b] ?? 99);
-            });
+            .sort((a, b) => (MODIFIER_ORDER[a] ?? 99) - (MODIFIER_ORDER[b] ?? 99));
 
         return `${formattedModifiers.join("")}${keySymbol}`;
     }
