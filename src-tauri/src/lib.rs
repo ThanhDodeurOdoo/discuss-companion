@@ -1,6 +1,9 @@
 mod commands;
 mod event_tap;
 mod messaging;
+
+mod flatbuffers;
+#[allow(dead_code, unused_imports, clippy::all)]
 mod server;
 mod state;
 
@@ -36,7 +39,7 @@ fn setup_logging() {
 
 fn handle_ws_server(
     app_handle: tauri::AppHandle,
-    ws_tx: tokio::sync::broadcast::Sender<String>,
+    ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
     ws_shutdown_rx: tokio::sync::broadcast::Receiver<()>,
 ) {
     thread::spawn(move || {
@@ -60,7 +63,7 @@ fn handle_ws_server(
 fn handle_ptt_events(
     app_handle: tauri::AppHandle,
     event_rx: crossbeam_channel::Receiver<state::OutgoingMessage>,
-    ws_tx: tokio::sync::broadcast::Sender<String>,
+    ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
 ) {
     thread::spawn(move || {
         let idle_img = Image::from_bytes(ICON_IDLE).ok();
@@ -93,9 +96,11 @@ fn handle_ptt_events(
                 }
             }
 
-            if let Ok(json) = serde_json::to_string(&msg) {
-                let _ = ws_tx.send(json);
-            }
+            // if let Ok(json) = serde_json::to_string(&msg) {
+            //    let _ = ws_tx.send(json);
+            // }
+            let bin = msg.to_flatbuffer();
+            let _ = ws_tx.send(bin);
         }
     });
 }
@@ -108,7 +113,7 @@ pub fn run() {
 
     let shutdown = Arc::new(AtomicBool::new(false));
     let shutdown_clone = Arc::clone(&shutdown);
-    let (ws_tx, _) = tokio::sync::broadcast::channel::<String>(100);
+    let (ws_tx, _) = tokio::sync::broadcast::channel::<Vec<u8>>(100);
     let (ws_shutdown_tx, ws_shutdown_rx) = tokio::sync::broadcast::channel::<()>(1);
     let ws_tx_clone = ws_tx.clone();
 

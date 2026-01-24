@@ -47,18 +47,44 @@ npm run lint
 cd src-tauri
 cargo clippy -- -D warnings
 cargo fmt --check
+cargo fmt --check
 ```
+
+### Protocol & FlatBuffers
+
+The communication between the App and the Extension uses [FlatBuffers](https://google.github.io/flatbuffers/).
+The schema is defined in `protocol.fbs`.
+
+If you modify `protocol.fbs`, you must regenerate the code:
+
+1.  **Install flatc**:
+    ```bash
+    brew install flatbuffers
+    ```
+2.  **Generate Code**:
+    ```bash
+    flatc --rust -o src-tauri/src/flatbuffers protocol.fbs
+    flatc --ts -o extension/src protocol.fbs
+    ```
 
 ---
 
 ## Extension Setup
 
 To link the app with Odoo:
-1.  Open Chrome and navigate to `chrome://extensions/`.
-2.  Enable **Developer mode** (top right).
-3.  Click **Load unpacked**.
-4.  Select the `extension` folder inside this project.
-5.  Refresh your Odoo tab.
+
+1.  **Build the Extension**:
+    ```bash
+    npm run build:extension
+    ```
+    This will generate the `extension/dist` folder.
+
+2.  **Load in Chrome**:
+    1.  Open Chrome and navigate to `chrome://extensions/`.
+    2.  Enable **Developer mode** (top right).
+    3.  Click **Load unpacked**.
+    4.  Select the `extension/dist` folder inside this project (it contains the bundled extension).
+    5.  Refresh your Odoo tab.
 
 ---
 

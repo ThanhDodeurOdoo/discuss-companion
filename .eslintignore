@@ -1,4 +1,6 @@
-node_modules/
-dist/
-src-tauri/target/
-vendor/owl/dist/owl.es.js
+dist
+node_modules
+extension/src/discuss/flatbuffers
+extension/src/discuss/flatbuffers/**/*
+extension/src/discuss/flatbuffers.ts
+src-tauri/target

@@ -1,0 +1,65 @@
+namespace Discuss.Flatbuffers;
+
+table KeyBinding {
+  code: ushort;
+  modifiers: [string];
+}
+
+table PttDown {
+  ts: ulong;
+  key: KeyBinding;
+  is_repeat: bool;
+}
+
+table PttUp {
+  ts: ulong;
+  key: KeyBinding;
+}
+
+table Ping {}
+table Pong {
+  ts: ulong;
+}
+
+table Status {
+  ts: ulong;
+  state: string;
+  version: string;
+}
+
+table Error {
+  ts: ulong;
+  message: string;
+}
+
+table BindingInfo {
+  ts: ulong;
+  binding: KeyBinding;
+}
+
+table SetBinding {
+  binding: KeyBinding;
+}
+
+table GetBinding {}
+
+table Shutdown {}
+
+union MessageBody {
+  Ping,
+  Pong,
+  PttDown,
+  PttUp,
+  Status,
+  Error,
+  BindingInfo,
+  SetBinding,
+  GetBinding,
+  Shutdown
+}
+
+table Message {
+  body: MessageBody;
+}
+
+root_type Message;

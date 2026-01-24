@@ -14,6 +14,7 @@ module.exports = {
     env: {
         browser: true,
         node: true,
+        webextensions: true,
         es2024: true
     },
     parser: "@typescript-eslint/parser",

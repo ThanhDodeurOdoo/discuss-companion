@@ -10,7 +10,7 @@ const mockStorage = mockChrome({
 mockWebSocket();
 
 // Import background script
-await import("../../../extension/background.js");
+await import("../../../extension/src/background.ts");
 const capturedHandleMessage = chrome.runtime.onMessage.addListener.mock.calls[0][0];
 
 describe("Extension Background Script", () => {

@@ -7,6 +7,9 @@ use tokio::sync::broadcast;
 use tokio_tungstenite::tungstenite::Message;
 use tracing::{error, info};
 
+use crate::flatbuffers::protocol_generated::discuss::flatbuffers as protocol;
+use crate::state::{current_timestamp, IncomingMessage, KeyBinding, OutgoingMessage};
+
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 pub fn is_connected() -> bool {
@@ -15,7 +18,7 @@ pub fn is_connected() -> bool {
 
 pub async fn start_ws_server(
     port: u16,
-    tx: broadcast::Sender<String>,
+    tx: broadcast::Sender<Vec<u8>>,
     mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
     app_handle: tauri::AppHandle,
 ) {
@@ -30,9 +33,6 @@ pub async fn start_ws_server(
     info!("WS server listening on: ws://{}", addr);
 
     let tx_clone = tx;
-
-    // Spawn a task to handle the actual broadcasting of PTT events from the channel
-    // This is a placeholder for where events from the event_tap will come.
 
     loop {
         tokio::select! {
@@ -59,7 +59,7 @@ pub async fn start_ws_server(
 async fn handle_connection(
     stream: TcpStream,
     addr: SocketAddr,
-    tx: broadcast::Sender<String>,
+    tx: broadcast::Sender<Vec<u8>>,
     app_handle: tauri::AppHandle,
 ) {
     let ws_stream = match tokio_tungstenite::accept_async(stream).await {
@@ -80,7 +80,7 @@ async fn handle_connection(
         tokio::select! {
             msg = rx.recv() => {
                 if let Ok(msg) = msg {
-                    if let Err(e) = ws_sender.send(Message::Text(msg.into())).await {
+                    if let Err(e) = ws_sender.send(Message::Binary(msg.into())).await {
                         error!("Error sending message to {}: {}", addr, e);
                         break;
                     }
@@ -88,22 +88,46 @@ async fn handle_connection(
             }
             msg = ws_receiver.next() => {
                 match msg {
-                    Some(Ok(Message::Text(text))) => {
-                        use crate::state::{IncomingMessage, OutgoingMessage, current_timestamp};
-                        if let Ok(incoming) = serde_json::from_str::<IncomingMessage>(&text) {
-                            if let IncomingMessage::Ping = incoming {
-                                let pong = OutgoingMessage::Pong { ts: current_timestamp() };
-                                if let Ok(json) = serde_json::to_string(&pong) {
-                                    if let Err(e) = ws_sender.send(Message::Text(json.into())).await {
-                                        error!("Error sending pong to {}: {}", addr, e);
+                    Some(Ok(Message::Binary(bin))) => {
+                        match protocol::root_as_message(&bin) {
+                            Ok(message) => {
+                                match message.body_type() {
+                                    protocol::MessageBody::Ping => {
+                                        let pong = OutgoingMessage::Pong { ts: current_timestamp() };
+                                        let bin = pong.to_flatbuffer();
+                                        if let Err(e) = ws_sender.send(Message::Binary(bin.into())).await {
+                                            error!("Error sending pong to {}: {}", addr, e);
+                                        }
+                                    }
+                                    protocol::MessageBody::SetBinding => {
+                                        if let Some(binding_table) = message.body_as_set_binding() {
+                                            if let Some(key) = binding_table.binding() {
+                                                let modifiers: Vec<String> = key.modifiers().map(|m| m.iter().map(ToString::to_string).collect()).unwrap_or_default();
+                                                let binding = KeyBinding {
+                                                    code: key.code(),
+                                                    modifiers,
+                                                };
+                                                let incoming = IncomingMessage::SetBinding { binding };
+                                                let _ = app_handle.emit("ws-message", &incoming);
+                                            }
+                                        }
+                                    }
+                                    protocol::MessageBody::GetBinding => {
+                                         let incoming = IncomingMessage::GetBinding;
+                                         let _ = app_handle.emit("ws-message", &incoming);
+                                    }
+                                    protocol::MessageBody::Shutdown => {
+                                         let incoming = IncomingMessage::Shutdown;
+                                         let _ = app_handle.emit("ws-message", &incoming);
+                                    }
+                                    _ => {
+                                        // Ignore other messages from client or unhandled types
                                     }
                                 }
-                            } else {
-                                info!("Received command from {}: {:?}", addr, incoming);
-                                let _ = app_handle.emit("ws-message", &incoming);
                             }
-                        } else {
-                            info!("Received non-JSON message from {}: {}", addr, text);
+                            Err(e) => {
+                                error!("Error converting to flatbuffer message from {}: {}", addr, e);
+                            }
                         }
                     }
                     Some(Ok(Message::Close(_))) | None => {
