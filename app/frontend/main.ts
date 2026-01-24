@@ -7,19 +7,10 @@ async function start() {
     try {
         console.log("Starting Owl App...");
         const app = new OwlApp({ plugins: [AppPlugin] });
-        if (!rootTemplate) {
-            throw new Error("Root template not loaded");
-        }
         app.addTemplates(rootTemplate);
-
         const rootComponent = app.createRoot(Root);
         const target = document.getElementById("app");
-        if (target) {
-            await rootComponent.mount(target);
-            console.log("Owl App mounted successfully");
-        } else {
-            throw new Error("#app element not found");
-        }
+        await rootComponent.mount(target!);
     } catch (e) {
         console.error("Error starting Owl App:", e);
         document.body.innerHTML = `

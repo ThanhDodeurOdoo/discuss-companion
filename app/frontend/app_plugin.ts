@@ -29,6 +29,7 @@ export class AppPlugin extends Plugin {
     static id = "AppPlugin";
 
     isRecording = signal(false);
+    isPressed = signal(false);
     permissionGranted = signal(false);
     extensionConnected = signal(false);
     currentBindingCode = signal(0);
@@ -51,7 +52,7 @@ export class AppPlugin extends Plugin {
     }
 
     async init() {
-        this.addLog("SYSTEM", "Agent UI initialized. Listening for events...");
+        this.addLog("SYSTEM", "Ready");
         await this.fetchCurrentBinding();
         await this.checkPermission();
         await this.setupListeners();
@@ -79,6 +80,12 @@ export class AppPlugin extends Plugin {
                     `Key binding updated to: ${this.getKeyName(payload.key.code)}`
                 );
                 return;
+            }
+
+            if (payload.type === "ptt_down") {
+                this.isPressed.set(true);
+            } else {
+                this.isPressed.set(false);
             }
 
             if (payload.type === "ptt_down" && payload.is_repeat) {

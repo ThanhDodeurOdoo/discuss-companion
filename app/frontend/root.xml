@@ -16,7 +16,7 @@
 
         <main>
             <div class="ptt-control">
-                <div class="key-display" t-att-class="this.app.isRecording() ? 'recording' : ''">
+                <div class="key-display" t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }">
                     <span t-out="this.app.isRecording() ? 'PRESS ANY KEY...' : this.keyName()"/>
                 </div>
                 <button class="action-btn" 
