@@ -2,6 +2,10 @@
 
 Standalone Chrome Extension for Odoo Discuss Push-to-Talk.
 
+The extension is derived from Odoo's own extension for Push-to-Talk.
+
+[associated Odoo license](LICENSE)
+
 ## Features
 - System-wide Push-to-Talk via Tauri Desktop Agent
 - WebSocket communication (no Native Messaging hurdles)

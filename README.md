@@ -91,3 +91,8 @@ The project includes three main GitHub Actions suites that run on every push and
 ## Security & Privacy
 -   The "Event Tap" only listens for the specific key codes configured for PTT.
 -   The WebSocket server runs on `localhost:49152` and does not accept external connections.
+
+---
+
+## Contributing
+Interested in contributing? Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on code style, testing, and more.
