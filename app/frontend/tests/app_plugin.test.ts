@@ -32,12 +32,12 @@ describe("AppPlugin", () => {
         expect(plugin.formatKeyBinding(49, ["shift", "meta"])).toBe("Cmd+Shift+Space");
     });
 
-    test("addLog adds log entries and limits to 10", () => {
-        for (let i = 0; i < 15; i++) {
+    test("addLog adds log entries and limits to 20", () => {
+        for (let i = 0; i < 30; i++) {
             plugin.addLog("TEST", `message ${i}`);
         }
-        expect(plugin.logs().length).toBe(15);
-        expect(plugin.logs()[0].message).toBe("message 14");
+        expect(plugin.logs().length).toBe(20);
+        expect(plugin.logs()[0].message).toBe("message 29");
     });
 
     test("toggleRecording", async () => {
