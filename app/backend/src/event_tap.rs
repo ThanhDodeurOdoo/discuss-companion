@@ -84,6 +84,16 @@ pub fn get_binding() -> KeyBinding {
         .unwrap_or_default()
 }
 
+pub fn force_ptt_up() {
+    info!("Forcing PTT UP (Safety Release)");
+    set_ptt_held(false);
+    PRIMARY_KEY_HELD.store(false, Ordering::SeqCst);
+
+    let binding = get_binding();
+    let ts = current_timestamp();
+    send_event(OutgoingMessage::PttUp { ts, key: binding });
+}
+
 fn get_ptt_state() -> PttState {
     if HELD.load(Ordering::SeqCst) {
         PttState::Held

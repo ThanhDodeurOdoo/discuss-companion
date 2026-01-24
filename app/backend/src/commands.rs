@@ -41,3 +41,8 @@ pub fn is_accessibility_granted() -> bool {
 pub fn is_extension_connected() -> bool {
     crate::server::is_connected()
 }
+
+#[tauri::command]
+pub fn force_ptt_up() {
+    crate::event_tap::force_ptt_up();
+}

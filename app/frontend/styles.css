@@ -170,8 +170,9 @@ main {
 }
 
 .action-btn:hover {
-    filter: brightness(1.1);
-    box-shadow: 0 4px 12px rgba(47, 129, 247, 0.2);
+    background: #00ADB5;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 229, 255, 0.2);
 }
 
 .action-btn:active {
@@ -181,7 +182,38 @@ main {
 }
 
 .action-btn.cancel {
-    background: var(--error);
+    background: #cf6679;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-controls {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 100;
+}
+
+.text-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.text-btn.safety-btn:hover {
+    color: #ff5252;
+    background: rgba(255, 82, 82, 0.1);
+}
+
+.text-btn.safety-btn:active {
+    transform: scale(0.95);
+    filter: brightness(0.95);
+    box-shadow: none;
 }
 
 .logs-section {

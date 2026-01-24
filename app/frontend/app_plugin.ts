@@ -33,6 +33,7 @@ export class AppPlugin extends Plugin {
     permissionGranted = signal(false);
     extensionConnected = signal(false);
     currentBinding = signal<PttBinding>({ code: 0, modifiers: [] });
+    isForcingRelease = false;
     logs = signal.Array<LogEntry>([]);
 
     logIdCounter = 0;
@@ -98,6 +99,11 @@ export class AppPlugin extends Plugin {
                 return;
             }
 
+            if (payload.type === "ptt_up" && this.isForcingRelease) {
+                this.isForcingRelease = false;
+                return;
+            }
+
             const type = payload.type === "ptt_down" ? "DOWN" : "UP";
             this.addLog(
                 type,
@@ -153,6 +159,13 @@ export class AppPlugin extends Plugin {
             this.isRecording.set(true);
             await invoke("set_recording_mode", { recording: true });
         }
+    }
+
+    async forceRelease() {
+        this.addLog("SYSTEM", "Safety release triggered");
+        this.isForcingRelease = true;
+        this.isPressed.set(false);
+        await invoke("force_ptt_up");
     }
 
     addLog(type: string, message: string) {

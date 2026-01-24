@@ -182,11 +182,17 @@ pub fn run() {
             commands::get_current_binding,
             commands::is_accessibility_granted,
             commands::is_extension_connected,
+            commands::force_ptt_up,
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {
         error!("error while running tauri application: {e}");
     }
+
+    // Safety: Ensure PTT is released when app quits
+    event_tap::force_ptt_up();
+    // Allow a brief moment for the message to traverse the channel and WS
+    std::thread::sleep(std::time::Duration::from_millis(100));
 
     let _ = ws_shutdown_tx.send(());
     shutdown.store(true, Ordering::SeqCst);

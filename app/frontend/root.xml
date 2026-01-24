@@ -41,6 +41,12 @@
                     </t>
                 </div>
             </div>
+
+            <div class="footer-controls">
+                <button class="text-btn safety-btn" t-on-click="() => this.app.forceRelease()" title="Force stop microphone">
+                    force release
+                </button>
+            </div>
         </main>
     </t>
 </templates>

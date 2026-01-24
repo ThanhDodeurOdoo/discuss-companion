@@ -101,5 +101,13 @@ The project includes three main GitHub Actions suites that run on every push and
 
 ---
 
+## Safety Features
+The application includes several mechanisms to ensure the microphone does not get stuck in the "active" state:
+1.  **Robust Key Tracking**: The system tracks the specific key states to prevent stuck keys on partial release.
+2.  **Safety Release Button**: A small "force release" button in the main window immediately forces a "PTT Up" signal, resetting the internal state.
+3.  **Auto-Release on Quit**: When the application quits (Command-Q or Menu Exit), it automatically sends a "PTT Up" signal to ensure your Odoo microphone is muted before the process terminates.
+
+---
+
 ## Contributing
 Interested in contributing? Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on code style, testing, and more.
