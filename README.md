@@ -1,7 +1,8 @@
 # Discuss Companion for macOS
 
-[![UI Status](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml)
-[![Systems Status](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/systems.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/systems.yml)
+[![Systems](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/systems.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/systems.yml)
+[![UI](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml)
+[![Extension](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/extension.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/extension.yml)
 
 The Discuss Companion is a macOS companion app for Odoo Discuss. It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus.
 
@@ -71,8 +72,9 @@ npm run tauri build
 The output will be generated in `src-tauri/target/release/bundle/`.
 
 ### Continuous Integration
-The project includes two main GitHub Actions suites that run on every push and pull request to `main` and `master`:
-- **UI**: Handles frontend linting (ESLint) and testing (Jest). Tests only run if linting passes.
+The project includes three main GitHub Actions suites that run on every push and pull request to `main` and `master`:
+- **UI**: Handles frontend linting (ESLint) and app-specific testing. Tests only run if linting passes.
+- **Extension**: Handles testing for the Chrome extension components.
 - **Systems**: Handles backend (Rust) linting (fmt, clippy) and testing. Tests only run if linting passes.
 
 ---

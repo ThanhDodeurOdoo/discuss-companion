@@ -12,7 +12,7 @@ jest.unstable_mockModule("@tauri-apps/api/event", () => ({
 
 const { invoke } = await import("@tauri-apps/api/core");
 const { listen } = await import("@tauri-apps/api/event");
-const { AppPlugin } = await import("../app_plugin.ts");
+const { AppPlugin } = await import("../../app_plugin.ts");
 
 const mockedInvoke = invoke as jest.MockedFunction<typeof invoke>;
 const mockedListen = listen as jest.MockedFunction<typeof listen>;

@@ -14,7 +14,7 @@ jest.unstable_mockModule("@tauri-apps/api/event", () => ({
 await import("@tauri-apps/api/core");
 await import("@tauri-apps/api/event");
 
-jest.unstable_mockModule("../App.xml?raw", () => ({
+jest.unstable_mockModule("../../App.xml?raw", () => ({
     __esModule: true,
     default: `<templates xml:space="preserve">
         <t t-name="discuss.Companion">
@@ -29,7 +29,7 @@ jest.unstable_mockModule("../App.xml?raw", () => ({
     </templates>`
 }));
 
-jest.unstable_mockModule("../app_plugin.ts", () => ({
+jest.unstable_mockModule("../../app_plugin.ts", () => ({
     __esModule: true,
     AppPlugin: class extends Plugin {
         static id = "AppPlugin";
@@ -40,7 +40,7 @@ jest.unstable_mockModule("../app_plugin.ts", () => ({
     }
 }));
 
-const { AppPlugin } = await import("../app_plugin.ts");
+const { AppPlugin } = await import("../../app_plugin.ts");
 
 class App extends Component {
     static template = "discuss.Companion";
@@ -66,7 +66,7 @@ describe("App DOM Tests", () => {
 
     test("renders the app correctly", async () => {
         owlApp = new OwlApp({ plugins: [AppPlugin] });
-        const template = (await import("../App.xml?raw")).default;
+        const template = (await import("../../App.xml?raw")).default;
         owlApp.addTemplates(template);
 
         await owlApp.createRoot(App).mount(target);
@@ -92,7 +92,7 @@ describe("App DOM Tests", () => {
         };
 
         owlApp = new OwlApp({ plugins: [MockedPlugin] });
-        const template = (await import("../App.xml?raw")).default;
+        const template = (await import("../../App.xml?raw")).default;
         owlApp.addTemplates(template);
 
         class TestApp extends Component {

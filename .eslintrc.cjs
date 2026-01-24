@@ -26,19 +26,24 @@ module.exports = {
                 "extension/**/*.js",
                 "jest.config.js",
                 "jest.setup.js",
-                "jest.xmlTransformer.js"
+                "jest.xmlTransformer.js",
+                "src/tests/extension/**/*.js"
             ],
             parserOptions: {
                 project: null
             }
         },
         {
-            files: ["extension/**/*.js"],
+            files: ["extension/**/*.js", "src/tests/extension/**/*.js"],
             env: {
-                webextensions: true
+                webextensions: true,
+                jest: true
             },
             rules: {
                 "no-console": "off"
+            },
+            globals: {
+                chrome: "readonly"
             }
         }
     ],
