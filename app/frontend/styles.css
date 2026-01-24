@@ -117,8 +117,9 @@ main {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: center;
+    align-items: stretch; /* ensures button respects sidebar width */
     gap: 20px;
+    min-width: 0;
 }
 
 .key-display {
@@ -130,22 +131,18 @@ main {
   border-radius: 12px;
   border: 1px dashed var(--accent-color);
   text-align: center;
-  min-width: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  min-width: 0;
 }
 
-.key-name {
-    font-weight: 500;
-}
-
-.key-symbol {
+.key-text {
     font-size: 2.5rem;
-    font-weight: 700;
-    line-height: 1;
-    opacity: 0.8;
+    font-weight: 500;
+    word-break: break-all;
+    overflow-wrap: anywhere;
 }
 
 .key-display.recording {

@@ -20,9 +20,9 @@
                     class="key-display" 
                     t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }" 
                     t-on-click="() => this.app.toggleRecording()">
-                    <span t-if="this.app.isRecording()" class="key-name">PRESS ANY KEY...</span>
-                    <span t-elif="this.app.showSymbols()" class="key-symbol" t-out="this.keySymbol()"/>
-                    <span t-else="" class="key-name" t-out="this.keyName()"/>
+                    <span t-if="this.app.isRecording()" class="key-text">PRESS ANY KEY...</span>
+                    <span t-elif="this.app.showSymbols()" class="key-text" t-out="this.keySymbol()"/>
+                    <span t-else="" class="key-text" t-out="this.keyName()"/>
                 </button>
             </div>
 
@@ -48,7 +48,7 @@
                 </button>
                 <div class="toggle-container">
                     <input type="checkbox" id="show-symbols" t-att-checked="this.app.showSymbols()" t-on-change="(ev) => this.app.showSymbols.set(ev.target.checked)"/>
-                    <label for="show-symbols">Show Symbols</label>
+                    <label for="show-symbols">Show icons</label>
                 </div>
                 <a class="text-btn source-btn" href="https://github.com/ThanhDodeurOdoo/discuss-companion" target="_blank" rel="noreferrer">
                     source
