@@ -60,51 +60,77 @@ fn handle_ws_server(
     });
 }
 
+struct PttHandler {
+    app_handle: tauri::AppHandle,
+    ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
+    idle_img: Option<Image<'static>>,
+    active_img: Option<Image<'static>>,
+    is_active: bool,
+}
+
+impl PttHandler {
+    fn new(app_handle: tauri::AppHandle, ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>) -> Self {
+        Self {
+            app_handle,
+            ws_tx,
+            idle_img: Image::from_bytes(ICON_IDLE).ok(),
+            active_img: Image::from_bytes(ICON_ACTIVE).ok(),
+            is_active: false,
+        }
+    }
+
+    fn handle(&mut self, msg: &state::OutgoingMessage) {
+        // Notify Frontend
+        let _ = self.app_handle.emit("ptt-event", msg);
+
+        // Update Tray Icon efficiently
+        self.update_tray(msg);
+
+        // Broadcast to WebSocket
+        let bin = msg.to_flatbuffer();
+        let _ = self.ws_tx.send(bin);
+    }
+
+    fn update_tray(&mut self, msg: &state::OutgoingMessage) {
+        let Some(tray) = self.app_handle.tray_by_id(TRAY_ID) else {
+            return;
+        };
+
+        match msg {
+            state::OutgoingMessage::PttDown { is_repeat, .. } => {
+                if !is_repeat && !self.is_active {
+                    self.is_active = true;
+                    if let Some(img) = self.active_img.as_ref() {
+                        let _ = tray.set_icon(Some(img.clone()));
+                    }
+                }
+            }
+            state::OutgoingMessage::PttUp { .. } => {
+                if self.is_active {
+                    self.is_active = false;
+                    if let Some(img) = self.idle_img.as_ref() {
+                        let _ = tray.set_icon(Some(img.clone()));
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 fn handle_ptt_events(
     app_handle: tauri::AppHandle,
     event_rx: crossbeam_channel::Receiver<state::OutgoingMessage>,
     ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
 ) {
     thread::spawn(move || {
-        let idle_img = Image::from_bytes(ICON_IDLE).ok();
-        let active_img = Image::from_bytes(ICON_ACTIVE).ok();
-        let mut is_active = false;
-
+        let mut handler = PttHandler::new(app_handle, ws_tx);
         while let Ok(msg) = event_rx.recv() {
-            let _ = app_handle.emit("ptt-event", &msg);
-
-            if let Some(tray) = app_handle.tray_by_id(TRAY_ID) {
-                match &msg {
-                    state::OutgoingMessage::PttDown { is_repeat, .. } => {
-                        if !is_repeat && !is_active {
-                            is_active = true;
-                            if let Some(img) = active_img.clone() {
-                                let _ = tray.set_icon(Some(img));
-                            }
-                        }
-                    }
-                    state::OutgoingMessage::PttUp { .. } => {
-                        if is_active {
-                            is_active = false;
-                            if let Some(img) = idle_img.clone() {
-                                let _ = tray.set_icon(Some(img));
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            // if let Ok(json) = serde_json::to_string(&msg) {
-            //    let _ = ws_tx.send(json);
-            // }
-            let bin = msg.to_flatbuffer();
-            let _ = ws_tx.send(bin);
+            handler.handle(&msg);
         }
     });
 }
 
-/// Entry ponit 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     setup_logging();

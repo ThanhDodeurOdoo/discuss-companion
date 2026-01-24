@@ -233,32 +233,109 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_key_binding_default() {
-        let binding = KeyBinding::default();
-        assert_eq!(binding.code, 49);
-        assert!(binding.modifiers.is_empty());
+    fn test_ptt_state_default() {
+        assert_eq!(PttState::default(), PttState::Idle);
     }
 
     #[test]
-    fn test_outgoing_message_serialization() {
-        let msg = OutgoingMessage::Status {
-            ts: 100,
-            state: "idle".to_string(),
-            version: "0.1.0".to_string(),
+    fn test_current_timestamp() {
+        let ts = current_timestamp();
+        assert!(ts > 0);
+    }
+
+    #[test]
+    fn test_ptt_down_flatbuffer() {
+        let msg = OutgoingMessage::PttDown {
+            ts: 123456789,
+            key: KeyBinding {
+                code: 1,
+                modifiers: vec!["shift".to_string()],
+            },
+            is_repeat: true,
         };
-        let json = serde_json::to_string(&msg).expect("Should serialize");
-        assert!(json.contains("\"type\":\"status\""));
-        assert!(json.contains("\"state\":\"idle\""));
+        let bin = msg.to_flatbuffer();
+        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), protocol::MessageBody::PttDown);
+        let body = decoded.body_as_ptt_down().expect("Body is PttDown");
+        assert_eq!(body.ts(), 123456789);
+        assert_eq!(body.is_repeat(), true);
+        let key = body.key().expect("Key present");
+        assert_eq!(key.code(), 1);
+        let mods = key.modifiers().expect("Modifiers present");
+        assert_eq!(mods.len(), 1);
+        assert_eq!(mods.get(0), "shift");
     }
 
     #[test]
-    fn test_incoming_message_deserialization() {
-        let json = r#"{"type":"set_binding","binding":{"code":10,"modifiers":[]}}"#;
-        let msg: IncomingMessage = serde_json::from_str(json).expect("Should deserialize");
-        if let IncomingMessage::SetBinding { binding } = msg {
-            assert_eq!(binding.code, 10);
-        } else {
-            panic!("Wrong message type");
-        }
+    fn test_ptt_up_flatbuffer() {
+        let msg = OutgoingMessage::PttUp {
+            ts: 987654321,
+            key: KeyBinding::default(),
+        };
+        let bin = msg.to_flatbuffer();
+        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), protocol::MessageBody::PttUp);
+        let body = decoded.body_as_ptt_up().expect("Body is PttUp");
+        assert_eq!(body.ts(), 987654321);
+    }
+
+    #[test]
+    fn test_status_flatbuffer() {
+        let msg = OutgoingMessage::Status {
+            ts: 111,
+            state: "active".to_string(),
+            version: "1.2.3".to_string(),
+        };
+        let bin = msg.to_flatbuffer();
+        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), protocol::MessageBody::Status);
+        let body = decoded.body_as_status().expect("Body is Status");
+        assert_eq!(body.ts(), 111);
+        assert_eq!(body.state(), Some("active"));
+        assert_eq!(body.version(), Some("1.2.3"));
+    }
+
+    #[test]
+    fn test_binding_info_flatbuffer() {
+        let msg = OutgoingMessage::BindingInfo {
+            ts: 222,
+            binding: KeyBinding {
+                code: 56,
+                modifiers: vec!["ctrl".to_string(), "alt".to_string()],
+            },
+        };
+        let bin = msg.to_flatbuffer();
+        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), protocol::MessageBody::BindingInfo);
+        let body = decoded.body_as_binding_info().expect("Body is BindingInfo");
+        assert_eq!(body.ts(), 222);
+        let key = body.binding().expect("Binding present");
+        assert_eq!(key.code(), 56);
+        let mods = key.modifiers().expect("Modifiers present");
+        assert_eq!(mods.len(), 2);
+    }
+
+    #[test]
+    fn test_pong_flatbuffer() {
+        let msg = OutgoingMessage::Pong { ts: 333 };
+        let bin = msg.to_flatbuffer();
+        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), protocol::MessageBody::Pong);
+        let body = decoded.body_as_pong().expect("Body is Pong");
+        assert_eq!(body.ts(), 333);
+    }
+
+    #[test]
+    fn test_error_flatbuffer() {
+        let msg = OutgoingMessage::Error {
+            ts: 444,
+            message: "Something went wrong".to_string(),
+        };
+        let bin = msg.to_flatbuffer();
+        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), protocol::MessageBody::Error);
+        let body = decoded.body_as_error().expect("Body is Error");
+        assert_eq!(body.ts(), 444);
+        assert_eq!(body.message(), Some("Something went wrong"));
     }
 }

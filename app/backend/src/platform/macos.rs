@@ -361,4 +361,19 @@ mod tests {
         engine.set_recording(false);
         assert!(!IS_RECORDING.load(Ordering::SeqCst));
     }
+
+    #[test]
+    fn test_get_modifiers_from_flags() {
+        let flags = K_CG_EVENT_FLAG_MASK_SHIFT | K_CG_EVENT_FLAG_MASK_COMMAND;
+        let mods = get_modifiers_from_flags(flags);
+        assert_eq!(mods.len(), 2);
+        assert!(mods.contains(&"shift".to_string()));
+        assert!(mods.contains(&"meta".to_string()));
+
+        let flags = K_CG_EVENT_FLAG_MASK_CONTROL | K_CG_EVENT_FLAG_MASK_ALTERNATE;
+        let mods = get_modifiers_from_flags(flags);
+        assert_eq!(mods.len(), 2);
+        assert!(mods.contains(&"ctrl".to_string()));
+        assert!(mods.contains(&"alt".to_string()));
+    }
 }
