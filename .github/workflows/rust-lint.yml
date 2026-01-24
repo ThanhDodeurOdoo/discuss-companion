@@ -1,4 +1,4 @@
-name: Tests
+name: Rust Lint
 
 on:
   push:
@@ -7,29 +7,13 @@ on:
     branches: [main, master]
 
 jobs:
-  test:
-    name: Run Tests
+  lint:
+    name: Rust Lint
     runs-on: macos-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ">=24.13.0"
-          cache: "npm"
-          cache-dependency-path: package-lock.json
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run frontend lint
-        run: npm run lint
-
-      - name: Run frontend tests
-        run: npm test
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -43,9 +27,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-lint-
 
       - name: Check formatting
         run: cargo fmt --check
@@ -53,8 +37,4 @@ jobs:
 
       - name: Run clippy
         run: cargo clippy -- -D warnings
-        working-directory: src-tauri
-
-      - name: Run tests
-        run: cargo test --verbose
         working-directory: src-tauri
