@@ -1,10 +1,17 @@
 use futures_util::{SinkExt, StreamExt};
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tauri::Emitter;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
 use tokio_tungstenite::tungstenite::Message;
 use tracing::{error, info};
+
+static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+pub fn is_connected() -> bool {
+    CONNECTION_COUNT.load(Ordering::SeqCst) > 0
+}
 
 pub async fn start_ws_server(
     port: u16,
@@ -63,6 +70,7 @@ async fn handle_connection(
         }
     };
     info!("New WebSocket connection from: {}", addr);
+    CONNECTION_COUNT.fetch_add(1, Ordering::SeqCst);
     let _ = app_handle.emit("ws-connection", format!("Connected: {addr}"));
 
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
@@ -100,6 +108,7 @@ async fn handle_connection(
                     }
                     Some(Ok(Message::Close(_))) | None => {
                         info!("WebSocket connection closed: {}", addr);
+                        CONNECTION_COUNT.fetch_sub(1, Ordering::SeqCst);
                         let _ =
                             app_handle.emit("ws-disconnection", format!("Disconnected: {addr}"));
                         break;

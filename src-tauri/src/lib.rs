@@ -150,6 +150,7 @@ pub fn run() {
             commands::set_recording_mode,
             commands::get_current_binding,
             commands::is_accessibility_granted,
+            commands::is_extension_connected,
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {

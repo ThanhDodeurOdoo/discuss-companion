@@ -57,6 +57,9 @@ export class AppPlugin extends Plugin {
     }
 
     async setupListeners() {
+        const isConnected = await invoke<boolean>("is_extension_connected");
+        this.extensionConnected.set(isConnected);
+
         const pttUnlisten = await listen<PttEvent>("ptt-event", async (event) => {
             const payload = event.payload;
 

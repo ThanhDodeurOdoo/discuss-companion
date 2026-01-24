@@ -36,3 +36,8 @@ pub fn get_current_binding() -> KeyBinding {
 pub fn is_accessibility_granted() -> bool {
     check_accessibility_permission()
 }
+
+#[tauri::command]
+pub fn is_extension_connected() -> bool {
+    crate::server::is_connected()
+}
