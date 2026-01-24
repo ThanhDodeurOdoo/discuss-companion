@@ -1,1 +1,4 @@
-vendor/
+node_modules/
+dist/
+src-tauri/target/
+vendor/owl/dist/owl.es.js

@@ -1,4 +1,5 @@
 module.exports = {
+    ignorePatterns: ["vendor/owl/dist/owl.es.js", "dist/", "src-tauri/target/"],
     extends: [
         "eslint:recommended",
         "plugin:@typescript-eslint/recommended",
