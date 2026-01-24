@@ -88,6 +88,7 @@ The application automatically detects the target OS based on the build environme
 
 > [!WARNING]  
 > LINUX TARGET IS NOT YET IMPLEMENTED, pull requests are welcome I do not have a Linux machine to test on.
+> see: [Issue#1](https://github.com/ThanhDodeurOdoo/discuss-companion/issues/1)
 
 When using Tauri, the target is determined by the host system:
 ```bash
