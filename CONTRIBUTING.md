@@ -28,9 +28,48 @@ The frontend uses Owl v3 and is in `src`. The extension is in the `extension` fo
 - **Type Assertions**: Avoid `as unknown as...`. If you must use it, provide a justifying comment.
 - **Defined Assertions**: Use the `!` operator only when you are absolutely certain the value is neither `null` nor `undefined`.
 
+### Linting & Code Quality
+
+```bash
+# Lint Frontend (TypeScript)
+npm run lint
+
+# Check Backend (Rust)
+cd app/backend
+cargo clippy -- -D warnings
+cargo fmt --check
+cargo fmt --check
+```
+
+## What do to when you modify something:
+
+### If you modify `protocol.fbs`, you must regenerate the code:
+
+1.  **Install flatc**:
+    ```bash
+    brew install flatbuffers
+    ```
+2.  **Generate Code**:
+    ```bash
+    flatc --rust -o app/backend/src/flatbuffers protocol.fbs
+    flatc --ts -o extension/src protocol.fbs
+    ```
+
+### If you modify the extension
+
+```bash
+npm run build:extension
+```
+
+### If you modify the app
+
+```bash
+npm run build
+```
+
+
 ## Testing
 
 Before submitting a Pull Request, ensure all tests pass locally.
 
-- **Frontend Tests**: `npm run test`
-- **Backend Tests**: `cd src-tauri && cargo test`
+- **Frontend Tests**: `npm run test` (this will run the tests for both the app and the extension)

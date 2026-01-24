@@ -8,19 +8,28 @@ The Discuss Companion is a macOS companion app for Odoo Discuss. It provides sys
 
 ## Architecture
 
-The system consists of three parts:
-1.  **Tauri App (Rust Backend)**: Captures global key events using macOS Core Graphics APIs and runs a WebSocket server.
-2.  **Tauri App (Vite Frontend)**, built with [Owl v3](https://github.com/odoo/owl).
-3.  **Chrome Extension**: Connects to the desktop agent via WebSockets and relays PTT signals to the Odoo web page.
+The repository contains 2 parts:
+1.  **The Tauri app**:
+    -   Captures global key events using macOS Core Graphics APIs and runs a WebSocket server.
+    -   front-end built with [Owl v3](https://github.com/odoo/owl).
+    -   back-end built with [Rust](https://www.rust-lang.org/).
+2.  **The Chrome extension**:
+    -   Connects to the desktop agent via WebSockets and relays PTT signals to the Odoo web page.
 
 ---
 
 ## Development
 
 ### Prerequisites
--   **Rust Toolchain**: [Install Rust](https://rustup.rs/)
--   **Node.js**: Version 18+ and `npm`
--   **macOS**: Required for the `CoreGraphics` event tapping.
+
+#### Dev:
+-  **Rust Toolchain**: [Install Rust](https://rustup.rs/)
+-  **flatbuffers**: Required for the `flatbuffers` code generation (if you need to change the protocol).
+-  **Node.js**: Version 18+ and `npm`
+#### Main:
+-  **Google Chrome**: Required for the extension.
+-  **macOS**: Required for the `CoreGraphics` event tapping.
+
 
 ### Running Locally
 1.  **Install dependencies**:
@@ -33,41 +42,16 @@ The system consists of three parts:
     ```
 
 3.  **Permissions**:
-    -   On the first run, macOS will prompt for **Accessibility Permissions**.
+    -   On the first run, macOS will prompt for **Accessibility Permissions** (it will appear as permissions to your IDE or whatever spawns the app).
     -   Grant permission in `System Settings` → `Privacy & Security` → `Accessibility`.
     -   Restart the app after granting permission.
 
-### Linting & Code Quality
-
-```bash
-# Lint Frontend (TypeScript)
-npm run lint
-
-# Check Backend (Rust)
-cd app/backend
-cargo clippy -- -D warnings
-cargo fmt --check
-cargo fmt --check
-```
+---
 
 ### Protocol & FlatBuffers
 
 The communication between the App and the Extension uses [FlatBuffers](https://google.github.io/flatbuffers/).
 The schema is defined in `protocol.fbs`.
-
-If you modify `protocol.fbs`, you must regenerate the code:
-
-1.  **Install flatc**:
-    ```bash
-    brew install flatbuffers
-    ```
-2.  **Generate Code**:
-    ```bash
-    flatc --rust -o app/backend/src/flatbuffers protocol.fbs
-    flatc --ts -o extension/src protocol.fbs
-    ```
-
----
 
 ## Extension Setup
 

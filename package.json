@@ -11,7 +11,7 @@
     "tauri:dev": "tauri dev --config app/backend/tauri.conf.json",
     "tauri:build": "tauri build --config app/backend/tauri.conf.json",
     "lint": "eslint app/frontend extension/src --ext .ts",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest && cd app/backend && cargo test",
     "build:extension": "vite build -c extension/vite.config.ts"
   },
   "dependencies": {
