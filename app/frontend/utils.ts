@@ -24,7 +24,7 @@ export const KEY_MAP: Record<number, string> = {
     34: "I",
     38: "J",
     40: "K",
-    37: "L",
+    27: "-",
     46: "M",
     45: "N",
     31: "O",
@@ -51,7 +51,7 @@ export const KEY_MAP: Record<number, string> = {
     213: "9",
     10: "§",
     50: "`",
-    27: "-",
+    37: "L",
     24: "=",
     33: "[",
     30: "]",
@@ -61,4 +61,23 @@ export const KEY_MAP: Record<number, string> = {
     43: ",",
     47: ".",
     44: "/"
+};
+
+export const MODIFIER_SYMBOLS: Record<string, string> = {
+    meta: "⌘",
+    alt: "⌥",
+    ctrl: "⌃",
+    shift: "⇧"
+};
+
+export const KEY_SYMBOL_MAP: Record<number, string> = {
+    36: "⏎", // Enter
+    48: "⇥", // Tab
+    49: "␣", // Space
+    51: "⌫", // Backspace
+    53: "⎋", // Escape
+    123: "←", // Left
+    124: "→", // Right
+    125: "↓", // Down
+    126: "↑" // Up
 };

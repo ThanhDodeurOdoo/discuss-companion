@@ -131,6 +131,21 @@ main {
   border: 1px dashed var(--accent-color);
   text-align: center;
   min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.key-name {
+    font-weight: 500;
+}
+
+.key-symbol {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+    opacity: 0.8;
 }
 
 .key-display.recording {
@@ -192,6 +207,26 @@ main {
     bottom: 10px;
     left: 10px;
     z-index: 100;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    user-select: none;
+}
+
+.toggle-container input {
+    cursor: pointer;
+}
+
+.toggle-container label {
+    cursor: pointer;
 }
 
 .text-btn {

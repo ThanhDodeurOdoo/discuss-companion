@@ -1,7 +1,7 @@
 import { Plugin, signal, onWillDestroy } from "@odoo/owl";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { KEY_MAP } from "./utils";
+import { KEY_MAP, KEY_SYMBOL_MAP, MODIFIER_SYMBOLS } from "./utils";
 
 type LogEntry = {
     id: number;
@@ -30,6 +30,7 @@ export class AppPlugin extends Plugin {
 
     isRecording = signal(false);
     isPressed = signal(false);
+    showSymbols = signal(true);
     permissionGranted = signal(false);
     extensionConnected = signal(false);
     currentBinding = signal<PttBinding>({ code: 0, modifiers: [] });
@@ -216,5 +217,19 @@ export class AppPlugin extends Plugin {
             return `${formattedModifiers.join("+")}+${keyName}`;
         }
         return keyName;
+    }
+
+    formatKeySymbol(code: number, modifiers: string[] = []): string {
+        const keySymbol = KEY_SYMBOL_MAP[code] || KEY_MAP[code] || "";
+        const formattedModifiers = modifiers
+            .map((m) => MODIFIER_SYMBOLS[m] || "")
+            .filter((s) => s !== "")
+            .sort((a, b) => {
+                // Custom sort order: Cmd, Ctrl, Option, Shift (using symbols)
+                const order: Record<string, number> = { "⌘": 0, "⌃": 1, "⌥": 2, "⇧": 3 };
+                return (order[a] ?? 99) - (order[b] ?? 99);
+            });
+
+        return `${formattedModifiers.join("")}${keySymbol}`;
     }
 }

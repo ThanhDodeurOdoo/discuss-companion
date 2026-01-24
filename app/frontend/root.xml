@@ -17,7 +17,9 @@
         <main>
             <div class="ptt-control">
                 <div class="key-display" t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }">
-                    <span t-out="this.app.isRecording() ? 'PRESS ANY KEY...' : this.keyName()"/>
+                    <span t-if="this.app.isRecording()" class="key-name">PRESS ANY KEY...</span>
+                    <span t-elif="this.app.showSymbols()" class="key-symbol" t-out="this.keySymbol()"/>
+                    <span t-else="" class="key-name" t-out="this.keyName()"/>
                 </div>
                 <button class="action-btn" 
                     t-att-class="this.app.isRecording() ? 'cancel' : ''"
@@ -46,6 +48,10 @@
                 <button class="text-btn safety-btn" t-on-click="() => this.app.forceRelease()" title="Force stop microphone">
                     force release
                 </button>
+                <div class="toggle-container">
+                    <input type="checkbox" id="show-symbols" t-att-checked="this.app.showSymbols()" t-on-change="(ev) => this.app.showSymbols.set(ev.target.checked)"/>
+                    <label for="show-symbols">Show Symbols</label>
+                </div>
             </div>
         </main>
     </t>
