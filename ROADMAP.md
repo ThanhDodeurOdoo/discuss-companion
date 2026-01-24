@@ -12,6 +12,11 @@ closing the app from the red button should also remove the app from the dock (bu
 ### Support for Linux
 
 Make a linux compilation target.
+[Issue#1](https://github.com/ThanhDodeurOdoo/discuss-companion/issues/1)
+
+### Add github build script to auto generate file?
+
+Would be nice to have a github action that automatically generates the app and extension files when a new version is released.
 
 ### Ability to control mute/deaf/... state
 
