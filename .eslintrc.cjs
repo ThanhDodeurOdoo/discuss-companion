@@ -49,7 +49,7 @@ module.exports = {
         "node/no-unsupported-features/es-syntax": "off",
         "node/no-missing-import": "off",
         "comma-dangle": "off",
-        "no-console": "error",
+        "no-console": "off",
         "no-undef": "error",
         "no-restricted-globals": ["error", "event", "self"],
         "no-const-assign": ["error"],

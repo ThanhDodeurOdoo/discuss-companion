@@ -1,0 +1,10 @@
+export declare function onWillStart(fn: () => Promise<void> | void | any): void;
+export declare function onWillUpdateProps(fn: (nextProps: any) => Promise<void> | void | any): void;
+export declare function onMounted(fn: () => void | any): void;
+export declare function onWillPatch(fn: () => any | void): void;
+export declare function onPatched(fn: () => void | any): void;
+export declare function onWillUnmount(fn: () => void | any): void;
+export declare function onWillDestroy(fn: () => void | any): void;
+type OnErrorCallback = (error: any) => void | any;
+export declare function onError(callback: OnErrorCallback): void;
+export {};

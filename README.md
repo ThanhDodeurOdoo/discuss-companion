@@ -8,7 +8,7 @@ The Discuss Companion is a macOS companion app for Odoo Discuss. It provides sys
 
 The system consists of three parts:
 1.  **Tauri App (Rust Backend)**: Captures global key events using macOS Core Graphics APIs and runs a WebSocket server.
-2.  **Tauri App (Vite Frontend)**: Displays real-time logs and accessibility status.
+2.  **Tauri App (Vite Frontend)**, built with [Owl v3](https://github.com/odoo/owl).
 3.  **Chrome Extension**: Connects to the desktop agent via WebSockets and relays PTT signals to the Odoo web page.
 
 ---

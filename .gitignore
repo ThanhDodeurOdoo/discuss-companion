@@ -25,6 +25,7 @@ target/
 dist/
 dist-ssr/
 out/
+!vendor/owl/dist/
 
 # IDEs
 .vscode/*
