@@ -14,14 +14,14 @@ jest.unstable_mockModule("@tauri-apps/api/event", () => ({
 await import("@tauri-apps/api/core");
 await import("@tauri-apps/api/event");
 
-jest.unstable_mockModule("../../App.xml?raw", () => ({
+jest.unstable_mockModule("../../root.xml?raw", () => ({
     __esModule: true,
     default: `<templates xml:space="preserve">
-        <t t-name="discuss.Companion">
+        <t t-name="discuss.Root">
             <div class="test-app">
                 <h1 id="title">Discuss Companion</h1>
                 <div class="status-indicators">
-                    <span id="perm-status" t-esc="this.app.permissionGranted() ? 'Accessibility Granted' : 'Permission Required'"/>
+                    <span id="perm-status" t-out="this.app.permissionGranted() ? 'Accessibility Granted' : 'Permission Required'"/>
                 </div>
                 <button id="toggle-btn" t-on-click="() => this.app.toggleRecording()">Toggle</button>
             </div>
@@ -42,12 +42,12 @@ jest.unstable_mockModule("../../app_plugin.ts", () => ({
 
 const { AppPlugin } = await import("../../app_plugin.ts");
 
-class App extends Component {
-    static template = "discuss.Companion";
+class Root extends Component {
+    static template = "discuss.Root";
     app = plugin(AppPlugin);
 }
 
-describe("App DOM Tests", () => {
+describe("Root DOM Tests", () => {
     let target: HTMLElement;
     let owlApp: OwlApp;
 
@@ -66,10 +66,10 @@ describe("App DOM Tests", () => {
 
     test("renders the app correctly", async () => {
         owlApp = new OwlApp({ plugins: [AppPlugin] });
-        const template = (await import("../../App.xml?raw")).default;
+        const template = (await import("../../root.xml?raw")).default;
         owlApp.addTemplates(template);
 
-        await owlApp.createRoot(App).mount(target);
+        await owlApp.createRoot(Root).mount(target);
 
         expect(target.querySelector("#title")?.textContent).toBe("Discuss Companion");
         expect(target.querySelector("#perm-status")?.textContent).toBe("Permission Required");
@@ -92,15 +92,15 @@ describe("App DOM Tests", () => {
         };
 
         owlApp = new OwlApp({ plugins: [MockedPlugin] });
-        const template = (await import("../../App.xml?raw")).default;
+        const template = (await import("../../root.xml?raw")).default;
         owlApp.addTemplates(template);
 
-        class TestApp extends Component {
-            static template = "discuss.Companion";
+        class TestRoot extends Component {
+            static template = "discuss.Root";
             app = plugin(MockedPlugin);
         }
 
-        await owlApp.createRoot(TestApp).mount(target);
+        await owlApp.createRoot(TestRoot).mount(target);
 
         const btn = target.querySelector("#toggle-btn") as HTMLButtonElement;
         btn.click();

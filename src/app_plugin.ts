@@ -1,15 +1,16 @@
 import { Plugin, signal, onWillDestroy } from "@odoo/owl";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { KEY_MAP } from "./utils";
 
-interface LogEntry {
+type LogEntry = {
     id: number;
     ts: string;
     type: string;
     message: string;
-}
+};
 
-interface PttEvent {
+type PttEvent = {
     type: string;
     ts: number;
     key: {
@@ -17,12 +18,12 @@ interface PttEvent {
         modifiers: string[];
     };
     is_repeat?: boolean;
-}
+};
 
-interface PttBinding {
+type PttBinding = {
     code: number;
     modifiers: string[];
-}
+};
 
 export class AppPlugin extends Plugin {
     static id = "AppPlugin";
@@ -144,7 +145,6 @@ export class AppPlugin extends Plugin {
             hour12: false
         });
 
-        // signal.Array proxy allows direct mutation which triggers reactivity
         this.logs().unshift({
             id: ++this.logIdCounter,
             ts: time,
@@ -162,70 +162,6 @@ export class AppPlugin extends Plugin {
     }
 
     getKeyName(code: number): string {
-        const keyMap: Record<number, string> = {
-            49: "Space",
-            56: "Shift",
-            59: "Ctrl",
-            58: "Option",
-            55: "Command",
-            123: "Left",
-            124: "Right",
-            125: "Down",
-            126: "Up",
-            36: "Enter",
-            48: "Tab",
-            51: "Backspace",
-            53: "Escape",
-            71: "Clear",
-            0: "A",
-            11: "B",
-            8: "C",
-            2: "D",
-            14: "E",
-            3: "F",
-            5: "G",
-            4: "H",
-            34: "I",
-            38: "J",
-            40: "K",
-            37: "L",
-            46: "M",
-            45: "N",
-            31: "O",
-            35: "P",
-            12: "Q",
-            15: "R",
-            1: "S",
-            17: "T",
-            32: "U",
-            9: "V",
-            13: "W",
-            7: "X",
-            16: "Y",
-            6: "Z",
-            29: "0",
-            18: "1",
-            19: "2",
-            20: "3",
-            21: "4",
-            23: "5",
-            22: "6",
-            26: "7",
-            28: "8",
-            213: "9",
-            10: "§",
-            50: "`",
-            27: "-",
-            24: "=",
-            33: "[",
-            30: "]",
-            42: "\\",
-            41: ";",
-            39: "'",
-            43: ",",
-            47: ".",
-            44: "/"
-        };
-        return keyMap[code] || `Key ${code}`;
+        return KEY_MAP[code] || `Key ${code}`;
     }
 }

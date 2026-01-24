@@ -62,7 +62,7 @@ To link the app with Odoo:
 
 ---
 
-## 🚀 Deployment & Distribution
+## Deployment & Distribution
 
 ### Build for Production
 To create a signed macOS `.app` or `.dmg`:

@@ -1,15 +1,15 @@
 <templates xml:space="preserve">
-    <t t-name="discuss.Companion">
+    <t t-name="discuss.Root">
         <header>
             <h1>Discuss Companion</h1>
             <div class="status-indicators">
                 <div class="status-item" t-att-class="this.app.permissionGranted() ? 'granted' : ''">
                     <div class="status-dot"></div>
-                    <span t-esc="this.app.permissionGranted() ? 'Accessibility Granted' : 'Permission Required'"/>
+                    <span t-out="this.app.permissionGranted() ? 'Accessibility Granted' : 'Permission Required'"/>
                 </div>
                 <div class="status-item" t-att-class="this.app.extensionConnected() ? 'connected' : ''">
                     <div class="status-dot"></div>
-                    <span t-esc="this.app.extensionConnected() ? 'Ext. Connected' : 'Ext. Disconnected'"/>
+                    <span t-out="this.app.extensionConnected() ? 'Ext. Connected' : 'Ext. Disconnected'"/>
                 </div>
             </div>
         </header>
@@ -17,12 +17,12 @@
         <main>
             <div class="ptt-control">
                 <div class="key-display" t-att-class="this.app.isRecording() ? 'recording' : ''">
-                    <span t-esc="this.app.isRecording() ? 'PRESS ANY KEY...' : this.getKeyName(this.app.currentBindingCode())"/>
+                    <span t-out="this.app.isRecording() ? 'PRESS ANY KEY...' : this.keyName()"/>
                 </div>
                 <button class="action-btn" 
                     t-att-class="this.app.isRecording() ? 'cancel' : ''"
                     t-on-click="() => this.app.toggleRecording()">
-                    <t t-esc="this.app.isRecording() ? 'Cancel' : 'Change Key'"/>
+                    <t t-out="this.app.isRecording() ? 'Cancel' : 'Change Key'"/>
                 </button>
             </div>
 
@@ -34,9 +34,9 @@
                 <div class="logs-container">
                     <t t-foreach="this.app.logs()" t-as="log" t-key="log.id">
                         <div class="log-entry">
-                            <span class="log-ts" t-esc="log.ts"/>
-                            <span t-attf-class="log-type type-{{log.type.toLowerCase()}}" t-esc="log.type"/>
-                            <span class="log-msg" t-esc="log.message"/>
+                            <span class="log-ts" t-out="log.ts"/>
+                            <span t-attf-class="log-type type-{{log.type.toLowerCase()}}" t-out="log.type"/>
+                            <span class="log-msg" t-out="log.message"/>
                         </div>
                     </t>
                 </div>
