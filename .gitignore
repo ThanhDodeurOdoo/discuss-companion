@@ -13,10 +13,10 @@ lerna-debug.log*
 node_modules/
 
 # Tauri
-src-tauri/target/
-src-tauri/binaries/
-src-tauri/gen/
-src-tauri/gen/schemas/
+app/backend/target/
+app/backend/binaries/
+app/backend/gen/
+app/backend/gen/schemas/
 
 # Rust/Cargo
 target/

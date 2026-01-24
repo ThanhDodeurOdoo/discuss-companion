@@ -25,18 +25,18 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-systems-lint-${{ hashFiles('src-tauri/Cargo.lock') }}
+            app/backend/target
+          key: ${{ runner.os }}-cargo-systems-lint-${{ hashFiles('app/backend/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-systems-lint-
 
       - name: Check formatting
         run: cargo fmt --check
-        working-directory: src-tauri
+        working-directory: app/backend
 
       - name: Run clippy
         run: cargo clippy -- -D warnings
-        working-directory: src-tauri
+        working-directory: app/backend
 
   test:
     name: Tests
@@ -55,11 +55,11 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-systems-test-${{ hashFiles('src-tauri/Cargo.lock') }}
+            app/backend/target
+          key: ${{ runner.os }}-cargo-systems-test-${{ hashFiles('app/backend/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-systems-test-
 
       - name: Run rust tests
         run: cargo test --verbose
-        working-directory: src-tauri
+        working-directory: app/backend

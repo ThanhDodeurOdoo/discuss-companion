@@ -8,7 +8,7 @@ import { mockChrome } from "./utils.js";
 mockChrome();
 
 // We import it once at the top level
-await import("../../../extension/content.js");
+await import("../content.js");
 const capturedCallback = chrome.runtime.onMessage.addListener.mock.calls[0][0];
 
 describe("Extension Content Script", () => {

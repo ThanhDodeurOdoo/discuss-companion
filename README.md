@@ -29,7 +29,7 @@ The system consists of three parts:
     ```
 2.  **Start the app in development mode**:
     ```bash
-    npm run tauri dev
+    npm run tauri:dev
     ```
 
 3.  **Permissions**:
@@ -44,7 +44,7 @@ The system consists of three parts:
 npm run lint
 
 # Check Backend (Rust)
-cd src-tauri
+cd app/backend
 cargo clippy -- -D warnings
 cargo fmt --check
 cargo fmt --check
@@ -63,7 +63,7 @@ If you modify `protocol.fbs`, you must regenerate the code:
     ```
 2.  **Generate Code**:
     ```bash
-    flatc --rust -o src-tauri/src/flatbuffers protocol.fbs
+    flatc --rust -o app/backend/src/flatbuffers protocol.fbs
     flatc --ts -o extension/src protocol.fbs
     ```
 
@@ -93,9 +93,9 @@ To link the app with Odoo:
 ### Build for Production
 To create a signed macOS `.app` or `.dmg`:
 ```bash
-npm run tauri build
+npm run tauri:build
 ```
-The output will be generated in `src-tauri/target/release/bundle/`.
+The output will be generated in `app/backend/target/release/bundle/`.
 
 ### Continuous Integration
 The project includes three main GitHub Actions suites that run on every push and pull request to `main` and `master`:
