@@ -13,7 +13,7 @@
     "tauri": "tauri",
     "lint": "eslint app/frontend extension/src --ext .ts && cd app/backend && cargo fmt --check && cargo clippy -- -D warnings",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest && cd app/backend && cargo test",
-    "full-check": "npm run lint && npm run test",
+    "verify": "npm run lint && npm run test",
     "pre:dev": "vite",
     "pre:build": "tsc && vite build"
 

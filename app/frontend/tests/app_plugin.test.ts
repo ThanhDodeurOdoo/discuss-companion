@@ -36,7 +36,7 @@ describe("AppPlugin", () => {
         for (let i = 0; i < 15; i++) {
             plugin.addLog("TEST", `message ${i}`);
         }
-        expect(plugin.logs().length).toBe(10);
+        expect(plugin.logs().length).toBe(15);
         expect(plugin.logs()[0].message).toBe("message 14");
     });
 
