@@ -146,11 +146,7 @@ pub fn run() {
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
-            let tray_icon = if let Some(icon) = app.default_window_icon().cloned() {
-                icon
-            } else {
-                Image::from_bytes(ICON_IDLE)?
-            };
+            let tray_icon = Image::from_bytes(ICON_IDLE)?;
 
             let _tray = TrayIconBuilder::with_id(TRAY_ID)
                 .icon(tray_icon)
