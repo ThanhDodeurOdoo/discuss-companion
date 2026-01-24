@@ -16,15 +16,13 @@
 
         <main>
             <div class="ptt-control">
-                <div class="key-display" t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }">
+                <button 
+                    class="key-display" 
+                    t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }" 
+                    t-on-click="() => this.app.toggleRecording()">
                     <span t-if="this.app.isRecording()" class="key-name">PRESS ANY KEY...</span>
                     <span t-elif="this.app.showSymbols()" class="key-symbol" t-out="this.keySymbol()"/>
                     <span t-else="" class="key-name" t-out="this.keyName()"/>
-                </div>
-                <button class="action-btn" 
-                    t-att-class="this.app.isRecording() ? 'cancel' : ''"
-                    t-on-click="() => this.app.toggleRecording()">
-                    <t t-out="this.app.isRecording() ? 'Cancel' : 'Change Key'"/>
                 </button>
             </div>
 
