@@ -9,14 +9,16 @@ The Discuss Companion is a macOS companion app for Odoo Discuss. It provides sys
 ## Architecture
 
 The repository contains 2 parts:
-1.  **The Tauri app**:
+1.  **The App**:
     -   Captures global key events using macOS Core Graphics APIs and runs a WebSocket server.
     -   front-end built with [Owl v3](https://github.com/odoo/owl).
     -   back-end built with [Rust](https://www.rust-lang.org/).
-2.  **The Chrome extension**:
+2.  **The Chrome Extension**:
     -   Connects to the desktop agent via WebSockets and relays PTT signals to the Odoo web page.
 
----
+The communication between the App and the Extension uses [FlatBuffers](https://google.github.io/flatbuffers/), The schema is defined in `protocol.fbs`. These messages are sent through websocket.
+
+
 
 ## Development
 
@@ -46,12 +48,6 @@ The repository contains 2 parts:
     -   Grant permission in `System Settings` → `Privacy & Security` → `Accessibility`.
     -   Restart the app after granting permission.
 
----
-
-### Protocol & FlatBuffers
-
-The communication between the App and the Extension uses [FlatBuffers](https://google.github.io/flatbuffers/).
-The schema is defined in `protocol.fbs`.
 
 ## Extension Setup
 

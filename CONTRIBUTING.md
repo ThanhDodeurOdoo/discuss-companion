@@ -72,6 +72,6 @@ npm run build:app # for deployment
 
 ## Testing
 
-Before submitting a Pull Request, ensure all tests pass locally.
+Before submitting a Pull Request, ensure all tests pass locally:
 
-- **Frontend Tests**: `npm run test` (this will run the tests for both the app and the extension)
+`npm run test` will run all test suites (frontend, backend, extension)
