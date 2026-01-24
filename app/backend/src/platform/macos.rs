@@ -1,6 +1,7 @@
 // SAFETY: requires unsafe code for macOS Core Graphics FFI calls.
 // The CGEventTap API is inherently unsafe as it involves C callbacks and raw pointers.
 
+use crate::platform::PttEngine;
 use crate::state::{current_timestamp, KeyBinding, OutgoingMessage, PttState};
 use anyhow::{anyhow, Result};
 use core_foundation::base::TCFType;
@@ -64,34 +65,126 @@ static IS_RECORDING: AtomicBool = AtomicBool::new(false);
 static EVENT_SENDER: OnceLock<Sender<OutgoingMessage>> = OnceLock::new();
 static CURRENT_BINDING: OnceLock<RwLock<KeyBinding>> = OnceLock::new();
 
-pub fn set_binding(binding: KeyBinding) {
-    TARGET_KEYCODE.store(binding.code, Ordering::SeqCst);
-    let lock = CURRENT_BINDING.get_or_init(|| RwLock::new(KeyBinding::default()));
-    if let Ok(mut guard) = lock.write() {
-        *guard = binding;
+pub struct MacosEngine;
+
+impl PttEngine for MacosEngine {
+    fn set_binding(&self, binding: KeyBinding) {
+        TARGET_KEYCODE.store(binding.code, Ordering::SeqCst);
+        let lock = CURRENT_BINDING.get_or_init(|| RwLock::new(KeyBinding::default()));
+        if let Ok(mut guard) = lock.write() {
+            *guard = binding;
+        }
+    }
+
+    fn set_recording(&self, recording: bool) {
+        IS_RECORDING.store(recording, Ordering::SeqCst);
+    }
+
+    fn get_binding(&self) -> KeyBinding {
+        CURRENT_BINDING
+            .get_or_init(|| RwLock::new(KeyBinding::default()))
+            .read()
+            .map(|g| g.clone())
+            .unwrap_or_default()
+    }
+
+    fn force_ptt_up(&self) {
+        info!("Forcing PTT UP (Safety Release)");
+        set_ptt_held(false);
+        PRIMARY_KEY_HELD.store(false, Ordering::SeqCst);
+
+        let binding = self.get_binding();
+        let ts = current_timestamp();
+        send_event(OutgoingMessage::PttUp { ts, key: binding });
+    }
+
+    fn check_accessibility_permission(&self) -> bool {
+        use core_foundation::boolean::CFBoolean;
+        use core_foundation::dictionary::CFDictionary;
+        use core_foundation::string::CFString;
+
+        // SAFETY: Interacting with macOS ApplicationServices to check/request accessibility logs.
+        #[allow(unsafe_code)]
+        unsafe {
+            // The actual key string for kAXTrustedCheckOptionPrompt
+            let key = CFString::from_static_string("AXTrustedCheckOptionPrompt");
+            let value = CFBoolean::true_value();
+            let options = CFDictionary::from_CFType_pairs(&[(key.as_CFType(), value.as_CFType())]);
+            AXIsProcessTrustedWithOptions(options.as_concrete_TypeRef()) != 0
+        }
+    }
+
+    fn start_engine(
+        &self,
+        sender: Sender<OutgoingMessage>,
+        shutdown: &Arc<AtomicBool>,
+    ) -> Result<()> {
+        EVENT_SENDER
+            .set(sender)
+            .map_err(|_| anyhow!("Event sender already initialized"))?;
+
+        // We also want to listen for flags changed to update modifiers if needed,
+        let event_mask: u64 =
+            (1 << K_CG_EVENT_KEY_DOWN) | (1 << K_CG_EVENT_KEY_UP) | (1 << K_CG_EVENT_FLAGS_CHANGED);
+
+        // SAFETY: CGEventTapCreate is safe when we provide a valid callback and handle NULL return
+        #[allow(unsafe_code)]
+        let tap: CFMachPortRef = unsafe {
+            CGEventTapCreate(
+                CGEventTapLocation::AnnotatedSession as u32,
+                CGEventTapPlacement::HeadInsertEventTap as u32,
+                CGEventTapOptions::ListenOnly as u32,
+                event_mask,
+                event_callback,
+                ptr::null_mut(),
+            )
+        };
+
+        if tap.is_null() {
+            return Err(anyhow!(
+                "Failed to create event tap. Accessibility permission may be missing. \
+                 Grant permission in System Settings → Privacy & Security → Accessibility."
+            ));
+        }
+
+        // SAFETY: CFMachPortCreateRunLoopSource requires a valid CFMachPort
+        #[allow(unsafe_code)]
+        let source: CFRunLoopSourceRef =
+            unsafe { CFMachPortCreateRunLoopSource(ptr::null(), tap, 0) };
+
+        if source.is_null() {
+            return Err(anyhow!("Failed to create run loop source"));
+        }
+
+        let run_loop = CFRunLoop::get_current();
+
+        // SAFETY: Adding a valid source to the run loop with a valid extern static
+        #[allow(unsafe_code)]
+        unsafe {
+            CFRunLoopAddSource(
+                run_loop.as_concrete_TypeRef(),
+                source,
+                kCFRunLoopCommonModes,
+            );
+        }
+
+        info!("Event tap started, listening for PTT key events");
+
+        while !shutdown.load(Ordering::SeqCst) {
+            // SAFETY: kCFRunLoopDefaultMode is a valid extern static
+            #[allow(unsafe_code)]
+            let mode = unsafe { core_foundation::runloop::kCFRunLoopDefaultMode };
+            CFRunLoop::run_in_mode(mode, Duration::from_millis(100), false);
+        }
+
+        info!("Event tap stopped");
+        Ok(())
     }
 }
 
-pub fn set_recording(recording: bool) {
-    IS_RECORDING.store(recording, Ordering::SeqCst);
-}
-
-pub fn get_binding() -> KeyBinding {
-    CURRENT_BINDING
-        .get_or_init(|| RwLock::new(KeyBinding::default()))
-        .read()
-        .map(|g| g.clone())
-        .unwrap_or_default()
-}
-
-pub fn force_ptt_up() {
-    info!("Forcing PTT UP (Safety Release)");
-    set_ptt_held(false);
-    PRIMARY_KEY_HELD.store(false, Ordering::SeqCst);
-
-    let binding = get_binding();
-    let ts = current_timestamp();
-    send_event(OutgoingMessage::PttUp { ts, key: binding });
+pub fn get_engine() -> &'static dyn PttEngine {
+    static ENGINE: MacosEngine = MacosEngine;
+    &ENGINE
 }
 
 fn get_ptt_state() -> PttState {
@@ -155,7 +248,8 @@ extern "C" fn event_callback(
 
     let primary_held = PRIMARY_KEY_HELD.load(Ordering::SeqCst);
     let current_ptt_state = get_ptt_state();
-    let binding = get_binding();
+    let engine = get_engine();
+    let binding = engine.get_binding();
     let ts = current_timestamp();
 
     if recording {
@@ -223,85 +317,6 @@ extern "C" fn event_callback(
     event
 }
 
-pub fn check_accessibility_permission() -> bool {
-    use core_foundation::base::TCFType;
-    use core_foundation::boolean::CFBoolean;
-    use core_foundation::dictionary::CFDictionary;
-    use core_foundation::string::CFString;
-
-    // SAFETY: Interacting with macOS ApplicationServices to check/request accessibility logs.
-    #[allow(unsafe_code)]
-    unsafe {
-        // The actual key string for kAXTrustedCheckOptionPrompt
-        let key = CFString::from_static_string("AXTrustedCheckOptionPrompt");
-        let value = CFBoolean::true_value();
-        let options = CFDictionary::from_CFType_pairs(&[(key.as_CFType(), value.as_CFType())]);
-        AXIsProcessTrustedWithOptions(options.as_concrete_TypeRef()) != 0
-    }
-}
-
-pub fn start_engine(sender: Sender<OutgoingMessage>, shutdown: &Arc<AtomicBool>) -> Result<()> {
-    EVENT_SENDER
-        .set(sender)
-        .map_err(|_| anyhow!("Event sender already initialized"))?;
-
-    // We also want to listen for flags changed to update modifiers if needed,
-    let event_mask: u64 =
-        (1 << K_CG_EVENT_KEY_DOWN) | (1 << K_CG_EVENT_KEY_UP) | (1 << K_CG_EVENT_FLAGS_CHANGED);
-
-    // SAFETY: CGEventTapCreate is safe when we provide a valid callback and handle NULL return
-    #[allow(unsafe_code)]
-    let tap: CFMachPortRef = unsafe {
-        CGEventTapCreate(
-            CGEventTapLocation::AnnotatedSession as u32,
-            CGEventTapPlacement::HeadInsertEventTap as u32,
-            CGEventTapOptions::ListenOnly as u32,
-            event_mask,
-            event_callback,
-            ptr::null_mut(),
-        )
-    };
-
-    if tap.is_null() {
-        return Err(anyhow!(
-            "Failed to create event tap. Accessibility permission may be missing. \
-             Grant permission in System Settings → Privacy & Security → Accessibility."
-        ));
-    }
-
-    // SAFETY: CFMachPortCreateRunLoopSource requires a valid CFMachPort
-    #[allow(unsafe_code)]
-    let source: CFRunLoopSourceRef = unsafe { CFMachPortCreateRunLoopSource(ptr::null(), tap, 0) };
-
-    if source.is_null() {
-        return Err(anyhow!("Failed to create run loop source"));
-    }
-
-    let run_loop = CFRunLoop::get_current();
-
-    // SAFETY: Adding a valid source to the run loop with a valid extern static
-    #[allow(unsafe_code)]
-    unsafe {
-        CFRunLoopAddSource(
-            run_loop.as_concrete_TypeRef(),
-            source,
-            kCFRunLoopCommonModes,
-        );
-    }
-
-    info!("Event tap started, listening for PTT key events");
-
-    while !shutdown.load(Ordering::SeqCst) {
-        // SAFETY: kCFRunLoopDefaultMode is a valid extern static
-        #[allow(unsafe_code)]
-        let mode = unsafe { core_foundation::runloop::kCFRunLoopDefaultMode };
-        CFRunLoop::run_in_mode(mode, Duration::from_millis(100), false);
-    }
-
-    info!("Event tap stopped");
-    Ok(())
-}
-
 fn get_modifiers_from_flags(flags: u64) -> Vec<String> {
     let mut mods = Vec::new();
 
@@ -327,21 +342,23 @@ mod tests {
 
     #[test]
     fn test_binding_storage() {
+        let engine = MacosEngine;
         let binding = KeyBinding {
             code: 123,
             modifiers: vec!["cmd".to_string()],
         };
-        set_binding(binding.clone());
-        let stored = get_binding();
+        engine.set_binding(binding.clone());
+        let stored = engine.get_binding();
         assert_eq!(stored.code, 123);
         assert_eq!(stored.modifiers, vec!["cmd".to_string()]);
     }
 
     #[test]
     fn test_recording_toggle() {
-        set_recording(true);
+        let engine = MacosEngine;
+        engine.set_recording(true);
         assert!(IS_RECORDING.load(Ordering::SeqCst));
-        set_recording(false);
+        engine.set_recording(false);
         assert!(!IS_RECORDING.load(Ordering::SeqCst));
     }
 }

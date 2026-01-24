@@ -73,7 +73,6 @@ fn handle_ptt_events(
         while let Ok(msg) = event_rx.recv() {
             let _ = app_handle.emit("ptt-event", &msg);
 
-            // Update Tray Icon efficiently
             if let Some(tray) = app_handle.tray_by_id(TRAY_ID) {
                 match &msg {
                     state::OutgoingMessage::PttDown { is_repeat, .. } => {
@@ -105,7 +104,7 @@ fn handle_ptt_events(
     });
 }
 
-/// Starts the Discuss PTT Agent application.
+/// Entry ponit 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     setup_logging();
