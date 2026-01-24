@@ -62,10 +62,20 @@ async fn handle_connection(
     tx: broadcast::Sender<Vec<u8>>,
     app_handle: tauri::AppHandle,
 ) {
-    let ws_stream = match tokio_tungstenite::accept_async(stream).await {
+    let callback =
+        |request: &tokio_tungstenite::tungstenite::handshake::server::Request,
+         response: tokio_tungstenite::tungstenite::handshake::server::Response| {
+            info!("Received handshake request from: {:?}", addr);
+            for (name, value) in request.headers() {
+                info!("Header: {:?}: {:?}", name, value);
+            }
+            Ok(response)
+        };
+
+    let ws_stream = match tokio_tungstenite::accept_hdr_async(stream, callback).await {
         Ok(s) => s,
         Err(e) => {
-            error!("Error during websocket handshake: {}", e);
+            error!("Error during websocket handshake from {}: {}", addr, e);
             return;
         }
     };

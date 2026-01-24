@@ -33,6 +33,11 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 });
 
 chrome.action.onClicked.addListener(function () {
+    const isFirefox = /Firefox/i.test(navigator.userAgent);
+    if (isFirefox) {
+        // Firefox doesn't simplify linking to extension shortcuts yet
+        return;
+    }
     chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
 });
 

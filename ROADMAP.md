@@ -9,6 +9,10 @@ top menu icon.
 
 closing the app from the red button should also remove the app from the dock (but not the process, which is already implemented).
 
+### Support for Linux
+
+Make a linux compilation target.
+
 ### Ability to control mute/deaf/... state
 
 This requires an improved Odoo side API to control the state of the user in the call,

@@ -3,13 +3,21 @@
     "name": "Discuss PTT Agent Extension",
     "description": "Desktop Agent integration for Odoo Discuss Push-to-Talk",
     "version": "1.1.0",
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "discuss-companion@odoo.com",
+            "strict_min_version": "109.0"
+        }
+    },
     "permissions": [
         "storage",
         "alarms"
     ],
     "action": {},
     "background": {
-        "service_worker": "background.js",
+        "scripts": [
+            "background.js"
+        ],
         "type": "module"
     },
     "icons": {

@@ -14,7 +14,7 @@ The repository contains 2 parts:
     -   Captures global key events using macOS Core Graphics APIs and runs a WebSocket server.
     -   front-end built with [Owl v3](https://github.com/odoo/owl).
     -   back-end built with [Rust](https://www.rust-lang.org/).
-2.  **The Chrome Extension**:
+2.  **The Extension (Chrome & Firefox)**:
     -   Connects to the desktop agent via WebSockets and relays PTT signals to the Odoo web page.
 
 The communication between the App and the Extension uses [FlatBuffers](https://google.github.io/flatbuffers/), The schema is defined in `protocol.fbs`. These messages are sent through websocket.
@@ -30,7 +30,7 @@ The communication between the App and the Extension uses [FlatBuffers](https://g
 -  **flatbuffers**: Required for the `flatbuffers` code generation (if you need to change the protocol).
 -  **Node.js**: Version 18+ and `npm`
 #### Main:
--  **Google Chrome**: Required for the extension.
+-  **Browser**: Google Chrome or Mozilla Firefox required for the extension.
 -  **macOS**: Required for the `CoreGraphics` event tapping.
 
 
@@ -56,16 +56,22 @@ To link the app with Odoo:
 
 1.  **Build the Extension**:
     ```bash
+    # Build for both Chrome and Firefox
     npm run build:extension
     ```
-    This will generate the `extension/dist` folder.
+    This will generate `extension/dist/chrome` and `extension/dist/firefox`.
 
-2.  **Load in Chrome**:
-    1.  Open Chrome and navigate to `chrome://extensions/`.
-    2.  Enable **Developer mode** (top right).
-    3.  Click **Load unpacked**.
-    4.  Select the `extension/dist` folder inside this project (it contains the bundled extension).
-    5.  Refresh your Odoo tab.
+2.  **Load in Browser**:
+    -   **Chrome**:
+        1.  Navigate to `chrome://extensions/`.
+        2.  Enable **Developer mode**.
+        3.  Click **Load unpacked** and select `extension/dist/chrome`.
+    -   **Firefox**:
+        1.  Navigate to `about:debugging`.
+        2.  Click **This Firefox**.
+        3.  Click **Load Temporary Add-on...** and select `extension/dist/firefox/manifest.json`.
+
+    Refresh your Odoo tab after loading.
 
 ---
 
