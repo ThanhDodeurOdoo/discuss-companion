@@ -74,4 +74,4 @@ npm run build:app # for deployment
 
 Before submitting a Pull Request, ensure all tests pass locally:
 
-`npm run test` will run all test suites (frontend, backend, extension)
+`npm run full-check` will run all linting and test suites (frontend, backend, extension)
