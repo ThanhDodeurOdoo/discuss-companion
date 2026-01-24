@@ -28,6 +28,9 @@ jobs:
       - name: Run frontend lint
         run: npm run lint
 
+      - name: Run frontend tests
+        run: npm test
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:

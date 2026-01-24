@@ -19,7 +19,14 @@ module.exports = {
     plugins: ["@typescript-eslint"],
     overrides: [
         {
-            files: [".eslintrc.cjs", "vite.config.ts", "extension/**/*.js"],
+            files: [
+                ".eslintrc.cjs",
+                "vite.config.ts",
+                "extension/**/*.js",
+                "jest.config.js",
+                "jest.setup.js",
+                "jest.xmlTransformer.js"
+            ],
             parserOptions: {
                 project: null
             }
