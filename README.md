@@ -1,9 +1,7 @@
 # Discuss Companion for macOS
 
-[![Frontend Lint](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/frontend-lint.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/frontend-lint.yml)
-[![Frontend Tests](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/frontend-tests.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/frontend-tests.yml)
-[![Rust Lint](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/rust-lint.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/rust-lint.yml)
-[![Rust Tests](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/rust-tests.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/rust-tests.yml)
+[![UI Status](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml)
+[![Systems Status](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/systems.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/systems.yml)
 
 The Discuss Companion is a macOS companion app for Odoo Discuss. It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus.
 
@@ -73,11 +71,9 @@ npm run tauri build
 The output will be generated in `src-tauri/target/release/bundle/`.
 
 ### Continuous Integration
-The project includes several GitHub Actions that automatically run on every push and pull request to `main` and `master`:
-- **Frontend Lint**: Lints the TypeScript frontend using ESLint.
-- **Frontend Tests**: Runs frontend unit tests using Jest.
-- **Rust Lint**: Checks code formatting and runs Clippy on the Rust backend.
-- **Rust Tests**: Runs Rust unit tests.
+The project includes two main GitHub Actions suites that run on every push and pull request to `main` and `master`:
+- **UI**: Handles frontend linting (ESLint) and testing (Jest). Tests only run if linting passes.
+- **Systems**: Handles backend (Rust) linting (fmt, clippy) and testing. Tests only run if linting passes.
 
 ---
 
