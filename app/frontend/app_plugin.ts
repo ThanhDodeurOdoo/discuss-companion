@@ -25,6 +25,8 @@ type PttBinding = {
     modifiers: string[];
 };
 
+const MAX_LOGS = 20;
+
 export class AppPlugin extends Plugin {
     static id = "AppPlugin";
 
@@ -181,7 +183,7 @@ export class AppPlugin extends Plugin {
             message
         });
 
-        if (this.logs().length > 10) {
+        if (this.logs().length > MAX_LOGS) {
             this.logs().pop();
         }
     }

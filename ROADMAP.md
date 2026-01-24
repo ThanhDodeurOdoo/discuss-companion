@@ -22,3 +22,15 @@ Would be nice to have a github action that automatically generates the app and e
 
 This requires an improved Odoo side API to control the state of the user in the call,
 unless we can send arbitrary code to the browser but that's sketchy.
+
+## Nice-to-have
+
+### Show partial key press
+
+purely cosmetic,
+For example when shortcut is CMD+SHIFT+K, when the user presses CMD, it would highlight CMD, then when the user presses SHIFT, it would highlight SHIFT, and finally when the user presses K, it would highlight K ( and do the usual press down animation)
+
+### A pause button?
+
+When paused, the app would not listen for any key press
+(send keyup on pause to make sure not to pause in down pos)

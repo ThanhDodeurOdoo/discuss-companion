@@ -186,6 +186,7 @@ main {
     position: fixed;
     bottom: 10px;
     left: 10px;
+    right: 10px;
     z-index: 100;
     display: flex;
     gap: 12px;
@@ -218,6 +219,22 @@ main {
     padding: 4px 8px;
     border-radius: 4px;
     transition: all 0.2s ease;
+}
+
+.text-btn.source-btn {
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    margin-left: auto;
+}
+
+.text-btn.source-btn:hover {
+    color: var(--accent-color);
+    border-color: rgba(47, 129, 247, 0.4);
+    background: rgba(47, 129, 247, 0.1);
+}
+
+.text-btn.source-btn:active {
+    transform: scale(0.95);
 }
 
 .text-btn.safety-btn:hover {
@@ -261,6 +278,18 @@ main {
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.clear-btn:hover {
+    color: var(--accent-color);
+    border-color: rgba(47, 129, 247, 0.5);
+    background: rgba(47, 129, 247, 0.1);
+}
+
+.clear-btn:active {
+    transform: scale(0.96);
+    filter: brightness(0.98);
 }
 
 .logs-container {

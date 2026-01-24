@@ -50,6 +50,9 @@
                     <input type="checkbox" id="show-symbols" t-att-checked="this.app.showSymbols()" t-on-change="(ev) => this.app.showSymbols.set(ev.target.checked)"/>
                     <label for="show-symbols">Show Symbols</label>
                 </div>
+                <a class="text-btn source-btn" href="https://github.com/ThanhDodeurOdoo/discuss-companion" target="_blank" rel="noreferrer">
+                    source
+                </a>
             </div>
         </main>
     </t>
