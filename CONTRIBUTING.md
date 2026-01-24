@@ -70,8 +70,29 @@ npm run build:app # for deployment
 ```
 
 
-## Testing
+## Verification
 
-Before submitting a Pull Request, ensure all tests pass locally:
+Before submitting a Pull Request, ensure all lints and tests pass locally:
 
-`npm run verify` will run all linting and test suites (frontend, backend, extension)
+you can run them individually:
+
+```bash
+npm run lint:extension
+npm run lint:frontend
+npm run lint:backend
+npm run test:extension
+npm run test:frontend
+npm run test:backend
+```
+by group:
+
+```bash
+npm run lint # all 3 lints
+npm run test # all 3 tests suites
+```
+
+or all at the same time:
+
+```bash
+npm run verify
+```
