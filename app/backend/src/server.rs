@@ -16,11 +16,11 @@ pub fn is_connected() -> bool {
     CONNECTION_COUNT.load(Ordering::SeqCst) > 0
 }
 
-pub async fn start_ws_server(
+pub async fn start_ws_server<R: tauri::Runtime>(
     port: u16,
     tx: broadcast::Sender<Vec<u8>>,
     mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
-    app_handle: tauri::AppHandle,
+    app_handle: tauri::AppHandle<R>,
 ) {
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = match TcpListener::bind(&addr).await {
@@ -56,11 +56,11 @@ pub async fn start_ws_server(
     }
 }
 
-async fn handle_connection(
+async fn handle_connection<R: tauri::Runtime>(
     stream: TcpStream,
     addr: SocketAddr,
     tx: broadcast::Sender<Vec<u8>>,
-    app_handle: tauri::AppHandle,
+    app_handle: tauri::AppHandle<R>,
 ) {
     let callback =
         |request: &tokio_tungstenite::tungstenite::handshake::server::Request,
@@ -151,5 +151,85 @@ async fn handle_connection(
                 }
             }
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tauri::test::{mock_builder, mock_context, noop_assets};
+
+    #[tokio::test]
+    async fn test_is_connected_initial() {
+        assert!(!is_connected());
+    }
+
+    #[tokio::test]
+    async fn test_handshake_and_connection_count() {
+        let (tx, _) = broadcast::channel(10);
+        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let app_handle = app.handle().clone();
+
+        // Use a random port
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let port = addr.port();
+        drop(listener); // Close it so start_ws_server can bind it
+
+        tokio::spawn(async move {
+            start_ws_server(port, tx, shutdown_rx, app_handle).await;
+        });
+
+        // Wait for server to start
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        // Perform handshake
+        let stream = TcpStream::connect(addr).await.expect("Failed to connect");
+        let (mut ws_stream, _) =
+            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream)
+                .await
+                .expect("Failed to handshake");
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        assert!(is_connected());
+
+        // Construct a Ping flatbuffer
+        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
+            Message as FBMessage, MessageArgs, MessageBody, Ping, PingArgs,
+        };
+        let mut builder = flatbuffers::FlatBufferBuilder::new();
+        let ping_offset = Ping::create(&mut builder, &PingArgs {});
+        let msg_offset = FBMessage::create(
+            &mut builder,
+            &MessageArgs {
+                body_type: MessageBody::Ping,
+                body: Some(ping_offset.as_union_value()),
+            },
+        );
+        builder.finish(msg_offset, None);
+        let ping_bin = builder.finished_data().to_vec();
+
+        ws_stream
+            .send(tokio_tungstenite::tungstenite::Message::Binary(
+                ping_bin.into(),
+            ))
+            .await
+            .unwrap();
+
+        // Wait for response
+        let resp = ws_stream.next().await.unwrap().unwrap();
+        if let tokio_tungstenite::tungstenite::Message::Binary(bin) = resp {
+            let message = protocol::root_as_message(&bin).unwrap();
+            assert_eq!(message.body_type(), protocol::MessageBody::Pong);
+        } else {
+            panic!("Expected binary message (Pong)");
+        }
+
+        // Close connection
+        drop(ws_stream);
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        assert!(!is_connected());
+
+        let _ = shutdown_tx.send(());
     }
 }
