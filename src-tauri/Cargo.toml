@@ -1,0 +1,62 @@
+[package]
+name = "discuss-companion"
+version = "0.1.0"
+description = "Odoo Discuss Push-to-Talk Agent"
+authors = ["Odoo"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "discuss_agent_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+tauri-plugin-store = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+crossbeam-channel = "0.5"
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.26"
+futures-util = "0.3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-graphics = "0.24"
+core-foundation = "0.10"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy] # https://rust-lang.github.io/rust-clippy/
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+unwrap_used = { level = "deny", priority = -1 }
+expect_used = { level = "deny", priority = -1 }
+panic = { level = "deny", priority = -1 }
+
+pedantic = "warn"
+perf = "warn"
+complexity = "warn"
+style = "warn"
+
+# nursery as of rust 1.92 https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html?groups=nursery
+needless_pass_by_ref_mut = "warn"
+redundant_clone = "warn"
+nonstandard_macro_braces = "warn"
+option_if_let_else = "warn"
+single_option_map = "warn"
+type_repetition_in_bounds = "warn"
+uninhabited_references = "warn"
+unnecessary_struct_initialization = "warn"
+use_self = "warn"

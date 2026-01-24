@@ -1,0 +1,35 @@
+{
+    "manifest_version": 3,
+    "name": "Discuss PTT Agent Extension",
+    "description": "Desktop Agent integration for Odoo Discuss Push-to-Talk",
+    "version": "1.1.0",
+    "permissions": [
+        "storage",
+        "alarms"
+    ],
+    "action": {},
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "icons": {
+        "128": "assets/icons/inactive_icon.png"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://*/*",
+                "http://*/*"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "run_at": "document_start"
+        }
+    ],
+    "externally_connectable": {
+        "matches": [
+            "<all_urls>"
+        ]
+    }
+}
