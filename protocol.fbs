@@ -1,8 +1,10 @@
 namespace Discuss.Flatbuffers;
 
+enum Modifier : ubyte { Shift, Control, Alt, Meta }
+
 table KeyBinding {
   code: ushort;
-  modifiers: [string];
+  modifiers: [Modifier];
 }
 
 table PttDown {

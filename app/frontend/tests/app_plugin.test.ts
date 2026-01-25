@@ -29,7 +29,7 @@ describe("AppPlugin", () => {
         expect(plugin.formatKeyBinding(49)).toBe("Space");
         expect(plugin.formatKeyBinding(56)).toBe("Shift");
         expect(plugin.formatKeyBinding(999)).toBe("Key 999");
-        expect(plugin.formatKeyBinding(49, ["shift", "meta"])).toBe("Cmd+Shift+Space");
+        expect(plugin.formatKeyBinding(49, [0, 3])).toBe("Cmd+Shift+Space");
     });
 
     test("addLog adds log entries and limits to 20", () => {

@@ -2,7 +2,7 @@
 // The CGEventTap API is inherently unsafe as it involves C callbacks and raw pointers.
 
 use crate::platform::PttEngine;
-use crate::state::{current_timestamp, KeyBinding, OutgoingMessage, PttState};
+use crate::state::{current_timestamp, KeyBinding, Modifier, OutgoingMessage, PttState};
 use anyhow::{anyhow, Result};
 use core_foundation::base::TCFType;
 use core_foundation::mach_port::CFMachPortRef;
@@ -317,20 +317,20 @@ extern "C" fn event_callback(
     event
 }
 
-fn get_modifiers_from_flags(flags: u64) -> Vec<String> {
+fn get_modifiers_from_flags(flags: u64) -> Vec<Modifier> {
     let mut mods = Vec::new();
 
     if (flags & K_CG_EVENT_FLAG_MASK_SHIFT) != 0 {
-        mods.push("shift".to_string());
+        mods.push(Modifier::Shift);
     }
     if (flags & K_CG_EVENT_FLAG_MASK_CONTROL) != 0 {
-        mods.push("ctrl".to_string());
+        mods.push(Modifier::Control);
     }
     if (flags & K_CG_EVENT_FLAG_MASK_ALTERNATE) != 0 {
-        mods.push("alt".to_string());
+        mods.push(Modifier::Alt);
     }
     if (flags & K_CG_EVENT_FLAG_MASK_COMMAND) != 0 {
-        mods.push("meta".to_string());
+        mods.push(Modifier::Meta);
     }
 
     mods
@@ -345,12 +345,12 @@ mod tests {
         let engine = MacosEngine;
         let binding = KeyBinding {
             code: 123,
-            modifiers: vec!["cmd".to_string()],
+            modifiers: vec![Modifier::Meta],
         };
         engine.set_binding(binding.clone());
         let stored = engine.get_binding();
         assert_eq!(stored.code, 123);
-        assert_eq!(stored.modifiers, vec!["cmd".to_string()]);
+        assert_eq!(stored.modifiers, vec![Modifier::Meta]);
     }
 
     #[test]
@@ -367,13 +367,13 @@ mod tests {
         let flags = K_CG_EVENT_FLAG_MASK_SHIFT | K_CG_EVENT_FLAG_MASK_COMMAND;
         let mods = get_modifiers_from_flags(flags);
         assert_eq!(mods.len(), 2);
-        assert!(mods.contains(&"shift".to_string()));
-        assert!(mods.contains(&"meta".to_string()));
+        assert!(mods.contains(&Modifier::Shift));
+        assert!(mods.contains(&Modifier::Meta));
 
         let flags = K_CG_EVENT_FLAG_MASK_CONTROL | K_CG_EVENT_FLAG_MASK_ALTERNATE;
         let mods = get_modifiers_from_flags(flags);
         assert_eq!(mods.len(), 2);
-        assert!(mods.contains(&"ctrl".to_string()));
-        assert!(mods.contains(&"alt".to_string()));
+        assert!(mods.contains(&Modifier::Control));
+        assert!(mods.contains(&Modifier::Alt));
     }
 }

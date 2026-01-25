@@ -8,7 +8,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tracing::{error, info};
 
 use crate::flatbuffers::protocol_generated::discuss::flatbuffers as protocol;
-use crate::state::{current_timestamp, IncomingMessage, KeyBinding, OutgoingMessage};
+use crate::state::{current_timestamp, IncomingMessage, KeyBinding, Modifier, OutgoingMessage};
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
@@ -122,7 +122,7 @@ async fn handle_connection<R: tauri::Runtime>(
                                     protocol::MessageBody::SetBinding => {
                                         if let Some(binding_table) = message.body_as_set_binding() {
                                             if let Some(key) = binding_table.binding() {
-                                                let modifiers: Vec<String> = key.modifiers().map(|m| m.iter().map(ToString::to_string).collect()).unwrap_or_default();
+                                                let modifiers: Vec<Modifier> = key.modifiers().map(|m| m.iter().map(Modifier::from).collect()).unwrap_or_default();
                                                 let binding = KeyBinding {
                                                     code: key.code(),
                                                     modifiers,
@@ -307,13 +307,13 @@ mod tests {
                 .await
                 .unwrap();
 
-        // Construct SetBinding flatbuffer
         use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
             KeyBindingArgs, Message as FBMessage, MessageArgs, MessageBody, SetBinding,
             SetBindingArgs,
         };
         let mut builder = flatbuffers::FlatBufferBuilder::new();
-        let mods = vec![builder.create_string("shift")];
+        let mods =
+            vec![crate::flatbuffers::protocol_generated::discuss::flatbuffers::Modifier::Shift];
         let mods_vec = builder.create_vector(&mods);
         let key_binding =
             crate::flatbuffers::protocol_generated::discuss::flatbuffers::KeyBinding::create(
@@ -353,7 +353,7 @@ mod tests {
         );
         let payload = event_payload.as_ref().unwrap();
         assert!(payload.contains("\"code\":42"));
-        assert!(payload.contains("\"modifiers\":[\"shift\"]"));
+        assert!(payload.contains("\"modifiers\":[0]"));
 
         let _ = shutdown_tx.send(());
     }

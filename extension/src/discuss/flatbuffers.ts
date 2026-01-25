@@ -8,6 +8,7 @@ export { GetBinding } from './flatbuffers/get-binding.js';
 export { KeyBinding } from './flatbuffers/key-binding.js';
 export { Message } from './flatbuffers/message.js';
 export { MessageBody } from './flatbuffers/message-body.js';
+export { Modifier } from './flatbuffers/modifier.js';
 export { Ping } from './flatbuffers/ping.js';
 export { Pong } from './flatbuffers/pong.js';
 export { PttDown } from './flatbuffers/ptt-down.js';

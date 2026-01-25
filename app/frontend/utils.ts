@@ -70,6 +70,13 @@ export const MODIFIER_SYMBOLS: Record<string, string> = {
     shift: "⇧"
 };
 
+export const MODIFIER_NAMES: Record<number, string> = {
+    0: "shift",
+    1: "ctrl",
+    2: "alt",
+    3: "meta"
+};
+
 export const KEY_SYMBOL_MAP: Record<number, string> = {
     36: "⏎", // Enter
     48: "⇥", // Tab

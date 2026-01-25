@@ -1,12 +1,72 @@
 use crate::flatbuffers::protocol_generated::discuss::flatbuffers as protocol;
 use flatbuffers::FlatBufferBuilder;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::time::SystemTime;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum Modifier {
+    Shift = 0,
+    Control = 1,
+    Alt = 2,
+    Meta = 3,
+}
+
+impl Serialize for Modifier {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_u8(*self as u8)
+    }
+}
+
+impl<'de> Deserialize<'de> for Modifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let v = u8::deserialize(deserializer)?;
+        match v {
+            0 => Ok(Self::Shift),
+            1 => Ok(Self::Control),
+            2 => Ok(Self::Alt),
+            3 => Ok(Self::Meta),
+            _ => Err(serde::de::Error::custom(format!(
+                "Invalid modifier value: {v}"
+            ))),
+        }
+    }
+}
+
+impl From<Modifier> for protocol::Modifier {
+    fn from(m: Modifier) -> Self {
+        match m {
+            Modifier::Shift => Self::Shift,
+            Modifier::Control => Self::Control,
+            Modifier::Alt => Self::Alt,
+            Modifier::Meta => Self::Meta,
+        }
+    }
+}
+
+impl From<protocol::Modifier> for Modifier {
+    #[allow(clippy::match_same_arms)]
+    fn from(m: protocol::Modifier) -> Self {
+        match m {
+            protocol::Modifier::Shift => Self::Shift,
+            protocol::Modifier::Control => Self::Control,
+            protocol::Modifier::Alt => Self::Alt,
+            protocol::Modifier::Meta => Self::Meta,
+            _ => Self::Shift, // Fallback, though shouldn't happen with valid data
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct KeyBinding {
     pub code: u16,
-    pub modifiers: Vec<String>,
+    pub modifiers: Vec<Modifier>,
 }
 
 impl Default for KeyBinding {
@@ -69,11 +129,8 @@ impl OutgoingMessage {
         let mut builder = FlatBufferBuilder::new();
         let message_offset = match self {
             OutgoingMessage::PttDown { ts, key, is_repeat } => {
-                let modifiers: Vec<_> = key
-                    .modifiers
-                    .iter()
-                    .map(|m| builder.create_string(m))
-                    .collect();
+                let modifiers: Vec<protocol::Modifier> =
+                    key.modifiers.iter().map(|&m| m.into()).collect();
                 let modifiers_offset = builder.create_vector(&modifiers);
                 let key_offset = protocol::KeyBinding::create(
                     &mut builder,
@@ -99,11 +156,8 @@ impl OutgoingMessage {
                 )
             }
             OutgoingMessage::PttUp { ts, key } => {
-                let modifiers: Vec<_> = key
-                    .modifiers
-                    .iter()
-                    .map(|m| builder.create_string(m))
-                    .collect();
+                let modifiers: Vec<protocol::Modifier> =
+                    key.modifiers.iter().map(|&m| m.into()).collect();
                 let modifiers_offset = builder.create_vector(&modifiers);
                 let key_offset = protocol::KeyBinding::create(
                     &mut builder,
@@ -164,11 +218,8 @@ impl OutgoingMessage {
                 )
             }
             OutgoingMessage::BindingInfo { ts, binding } => {
-                let modifiers: Vec<_> = binding
-                    .modifiers
-                    .iter()
-                    .map(|m| builder.create_string(m))
-                    .collect();
+                let modifiers: Vec<protocol::Modifier> =
+                    binding.modifiers.iter().map(|&m| m.into()).collect();
                 let modifiers_offset = builder.create_vector(&modifiers);
                 let key_offset = protocol::KeyBinding::create(
                     &mut builder,
@@ -247,7 +298,7 @@ mod tests {
             ts: 123456789,
             key: KeyBinding {
                 code: 1,
-                modifiers: vec!["shift".to_string()],
+                modifiers: vec![Modifier::Shift],
             },
             is_repeat: true,
         };
@@ -261,7 +312,7 @@ mod tests {
         assert_eq!(key.code(), 1);
         let mods = key.modifiers().expect("Modifiers present");
         assert_eq!(mods.len(), 1);
-        assert_eq!(mods.get(0), "shift");
+        assert_eq!(mods.get(0), protocol::Modifier::Shift);
     }
 
     #[test]
@@ -299,7 +350,7 @@ mod tests {
             ts: 222,
             binding: KeyBinding {
                 code: 56,
-                modifiers: vec!["ctrl".to_string(), "alt".to_string()],
+                modifiers: vec![Modifier::Control, Modifier::Alt],
             },
         };
         let bin = msg.to_flatbuffer();

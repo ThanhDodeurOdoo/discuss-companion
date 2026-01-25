@@ -4,6 +4,9 @@
 
 import * as flatbuffers from 'flatbuffers';
 
+import { Modifier } from '../../discuss/flatbuffers/modifier.js';
+
+
 export class KeyBinding {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
@@ -27,16 +30,19 @@ code():number {
   return offset ? this.bb!.readUint16(this.bb_pos + offset) : 0;
 }
 
-modifiers(index: number):string
-modifiers(index: number,optionalEncoding:flatbuffers.Encoding):string|Uint8Array
-modifiers(index: number,optionalEncoding?:any):string|Uint8Array|null {
+modifiers(index: number):Modifier|null {
   const offset = this.bb!.__offset(this.bb_pos, 6);
-  return offset ? this.bb!.__string(this.bb!.__vector(this.bb_pos + offset) + index * 4, optionalEncoding) : null;
+  return offset ? this.bb!.readUint8(this.bb!.__vector(this.bb_pos + offset) + index) : null;
 }
 
 modifiersLength():number {
   const offset = this.bb!.__offset(this.bb_pos, 6);
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
+modifiersArray():Uint8Array|null {
+  const offset = this.bb!.__offset(this.bb_pos, 6);
+  return offset ? new Uint8Array(this.bb!.bytes().buffer, this.bb!.bytes().byteOffset + this.bb!.__vector(this.bb_pos + offset), this.bb!.__vector_len(this.bb_pos + offset)) : null;
 }
 
 static startKeyBinding(builder:flatbuffers.Builder) {
@@ -51,16 +57,16 @@ static addModifiers(builder:flatbuffers.Builder, modifiersOffset:flatbuffers.Off
   builder.addFieldOffset(1, modifiersOffset, 0);
 }
 
-static createModifiersVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
-  builder.startVector(4, data.length, 4);
+static createModifiersVector(builder:flatbuffers.Builder, data:Modifier[]):flatbuffers.Offset {
+  builder.startVector(1, data.length, 1);
   for (let i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]!);
+    builder.addInt8(data[i]!);
   }
   return builder.endVector();
 }
 
 static startModifiersVector(builder:flatbuffers.Builder, numElems:number) {
-  builder.startVector(4, numElems, 4);
+  builder.startVector(1, numElems, 1);
 }
 
 static endKeyBinding(builder:flatbuffers.Builder):flatbuffers.Offset {

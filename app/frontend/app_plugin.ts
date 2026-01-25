@@ -1,7 +1,8 @@
+// SAFETY: requires unsafe code for macOS Core Graphics FFI calls.
 import { Plugin, signal, onWillDestroy } from "@odoo/owl";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { KEY_MAP, KEY_SYMBOL_MAP, MODIFIER_SYMBOLS } from "./utils";
+import { KEY_MAP, KEY_SYMBOL_MAP, MODIFIER_SYMBOLS, MODIFIER_NAMES } from "./utils";
 
 type LogEntry = {
     id: number;
@@ -15,14 +16,14 @@ type PttEvent = {
     ts: number;
     key: {
         code: number;
-        modifiers: string[];
+        modifiers: number[];
     };
     is_repeat?: boolean;
 };
 
 type PttBinding = {
     code: number;
-    modifiers: string[];
+    modifiers: number[];
 };
 
 const MAX_LOGS = 20;
@@ -245,11 +246,12 @@ export class AppPlugin extends Plugin {
         this.logs.set([]);
     }
 
-    formatKeyBinding(code: number, modifiers: string[] = []): string {
+    formatKeyBinding(code: number, modifiers: number[] = []): string {
         const keyName = KEY_MAP[code] || `Key ${code}`;
         const formattedModifiers = modifiers
             .map((m) => {
-                switch (m) {
+                const name = MODIFIER_NAMES[m] || "";
+                switch (name) {
                     case "meta":
                         return "Cmd";
                     case "alt":
@@ -259,9 +261,10 @@ export class AppPlugin extends Plugin {
                     case "shift":
                         return "Shift";
                     default:
-                        return m;
+                        return name;
                 }
             })
+            .filter((s) => s !== "")
             .sort((a, b) => (MODIFIER_ORDER[a] ?? 99) - (MODIFIER_ORDER[b] ?? 99));
 
         if (formattedModifiers.length > 0) {
@@ -270,13 +273,18 @@ export class AppPlugin extends Plugin {
         return keyName;
     }
 
-    formatKeySymbol(code: number, modifiers: string[] = []): string {
+    formatKeySymbol(code: number, modifiers: number[] = []): string {
         const keySymbol = KEY_SYMBOL_MAP[code] || KEY_MAP[code] || "";
-        const formattedModifiers = modifiers
-            .map((m) => MODIFIER_SYMBOLS[m] || "")
-            .filter((s) => s !== "")
+
+        const sortedModifierNames = modifiers
+            .map((m) => MODIFIER_NAMES[m] || "")
+            .filter((name) => name !== "")
             .sort((a, b) => (MODIFIER_ORDER[a] ?? 99) - (MODIFIER_ORDER[b] ?? 99));
 
-        return `${formattedModifiers.join("")}${keySymbol}`;
+        const symbolString = sortedModifierNames
+            .map((name) => MODIFIER_SYMBOLS[name] || "")
+            .join("");
+
+        return `${symbolString}${keySymbol}`;
     }
 }
