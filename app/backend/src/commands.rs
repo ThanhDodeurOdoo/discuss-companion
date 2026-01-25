@@ -8,6 +8,9 @@ pub fn get_version() -> String {
 }
 
 #[tauri::command]
+/// JUSTIFICATION: `clippy::needless_pass_by_value`
+/// Tauri commands require owned values for dependency injection of the app handle
+/// and for deserialization of arguments.
 #[allow(clippy::needless_pass_by_value)]
 pub fn update_binding(app_handle: tauri::AppHandle, binding: KeyBinding) {
     set_binding(binding.clone());

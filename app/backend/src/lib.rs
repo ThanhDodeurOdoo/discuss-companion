@@ -1,9 +1,7 @@
 mod commands;
-mod messaging;
 mod platform;
 
 mod flatbuffers;
-#[allow(dead_code, unused_imports, clippy::all)]
 mod server;
 mod state;
 
