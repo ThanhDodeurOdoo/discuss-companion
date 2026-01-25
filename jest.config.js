@@ -6,7 +6,8 @@ export default {
         "^@odoo/owl$": "<rootDir>/vendor/owl/dist/owl.es.js",
         // Map .js imports to .ts for FlatBuffers generated code
         "^(\\.{1,2}/.*)\\.js$": "$1",
-        "(.+)\\?raw$": "$1"
+        "(.+)\\?raw$": "$1",
+        "\\.css$": "<rootDir>/app/frontend/tests/styleMock.js"
     },
     transform: {
         "^.+\\.tsx?$": [

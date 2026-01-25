@@ -1,0 +1,17 @@
+<templates xml:space="preserve">
+    <t t-name="discuss.Footer">
+        <div class="footer-controls">
+            <button class="text-btn safety-btn prevent-select" t-on-click="() => this.app.forceRelease()" title="Force stop microphone">
+                force release
+            </button>
+            <div class="toggle-container">
+                <input type="checkbox" id="show-symbols" t-att-checked="this.app.showSymbols()" t-on-change="(ev) => this.app.showSymbols.set(ev.target.checked)"/>
+                <label for="show-symbols" class="prevent-select">Show icons</label>
+            </div>
+
+            <a class="text-btn source-btn" href="https://github.com/ThanhDodeurOdoo/discuss-companion" target="_blank" rel="noreferrer">
+                source
+            </a>
+        </div>
+    </t>
+</templates>

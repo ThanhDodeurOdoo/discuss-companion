@@ -1,0 +1,67 @@
+.ptt-control {
+    background: var(--bg-color);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch; /* ensures button respects sidebar width */
+    gap: 20px;
+    min-width: 0;
+}
+
+.key-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.5rem;
+  color: var(--accent-color);
+  background: rgba(47, 129, 247, 0.1);
+  padding: 16px 24px;
+  border-radius: 12px;
+  border: 1px dashed var(--accent-color);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.key-text {
+    font-size: 2.5rem;
+    font-weight: 500;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+
+.key-display.recording {
+    border-style: solid;
+    background: rgba(248, 81, 73, 0.1);
+    border-color: var(--error);
+    color: var(--error);
+    animation: record-pulse 1.5s infinite;
+}
+
+@keyframes record-pulse {
+  0% { opacity: 1; box-shadow: 0 0 0px var(--error); }
+  50% { opacity: 0.7; box-shadow: 0 0 10px var(--error); }
+  100% { opacity: 1; box-shadow: 0 0 0px var(--error); }
+}
+
+.key-display.pressed {
+    transform: scale(0.95);
+    background: rgba(47, 129, 247, 0.25);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    transition: all 0.1s ease;
+}
+
+.key-display:hover {
+    cursor: pointer;
+    transform: scale(1.02);
+    transition: all 0.1s ease;
+}
+
+.key-display:active {
+    transform: scale(0.95);
+    background: rgba(222, 33, 20, 0.25);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    transition: all 0.1s ease;
+}
