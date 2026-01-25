@@ -56,9 +56,7 @@ pub fn force_ptt_up() {
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value)]
 pub fn get_ws_port(state: State<'_, WsState>) -> u16 {
-    // SAFETY: Mutex poisoning is fatal/unrecoverable in this context
-    #[allow(clippy::unwrap_used)]
-    *state.port.lock().unwrap()
+    state.port.load(std::sync::atomic::Ordering::SeqCst)
 }
 
 #[tauri::command]
@@ -72,10 +70,8 @@ pub fn update_ws_port(app_handle: tauri::AppHandle, port: u16, state: State<'_, 
         let _ = store.save();
     }
 
-    // SAFETY: Mutex poisoning is fatal/unrecoverable in this context
-    #[allow(clippy::unwrap_used)]
-    let mut port_guard = state.port.lock().unwrap();
-    if *port_guard == port {
+    let current_port = state.port.load(std::sync::atomic::Ordering::SeqCst);
+    if current_port == port {
         let _ = app_handle.emit(
             "ws-server-status",
             serde_json::json!({
@@ -86,7 +82,7 @@ pub fn update_ws_port(app_handle: tauri::AppHandle, port: u16, state: State<'_, 
         info!("WS server port unchanged, frontend notified.");
         return;
     }
-    *port_guard = port;
+    state.port.store(port, std::sync::atomic::Ordering::SeqCst);
 
     // Shutdown previous server
     // SAFETY: Mutex poisoning is fatal/unrecoverable in this context

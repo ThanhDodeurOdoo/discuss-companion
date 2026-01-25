@@ -8,12 +8,12 @@ export class ControlPage extends Component {
     app = plugin(AppPlugin);
 
     keyName = computed(() => {
-        const binding = this.app.currentBinding();
-        return this.app.formatKeyBinding(binding.code, binding.modifiers);
+        const { code, modifiers } = this.app.currentBinding();
+        return this.app.formatKeyBinding(code, modifiers);
     });
 
     keySymbol = computed(() => {
-        const binding = this.app.currentBinding();
-        return this.app.formatKeySymbol(binding.code, binding.modifiers);
+        const { code, modifiers } = this.app.currentBinding();
+        return this.app.formatKeySymbol(code, modifiers);
     });
 }

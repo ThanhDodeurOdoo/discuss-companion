@@ -5,7 +5,7 @@ mod flatbuffers;
 mod server;
 mod state;
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::image::Image;
@@ -24,7 +24,7 @@ const ICON_INACTIVE_OFFLINE: &[u8] =
     include_bytes!("../../../assets/icons/inactive_offline_icon.png");
 
 pub struct WsState {
-    pub port: Mutex<u16>,
+    pub port: AtomicU16,
     pub ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
     pub server_shutdown_tx: Mutex<tokio::sync::broadcast::Sender<()>>,
     pub conn_tx: crossbeam_channel::Sender<bool>,
@@ -97,8 +97,6 @@ impl PttHandler {
         }
 
         self.update_tray();
-
-        // Broadcast to WebSocket
         let bin = msg.to_flatbuffer();
         let _ = self.ws_tx.send(bin);
     }
@@ -188,12 +186,10 @@ pub fn run() {
                 }
             }
 
-            // Channel for connection state updates
             let (conn_tx, conn_rx) = crossbeam_channel::unbounded::<bool>();
 
-            // Manage WsState
             app.manage(WsState {
-                port: Mutex::new(port),
+                port: AtomicU16::new(port),
                 ws_tx: ws_tx_clone.clone(),
                 server_shutdown_tx: Mutex::new(ws_shutdown_tx_clone),
                 conn_tx: conn_tx.clone(),
