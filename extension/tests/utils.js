@@ -2,6 +2,8 @@ import { jest } from "@jest/globals";
 
 export const mockStorage = {};
 
+export const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 export function mockChrome(storageInitial = {}) {
     for (const key in mockStorage) {
         delete mockStorage[key];
