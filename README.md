@@ -71,7 +71,7 @@ To link the app with Odoo:
         2.  Enable **Developer mode**.
         3.  Click **Load unpacked** and select `extension/dist/chrome`.
     -   **Firefox**:
-        1.  Navigate to `about:debugging`.
+        1.  Navigate to `about:debugging#/runtime/this-firefox`.
         2.  Click **This Firefox**.
         3.  Click **Load Temporary Add-on...** and select `extension/dist/firefox/manifest.json`.
 
@@ -125,7 +125,7 @@ The WebSocket port (default: 49152) can be configured if needed (e.g. to avoid c
 
 ## Security & Privacy
 -   The "Event Tap" only listens for the specific key codes configured for PTT.
--   The WebSocket server runs on `localhost:49152` (configurable) and does not accept external connections.
+-   The WebSocket server runs on `localhost` (configurable) and does not accept external connections.
 
 ---
 

@@ -4,6 +4,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { KEY_MAP, KEY_SYMBOL_MAP, MODIFIER_SYMBOLS, MODIFIER_NAMES } from "./utils";
 
+const DEFAULT_PORT = 49152;
+
 type LogEntry = {
     id: number;
     ts: string;
@@ -42,7 +44,7 @@ export class AppPlugin extends Plugin {
     logs = signal.Array<LogEntry>([]);
 
     // WS Port Management
-    wsPort = signal(49152);
+    wsPort = signal(DEFAULT_PORT);
     isWsReloading = signal(false);
 
     logIdCounter = 0;

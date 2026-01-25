@@ -5,7 +5,7 @@
     "version": "1.1.0",
     "browser_specific_settings": {
         "gecko": {
-            "id": "discuss-companion@odoo.com",
+            "id": "discuss-companion@debug",
             "strict_min_version": "109.0"
         }
     },
@@ -44,6 +44,10 @@
         "ws://127.0.0.1/*"
     ],
     "content_security_policy": {
-        "extension_pages": "script-src 'self'; object-src 'none'; connect-src ws://127.0.0.1:49152;"
+        "extension_pages": "script-src 'self'; object-src 'none'; connect-src ws://127.0.0.1:*;"
+    },
+    "options_ui": {
+        "page": "options.html",
+        "open_in_tab": false
     }
 }

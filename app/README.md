@@ -91,7 +91,7 @@ Communication between the Rust Backend and the Owl Frontend uses Tauri's event s
     -   `invoke("update_binding")`: Saves the new keybinding to persistent storage.
 
 ### External Communication (WebSocket)
-The application runs a local WebSocket server (default port `49152`) to communicate with Odoo.
+The application runs a local WebSocket server to communicate with Odoo.
 
 **Protocol**: [FlatBuffers](https://google.github.io/flatbuffers/)
 **Schema (`protocol.fbs`)**:

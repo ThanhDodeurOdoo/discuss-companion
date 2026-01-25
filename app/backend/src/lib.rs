@@ -15,6 +15,7 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 use tracing::{debug, error, info};
 
+pub const DEFAULT_PORT: u16 = 49152;
 const TRAY_ID: &str = "main-tray";
 const ICON_ACTIVE_ONLINE: &[u8] = include_bytes!("../../../assets/icons/active_online_icon.png");
 const ICON_INACTIVE_ONLINE: &[u8] =
@@ -94,10 +95,8 @@ impl PttHandler {
     }
 
     fn handle_ptt(&mut self, msg: &state::OutgoingMessage) {
-        // Notify Frontend
         let _ = self.app_handle.emit("ptt-event", msg);
 
-        // Update internal state
         match msg {
             state::OutgoingMessage::PttDown { is_repeat, .. } => {
                 if !is_repeat {
@@ -186,7 +185,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(move |app| {
-            let mut port = 49152;
+            let mut port = DEFAULT_PORT;
             if let Ok(store) = app.app_handle().store("settings.json") {
                 if let Some(value) = store.get("ptt_binding") {
                     if let Ok(binding) = serde_json::from_value(value) {
