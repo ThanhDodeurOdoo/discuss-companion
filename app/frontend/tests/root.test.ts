@@ -1,53 +1,23 @@
 import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globals";
-import { App as OwlApp, Component, Plugin, plugin } from "@odoo/owl";
+import { App as OwlApp } from "@odoo/owl";
+
+// Mock Tauri APIs
+const invokeMock = jest.fn();
+const listenMock = jest.fn(() => Promise.resolve(() => {}));
 
 jest.unstable_mockModule("@tauri-apps/api/core", () => ({
-    __esModule: true,
-    invoke: jest.fn()
+    invoke: invokeMock
 }));
 
 jest.unstable_mockModule("@tauri-apps/api/event", () => ({
-    __esModule: true,
-    listen: jest.fn()
+    listen: listenMock
 }));
 
-await import("@tauri-apps/api/core");
-await import("@tauri-apps/api/event");
+// Real imports
+const { Root } = await import("../root");
+const { AppPlugin } = await import("../app_plugin");
 
-jest.unstable_mockModule("../root.xml?raw", () => ({
-    __esModule: true,
-    default: `<templates xml:space="preserve">
-        <t t-name="discuss.Root">
-            <div class="test-app">
-                <h1 id="title">Discuss Companion</h1>
-                <div class="status-indicators">
-                    <span id="perm-status" t-out="this.app.permissionGranted() ? 'Accessibility Granted' : 'Permission Required'"/>
-                </div>
-                <button id="toggle-btn" t-on-click="() => this.app.toggleRecording()">Toggle</button>
-            </div>
-        </t>
-    </templates>`
-}));
-
-jest.unstable_mockModule("../app_plugin.ts", () => ({
-    __esModule: true,
-    AppPlugin: class extends Plugin {
-        static id = "AppPlugin";
-        permissionGranted = () => false;
-        isRecording = () => false;
-        toggleRecording = jest.fn();
-        setup() {}
-    }
-}));
-
-const { AppPlugin } = await import("../app_plugin.ts");
-
-class Root extends Component {
-    static template = "discuss.Root";
-    app = plugin(AppPlugin);
-}
-
-describe("Root DOM Tests", () => {
+describe("Root Integration Tests", () => {
     let target: HTMLElement;
     let owlApp: OwlApp;
 
@@ -55,6 +25,23 @@ describe("Root DOM Tests", () => {
         jest.clearAllMocks();
         target = document.createElement("div");
         document.body.appendChild(target);
+
+        // Default mock implementations
+        invokeMock.mockImplementation((cmd) => {
+            if (cmd === "is_extension_connected") {
+                return Promise.resolve(false);
+            }
+            if (cmd === "get_current_binding") {
+                return Promise.resolve({ code: 49, modifiers: [] });
+            } // Space key
+            if (cmd === "get_ws_port") {
+                return Promise.resolve(49152);
+            }
+            if (cmd === "is_accessibility_granted") {
+                return Promise.resolve(false);
+            }
+            return Promise.resolve(null);
+        });
     });
 
     afterEach(() => {
@@ -64,47 +51,39 @@ describe("Root DOM Tests", () => {
         document.body.removeChild(target);
     });
 
-    test("renders the app correctly", async () => {
+    async function mountApp() {
         owlApp = new OwlApp({ plugins: [AppPlugin] });
-        const template = (await import("../root.xml?raw")).default;
-        owlApp.addTemplates(template);
+        // Load all templates
+        const templates = await Promise.all([
+            import("../root.xml?raw"),
+            import("../companion.xml?raw"),
+            import("../header.xml?raw"),
+            import("../footer.xml?raw"),
+            import("../control_page.xml?raw"),
+            import("../log_page.xml?raw")
+        ]);
+        templates.forEach((t) => owlApp.addTemplates(t.default));
 
         await owlApp.createRoot(Root).mount(target);
+    }
 
-        expect(target.querySelector("#title")?.textContent).toBe("Discuss Companion");
-        expect(target.querySelector("#perm-status")?.textContent).toBe("Permission Required");
+    test("renders the full app hierarchy", async () => {
+        await mountApp();
+
+        // Check for Header title
+        const title = target.querySelector("h1");
+        expect(title).toBeTruthy();
+        expect(title?.textContent).toBe("Discuss Companion");
+
+        // Check for permission status (mocked to false)
+        const permStatus = target.querySelectorAll(".status-item")[0];
+        expect(permStatus?.textContent).toContain("Permission Required");
     });
 
-    test("clicking toggle button calls toggleRecording", async () => {
-        let pluginInstance: InstanceType<typeof AppPlugin>;
-        const MockedPlugin = class extends Plugin {
-            static id = "AppPlugin";
-            permissionGranted() {
-                return false;
-            }
-            isRecording() {
-                return false;
-            }
-            toggleRecording = jest.fn();
-            setup() {
-                pluginInstance = this as unknown as InstanceType<typeof AppPlugin>;
-            }
-        };
-
-        owlApp = new OwlApp({ plugins: [MockedPlugin] });
-        const template = (await import("../root.xml?raw")).default;
-        owlApp.addTemplates(template);
-
-        class TestRoot extends Component {
-            static template = "discuss.Root";
-            app = plugin(MockedPlugin);
-        }
-
-        await owlApp.createRoot(TestRoot).mount(target);
-
-        const btn = target.querySelector("#toggle-btn") as HTMLButtonElement;
-        btn.click();
-
-        expect(pluginInstance!.toggleRecording).toHaveBeenCalled();
+    test("mounting initiates initialization calls", async () => {
+        await mountApp();
+        expect(invokeMock).toHaveBeenCalledWith("get_current_binding");
+        expect(invokeMock).toHaveBeenCalledWith("get_ws_port");
+        expect(invokeMock).toHaveBeenCalledWith("is_accessibility_granted");
     });
 });

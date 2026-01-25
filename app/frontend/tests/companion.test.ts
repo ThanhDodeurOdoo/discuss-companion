@@ -1,42 +1,47 @@
 import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globals";
-import { App as OwlApp, Component, xml } from "@odoo/owl";
+import { App as OwlApp } from "@odoo/owl";
 
-// Mock imports
-jest.unstable_mockModule("../companion.xml?raw", () => ({
-    default: `<templates xml:space="preserve">
-    <t t-name="discuss.Companion">
-        <Header />
-        <main>
-            <ControlPage />
-            <LogPage />
-            <Footer />
-        </main>
-    </t>
-</templates>`
+// Mock Tauri APIs
+const invokeMock = jest.fn();
+const listenMock = jest.fn(() => Promise.resolve(() => {}));
+
+jest.unstable_mockModule("@tauri-apps/api/core", () => ({
+    invoke: invokeMock
 }));
 
-const createMockComponent = (name: string) =>
-    class extends Component {
-        static template = xml`<div class="${name.toLowerCase()}">Mock ${name}</div>`;
-    };
-
-jest.unstable_mockModule("../header", () => ({ Header: createMockComponent("Header") }));
-jest.unstable_mockModule("../footer", () => ({ Footer: createMockComponent("Footer") }));
-jest.unstable_mockModule("../control_page", () => ({
-    ControlPage: createMockComponent("ControlPage")
+jest.unstable_mockModule("@tauri-apps/api/event", () => ({
+    listen: listenMock
 }));
-jest.unstable_mockModule("../log_page", () => ({ LogPage: createMockComponent("LogPage") }));
 
 // Import the component under test after mocking dependencies
-const { Companion } = await import("../companion");
+const { Root } = await import("../root");
 
-describe("Companion Component", () => {
+describe("Companion Component Interactions", () => {
     let target: HTMLElement;
     let owlApp: OwlApp;
 
     beforeEach(() => {
         target = document.createElement("div");
         document.body.appendChild(target);
+        invokeMock.mockClear();
+        listenMock.mockClear();
+
+        // Default mock implementations
+        invokeMock.mockImplementation((cmd) => {
+            if (cmd === "is_extension_connected") {
+                return Promise.resolve(false);
+            }
+            if (cmd === "get_current_binding") {
+                return Promise.resolve({ code: 0, modifiers: [] });
+            }
+            if (cmd === "get_ws_port") {
+                return Promise.resolve(49152);
+            }
+            if (cmd === "is_accessibility_granted") {
+                return Promise.resolve(true);
+            }
+            return Promise.resolve(null);
+        });
     });
 
     afterEach(() => {
@@ -46,25 +51,67 @@ describe("Companion Component", () => {
         document.body.removeChild(target);
     });
 
-    test("renders all sub-components", async () => {
-        owlApp = new OwlApp();
-        const template = (await import("../companion.xml?raw")).default;
-        owlApp.addTemplates(template);
+    async function mountApp() {
+        // Register the plugin needed by Root
+        const { AppPlugin } = await import("../app_plugin");
+        owlApp = new OwlApp({ plugins: [AppPlugin] });
 
-        await owlApp.createRoot(Companion).mount(target);
+        // Load all templates
+        const templates = await Promise.all([
+            import("../root.xml?raw"),
+            import("../companion.xml?raw"),
+            import("../header.xml?raw"),
+            import("../footer.xml?raw"),
+            import("../control_page.xml?raw"),
+            import("../log_page.xml?raw")
+        ]);
+        templates.forEach((t) => owlApp.addTemplates(t.default));
 
-        expect(target.querySelector(".header")).toBeTruthy();
-        expect(target.querySelector(".header")?.textContent).toBe("Mock Header");
+        await owlApp.createRoot(Root).mount(target);
+    }
 
-        expect(target.querySelector(".footer")).toBeTruthy();
-        expect(target.querySelector(".footer")?.textContent).toBe("Mock Footer");
+    test("PTT Button toggles recording mode", async () => {
+        await mountApp();
 
-        expect(target.querySelector(".controlpage")).toBeTruthy();
-        expect(target.querySelector(".controlpage")?.textContent).toBe("Mock ControlPage");
+        const pttBtn = target.querySelector(".key-display") as HTMLButtonElement;
+        expect(pttBtn).toBeTruthy();
 
-        expect(target.querySelector(".logpage")).toBeTruthy();
-        expect(target.querySelector(".logpage")?.textContent).toBe("Mock LogPage");
+        // Initial state: not recording
+        expect(pttBtn.classList.contains("recording")).toBe(false);
 
-        expect(target.querySelector("main")).toBeTruthy();
+        // Click to start recording
+        await pttBtn.click();
+        expect(invokeMock).toHaveBeenCalledWith("set_recording_mode", { recording: true });
+
+        // Let's verify the subsequent call
+        await pttBtn.click();
+        expect(invokeMock).toHaveBeenCalledWith("set_recording_mode", { recording: false });
+    });
+
+    test("Force Release button triggers force_ptt_up", async () => {
+        await mountApp();
+        const forceBtn = target.querySelector(".safety-btn") as HTMLButtonElement;
+        expect(forceBtn).toBeTruthy();
+        expect(forceBtn.textContent).toContain("force release");
+
+        await forceBtn.click();
+        expect(invokeMock).toHaveBeenCalledWith("force_ptt_up");
+    });
+
+    test("Reload WS button triggers update_ws_port", async () => {
+        await mountApp();
+        const reloadBtn = target.querySelector(".reload-btn") as HTMLButtonElement;
+        const portInput = target.querySelector("#ws-port") as HTMLInputElement;
+
+        expect(reloadBtn).toBeTruthy();
+        expect(portInput).toBeTruthy();
+
+        // Change the port value
+        // We need to trigger the input event for Owl to update the bound value
+        portInput.value = "55555";
+        portInput.dispatchEvent(new Event("input"));
+
+        await reloadBtn.click();
+        expect(invokeMock).toHaveBeenCalledWith("update_ws_port", { port: 55555 });
     });
 });
