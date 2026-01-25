@@ -6,7 +6,7 @@
 
 The Discuss Companion is a companion app for Odoo Discuss, currently supporting macOS (Linux support is Work in Progress). It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus.
 
-![Discuss Companion Example](.github/assets/example.gif)
+![Discuss Companion Example](assets/example.gif)
 ## Architecture
 
 The repository contains 2 parts:
