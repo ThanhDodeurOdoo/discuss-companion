@@ -188,12 +188,17 @@ function connectToApp() {
             const buf = new flatbuffers.ByteBuffer(data);
             const message = Message.getRootAsMessage(buf);
 
-            if (message.bodyType() === MessageBody.PttDown) {
-                onCommand("ptt-pressed");
-            } else if (message.bodyType() === MessageBody.PttUp) {
-                onCommand("ptt-released");
-            } else if (message.bodyType() === MessageBody.Pong) {
-                // console.log("Received Pong");
+            switch (message.bodyType()) {
+                case MessageBody.PttDown:
+                    onCommand("ptt-pressed");
+                    break;
+                case MessageBody.PttUp:
+                    onCommand("ptt-released");
+                    break;
+                case MessageBody.Pong:
+                    break;
+                default:
+                    console.warn(`Unknown message type: ${message.bodyType()}`);
             }
         } catch (e) {
             console.error("Failed to parse message:", e);
