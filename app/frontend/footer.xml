@@ -5,7 +5,7 @@
                 force release
             </button>
             <div class="toggle-container">
-                <input type="checkbox" id="show-symbols" t-att-checked="this.app.showSymbols()" t-on-change="(ev) => this.app.showSymbols.set(ev.target.checked)"/>
+                <input type="checkbox" id="show-symbols" t-model="this.app.showSymbols"/>
                 <label for="show-symbols" class="prevent-select">Show icons</label>
             </div>
 

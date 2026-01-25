@@ -5,9 +5,10 @@
             <div class="port-control">
                  <label for="ws-port" class="prevent-select">WS Port</label>
                  <input type="number" id="ws-port" 
-                    t-att-value="this.app.wsPort()" 
+                    t-model="this.app.wsPort" 
                     t-att-disabled="this.app.isWsReloading()"
-                    t-on-change="(ev) => this.app.updatePort(ev)"
+                    min="1024"
+                    max="65535"
                     class="port-input"
                  />
                  <button class="text-btn reload-btn prevent-select" 

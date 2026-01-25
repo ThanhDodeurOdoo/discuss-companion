@@ -180,16 +180,15 @@ export class AppPlugin extends Plugin {
         this.addLog("SYSTEM", `Current WS Port: ${port}`);
     }
 
-    updatePort(event: Event) {
-        const input = event.target as HTMLInputElement;
-        const port = parseInt(input.value);
-        if (!isNaN(port)) {
-            this.wsPort.set(port);
-        }
-    }
-
     async reloadWsServer() {
-        const port = this.wsPort();
+        const rawPort = this.wsPort();
+        const port = Number(rawPort);
+
+        if (isNaN(port) || port < 1024 || port > 65535) {
+            this.addLog("ERROR", "Invalid port. Must be between 1024 and 65535.");
+            return;
+        }
+
         try {
             const currentPort = await invoke<number>("get_ws_port");
             if (port === currentPort) {
