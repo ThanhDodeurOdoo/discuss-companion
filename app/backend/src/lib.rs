@@ -53,21 +53,8 @@ fn handle_ws_server(
     ws_shutdown_rx: tokio::sync::broadcast::Receiver<()>,
     conn_tx: crossbeam_channel::Sender<bool>,
 ) {
-    thread::spawn(move || {
-        let rt_result = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build();
-
-        match rt_result {
-            Ok(rt) => {
-                rt.block_on(async {
-                    server::start_ws_server(port, ws_tx, ws_shutdown_rx, app_handle, conn_tx).await;
-                });
-            }
-            Err(e) => {
-                error!("Failed to create tokio runtime: {e}");
-            }
-        }
+    tauri::async_runtime::spawn(async move {
+        server::start_ws_server(port, ws_tx, ws_shutdown_rx, app_handle, conn_tx).await;
     });
 }
 
