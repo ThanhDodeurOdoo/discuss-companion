@@ -3,11 +3,11 @@ import { Message } from "./discuss/flatbuffers/message";
 import { MessageBody } from "./discuss/flatbuffers/message-body";
 import { Ping } from "./discuss/flatbuffers/ping";
 
-const WS_URL = "ws://127.0.0.1:49152";
 const ACTIVE_APP_ICON = "/assets/icons/active_icon.png";
 const INACTIVE_APP_ICON = "/assets/icons/inactive_icon.png";
 
 let socket: WebSocket | null = null;
+let wsPort = 49152; // Default port
 const RECONNECT_ALARM_NAME = "reconnect_alarm";
 
 interface IsTalkingMap {
@@ -19,7 +19,27 @@ interface ExtensionMessage {
     value?: unknown;
 }
 
-// Helper to handle Chrome storage safely
+chrome.storage.local.get({ wsPort: 49152 }, (items) => {
+    wsPort = items.wsPort as number;
+    console.log(`[Discussion Companion] Initialized with port: ${wsPort}`);
+    connectToApp();
+});
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === "local" && changes.wsPort) {
+        const newPort = changes.wsPort.newValue as number;
+        console.log(
+            `[Discussion Companion] Port changed from ${wsPort} to ${newPort}. Reconnecting...`
+        );
+        wsPort = newPort;
+        if (socket) {
+            socket.close(); // Close will trigger reconnect logic via onclose/alarm or we can force it
+        } else {
+            connectToApp();
+        }
+    }
+});
+
 async function getIsTalkingByTabId(): Promise<IsTalkingMap> {
     const { isTalkingByTabId = {} } = await chrome.storage.session.get();
     return isTalkingByTabId as IsTalkingMap;
@@ -158,9 +178,10 @@ function connectToApp() {
         return;
     }
 
-    console.log("Attempting to connect to WS:", WS_URL);
+    const wsUrl = `ws://127.0.0.1:${wsPort}`;
+    console.log("Attempting to connect to WS:", wsUrl);
     try {
-        socket = new WebSocket(WS_URL);
+        socket = new WebSocket(wsUrl);
         socket.binaryType = "arraybuffer";
     } catch {
         return;
@@ -169,7 +190,7 @@ function connectToApp() {
     let pingInterval: ReturnType<typeof setInterval>;
 
     socket.onopen = () => {
-        console.log("Connected to Discuss Companion via WebSocket");
+        console.log(`Connected to Discuss Companion via WebSocket on port ${wsPort}`);
         chrome.alarms.clear(RECONNECT_ALARM_NAME);
 
         // Send initial Ping
@@ -243,5 +264,3 @@ chrome.alarms.onAlarm.addListener((alarm) => {
         connectToApp();
     }
 });
-
-connectToApp();

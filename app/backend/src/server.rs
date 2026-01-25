@@ -475,4 +475,77 @@ mod tests {
 
         let _ = shutdown_tx.send(());
     }
+    #[tokio::test]
+    #[serial]
+    async fn test_restart_on_different_port() {
+        CONNECTION_COUNT.store(0, Ordering::SeqCst);
+        let (tx, _) = broadcast::channel(10);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let app_handle = app.handle().clone();
+
+        // Start on Port A
+        let (shutdown_tx_1, shutdown_rx_1) = broadcast::channel(1);
+        let listener_1 = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr_1 = listener_1.local_addr().unwrap();
+        let port_1 = addr_1.port();
+        drop(listener_1);
+
+        let tx_clone = tx.clone();
+        let app_handle_clone = app_handle.clone();
+        let h1 = tokio::spawn(async move {
+            start_ws_server(port_1, tx_clone, shutdown_rx_1, app_handle_clone).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        // Verify connection to Port A
+        let stream_1 = TcpStream::connect(addr_1)
+            .await
+            .expect("Failed to connect to Port A");
+        let (ws_1, _) =
+            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port_1), stream_1)
+                .await
+                .expect("Failed to handshake Port A");
+        assert!(is_connected());
+        drop(ws_1); // Close client
+
+        // Shutdown Port A
+        shutdown_tx_1.send(()).unwrap();
+        h1.await.unwrap(); // Wait for server to finish
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        // Start on Port B
+        let (shutdown_tx_2, shutdown_rx_2) = broadcast::channel(1);
+        let listener_2 = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr_2 = listener_2.local_addr().unwrap();
+        let port_2 = addr_2.port();
+        assert_ne!(port_1, port_2); // Ensure different ports
+        drop(listener_2);
+
+        let tx_clone_2 = tx.clone();
+        let app_handle_clone_2 = app_handle.clone();
+        let h2 = tokio::spawn(async move {
+            start_ws_server(port_2, tx_clone_2, shutdown_rx_2, app_handle_clone_2).await;
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        // Verify connection to Port B
+        let stream_2 = TcpStream::connect(addr_2)
+            .await
+            .expect("Failed to connect to Port B");
+        let (_ws_2, _) =
+            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port_2), stream_2)
+                .await
+                .expect("Failed to handshake Port B");
+        assert!(is_connected());
+
+        // Verify Port A is unreachable
+        let result = TcpStream::connect(addr_1).await;
+        assert!(result.is_err(), "Port A should be closed");
+
+        shutdown_tx_2.send(()).unwrap();
+        h2.await.unwrap();
+    }
 }

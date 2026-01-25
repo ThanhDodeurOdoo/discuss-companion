@@ -41,6 +41,14 @@ export default defineConfig(({ mode }) => {
                     {
                         src: "extension/assets",
                         dest: "."
+                    },
+                    {
+                        src: "extension/options.html",
+                        dest: "."
+                    },
+                    {
+                        src: "extension/options.js",
+                        dest: "."
                     }
                 ]
             })

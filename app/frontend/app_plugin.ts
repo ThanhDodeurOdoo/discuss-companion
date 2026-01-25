@@ -40,6 +40,10 @@ export class AppPlugin extends Plugin {
     isForcingRelease = false;
     logs = signal.Array<LogEntry>([]);
 
+    // WS Port Management
+    wsPort = signal(49152);
+    isWsReloading = signal(false);
+
     logIdCounter = 0;
     unlistenFns: (() => void)[] = [];
     permissionInterval: number | null = null;
@@ -59,6 +63,7 @@ export class AppPlugin extends Plugin {
     async init() {
         this.addLog("SYSTEM", "Ready");
         await this.fetchCurrentBinding();
+        await this.fetchWsPort();
         await this.checkPermission();
         await this.setupListeners();
     }
@@ -133,12 +138,27 @@ export class AppPlugin extends Plugin {
             this.addLog("WS-MSG", JSON.stringify(event.payload));
         });
 
+        type WsStatusPayload = {
+            status: string;
+            port: number;
+        };
+
+        const wsStatusUnlisten = await listen<WsStatusPayload>("ws-server-status", (event) => {
+            this.addLog("WS-STATUS", JSON.stringify(event.payload));
+            if (event.payload.status === "restarted") {
+                this.wsPort.set(event.payload.port);
+                this.isWsReloading.set(false);
+                this.addLog("SYSTEM", `WS Server restarted on port ${event.payload.port}`);
+            }
+        });
+
         this.unlistenFns.push(
             pttUnlisten,
             errorUnlisten,
             wsConnectUnlisten,
             wsDisconnectUnlisten,
-            wsMsgUnlisten
+            wsMsgUnlisten,
+            wsStatusUnlisten
         );
     }
 
@@ -151,6 +171,39 @@ export class AppPlugin extends Plugin {
         const binding = await invoke<PttBinding>("get_current_binding");
         if (binding) {
             this.currentBinding.set(binding);
+        }
+    }
+
+    async fetchWsPort() {
+        const port = await invoke<number>("get_ws_port");
+        this.wsPort.set(port);
+        this.addLog("SYSTEM", `Current WS Port: ${port}`);
+    }
+
+    updatePort(event: Event) {
+        const input = event.target as HTMLInputElement;
+        const port = parseInt(input.value);
+        if (!isNaN(port)) {
+            this.wsPort.set(port);
+        }
+    }
+
+    async reloadWsServer() {
+        const port = this.wsPort();
+        try {
+            const currentPort = await invoke<number>("get_ws_port");
+            if (port === currentPort) {
+                this.addLog("SYSTEM", "Port unchanged, skipping reload");
+                return;
+            }
+
+            this.addLog("SYSTEM", `Initiating WS server reload to port: ${port}`);
+            this.isWsReloading.set(true);
+            await invoke("update_ws_port", { port });
+            this.addLog("SYSTEM", "Reload command sent to backend");
+        } catch (e) {
+            this.addLog("ERROR", `Failed to reload WS server: ${e}`);
+            this.isWsReloading.set(false);
         }
     }
 

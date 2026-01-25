@@ -33,6 +33,18 @@ export function mockChrome(storageInitial = {}) {
                     Object.assign(mockStorage, val);
                     return Promise.resolve();
                 })
+            },
+            local: {
+                get: jest.fn().mockImplementation((defaults, callback) => {
+                    if (callback) {
+                        callback(defaults);
+                    }
+                    return Promise.resolve(defaults);
+                }),
+                set: jest.fn()
+            },
+            onChanged: {
+                addListener: jest.fn()
             }
         },
         alarms: {

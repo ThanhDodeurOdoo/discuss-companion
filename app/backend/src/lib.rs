@@ -6,18 +6,24 @@ mod server;
 mod state;
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 const TRAY_ID: &str = "main-tray";
 const ICON_IDLE: &[u8] = include_bytes!("../icons/tray-idle.png");
 const ICON_ACTIVE: &[u8] = include_bytes!("../icons/tray-active.png");
+
+pub struct WsState {
+    pub port: Mutex<u16>,
+    pub ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
+    pub server_shutdown_tx: Mutex<tokio::sync::broadcast::Sender<()>>,
+}
 
 fn setup_logging() {
     use tracing_subscriber::EnvFilter;
@@ -37,6 +43,7 @@ fn setup_logging() {
 
 fn handle_ws_server(
     app_handle: tauri::AppHandle,
+    port: u16,
     ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
     ws_shutdown_rx: tokio::sync::broadcast::Receiver<()>,
 ) {
@@ -48,7 +55,7 @@ fn handle_ws_server(
         match rt_result {
             Ok(rt) => {
                 rt.block_on(async {
-                    server::start_ws_server(49152, ws_tx, ws_shutdown_rx, app_handle).await;
+                    server::start_ws_server(port, ws_tx, ws_shutdown_rx, app_handle).await;
                 });
             }
             Err(e) => {
@@ -132,27 +139,45 @@ fn handle_ptt_events(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     setup_logging();
+    debug!("debug enabled");
     info!("Discuss Companion starting");
 
     let shutdown = Arc::new(AtomicBool::new(false));
     let shutdown_clone = Arc::clone(&shutdown);
     let (ws_tx, _) = tokio::sync::broadcast::channel::<Vec<u8>>(100);
+    // Initial shutdown channel
     let (ws_shutdown_tx, ws_shutdown_rx) = tokio::sync::broadcast::channel::<()>(1);
     let ws_tx_clone = ws_tx.clone();
+    let ws_shutdown_tx_clone = ws_shutdown_tx.clone();
 
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(move |app| {
-            handle_ws_server(app.handle().clone(), ws_tx_clone, ws_shutdown_rx);
-
+            let mut port = 49152;
             if let Ok(store) = app.app_handle().store("settings.json") {
                 if let Some(value) = store.get("ptt_binding") {
                     if let Ok(binding) = serde_json::from_value(value) {
                         platform::set_binding(binding);
                     }
                 }
+                if let Some(value) = store.get("ws_port") {
+                    if let Some(p) = value.as_u64() {
+                        if let Ok(p_u16) = u16::try_from(p) {
+                            port = p_u16;
+                        }
+                    }
+                }
             }
+
+            // Manage WsState
+            app.manage(WsState {
+                port: Mutex::new(port),
+                ws_tx: ws_tx_clone.clone(),
+                server_shutdown_tx: Mutex::new(ws_shutdown_tx_clone),
+            });
+
+            handle_ws_server(app.handle().clone(), port, ws_tx_clone, ws_shutdown_rx);
 
             let (event_tx, event_rx) = crossbeam_channel::unbounded();
             handle_ptt_events(app.handle().clone(), event_rx, ws_tx.clone());
@@ -202,6 +227,8 @@ pub fn run() {
             commands::is_accessibility_granted,
             commands::is_extension_connected,
             commands::force_ptt_up,
+            commands::get_ws_port,
+            commands::update_ws_port,
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {
@@ -213,6 +240,7 @@ pub fn run() {
     // Allow a brief moment for the message to traverse the channel and WS
     std::thread::sleep(std::time::Duration::from_millis(100));
 
+    // Cleanup: Send shutdown to WS server if still running
     let _ = ws_shutdown_tx.send(());
     shutdown.store(true, Ordering::SeqCst);
 }

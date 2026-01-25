@@ -114,9 +114,16 @@ The project includes three main GitHub Actions suites that run on every push and
 
 ---
 
+## Configuration
+The WebSocket port (default: 49152) can be configured if needed (e.g. to avoid conflicts):
+-   **App**: Change it directly in the main interface and click "Reload".
+-   **Extension**: Right-click the extension icon -> Options to set the matching port.
+
+---
+
 ## Security & Privacy
 -   The "Event Tap" only listens for the specific key codes configured for PTT.
--   The WebSocket server runs on `localhost:49152` and does not accept external connections.
+-   The WebSocket server runs on `localhost:49152` (configurable) and does not accept external connections.
 
 ---
 

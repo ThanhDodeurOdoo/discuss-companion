@@ -346,3 +346,59 @@ main {
 .log-msg {
   word-break: break-all;
 }
+
+.port-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.port-input {
+    background: rgba(139, 148, 158, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    width: 70px;
+    font-family: inherit;
+    font-size: 0.8rem;
+}
+
+.port-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 1px var(--accent-color);
+}
+
+.port-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.reload-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+.reload-btn:hover:not(:disabled) {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+.reload-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

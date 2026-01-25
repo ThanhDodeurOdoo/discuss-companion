@@ -2,6 +2,22 @@
     <t t-name="discuss.Root">
         <header class="prevent-select">
             <h1>Discuss Companion</h1>
+            <div class="port-control">
+                 <label for="ws-port" class="prevent-select">WS Port</label>
+                 <input type="number" id="ws-port" 
+                    t-att-value="this.app.wsPort()" 
+                    t-att-disabled="this.app.isWsReloading()"
+                    t-on-change="(ev) => this.app.updatePort(ev)"
+                    class="port-input"
+                 />
+                 <button class="text-btn reload-btn prevent-select" 
+                    t-on-click="() => this.app.reloadWsServer()" 
+                    t-att-disabled="this.app.isWsReloading()"
+                    title="Reload WebSocket Server">
+                    <t t-if="this.app.isWsReloading()">Reloading...</t>
+                    <t t-else="">Reload</t>
+                 </button>
+            </div>
             <div class="status-indicators">
                 <div class="status-item" t-att-class="this.app.permissionGranted() ? 'granted' : ''" t-att-title="'Whether the accessibility permission is granted'">
                     <div class="status-dot"></div>
@@ -50,6 +66,7 @@
                     <input type="checkbox" id="show-symbols" t-att-checked="this.app.showSymbols()" t-on-change="(ev) => this.app.showSymbols.set(ev.target.checked)"/>
                     <label for="show-symbols" class="prevent-select">Show icons</label>
                 </div>
+
                 <a class="text-btn source-btn" href="https://github.com/ThanhDodeurOdoo/discuss-companion" target="_blank" rel="noreferrer">
                     source
                 </a>
