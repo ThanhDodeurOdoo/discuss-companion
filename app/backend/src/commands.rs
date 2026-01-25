@@ -101,7 +101,13 @@ pub fn update_ws_port(app_handle: tauri::AppHandle, port: u16, state: State<'_, 
 
     // Start new server
     info!("Starting new WS server on port {}...", port);
-    crate::handle_ws_server(app_handle.clone(), port, state.ws_tx.clone(), rx);
+    crate::handle_ws_server(
+        app_handle.clone(),
+        port,
+        state.ws_tx.clone(),
+        rx,
+        state.conn_tx.clone(),
+    );
 
     // Notify frontend
     let _ = app_handle.emit(

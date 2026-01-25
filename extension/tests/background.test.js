@@ -60,7 +60,7 @@ describe("Extension Background Script", () => {
 
         expect(mockStorage.isTalkingByTabId[123]).toBe(true);
         expect(chrome.action.setIcon).toHaveBeenCalledWith({
-            path: "/assets/icons/active_icon.png"
+            path: "/assets/icons/active_online_icon.png"
         });
     });
 
@@ -143,6 +143,9 @@ describe("Extension Background Script", () => {
 
     test("reconnects on alarm", async () => {
         const initialCount = global.mockSockets.length;
+        if (global.mockSockets.length > 0) {
+            global.mockSockets[global.mockSockets.length - 1].close();
+        }
         await capturedOnAlarm({ name: "reconnect_alarm" });
         expect(global.mockSockets.length).toBeGreaterThan(initialCount);
     });

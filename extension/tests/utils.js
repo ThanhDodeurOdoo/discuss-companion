@@ -72,8 +72,17 @@ export function mockWebSocket() {
             }, 0);
         }
         send = jest.fn();
-        close = jest.fn();
+        close = jest.fn().mockImplementation(() => {
+            this.readyState = 3; // CLOSED
+            if (this.onclose) {
+                this.onclose({ code: 1000, reason: "Test closed" });
+            }
+        });
         binaryType = "blob";
     }
+    MockWebSocket.CONNECTING = 0;
+    MockWebSocket.OPEN = 1;
+    MockWebSocket.CLOSING = 2;
+    MockWebSocket.CLOSED = 3;
     global.WebSocket = MockWebSocket;
 }

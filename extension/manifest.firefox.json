@@ -21,7 +21,7 @@
         "type": "module"
     },
     "icons": {
-        "128": "assets/icons/inactive_icon.png"
+        "128": "assets/icons/inactive_offline_icon.png"
     },
     "content_scripts": [
         {

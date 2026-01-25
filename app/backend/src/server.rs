@@ -21,6 +21,7 @@ pub async fn start_ws_server<R: tauri::Runtime>(
     tx: broadcast::Sender<Vec<u8>>,
     mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
     app_handle: tauri::AppHandle<R>,
+    conn_tx: crossbeam_channel::Sender<bool>,
 ) {
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = match TcpListener::bind(&addr).await {
@@ -33,6 +34,11 @@ pub async fn start_ws_server<R: tauri::Runtime>(
     info!("WS server listening on: ws://{}", addr);
 
     let tx_clone = tx;
+    let conn_tx_clone = conn_tx.clone();
+
+    // Reset connection count on start
+    CONNECTION_COUNT.store(0, Ordering::SeqCst);
+    let _ = conn_tx.send(false);
 
     loop {
         tokio::select! {
@@ -46,7 +52,8 @@ pub async fn start_ws_server<R: tauri::Runtime>(
                 };
                 let tx = tx_clone.clone();
                 let app_handle = app_handle.clone();
-                tokio::spawn(handle_connection(stream, addr, tx, app_handle));
+                let conn_tx = conn_tx_clone.clone();
+                tokio::spawn(handle_connection(stream, addr, tx, app_handle, conn_tx));
             }
             _ = shutdown_rx.recv() => {
                 info!("WS server shutting down");
@@ -61,6 +68,7 @@ async fn handle_connection<R: tauri::Runtime>(
     addr: SocketAddr,
     tx: broadcast::Sender<Vec<u8>>,
     app_handle: tauri::AppHandle<R>,
+    conn_tx: crossbeam_channel::Sender<bool>,
 ) {
     let callback =
         |request: &tokio_tungstenite::tungstenite::handshake::server::Request,
@@ -80,7 +88,9 @@ async fn handle_connection<R: tauri::Runtime>(
         }
     };
     info!("New WebSocket connection from: {}", addr);
-    CONNECTION_COUNT.fetch_add(1, Ordering::SeqCst);
+    if CONNECTION_COUNT.fetch_add(1, Ordering::SeqCst) == 0 {
+        let _ = conn_tx.send(true);
+    }
     let _ = app_handle.emit("ws-connection", format!("Connected: {addr}"));
 
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
@@ -142,7 +152,9 @@ async fn handle_connection<R: tauri::Runtime>(
                     }
                     Some(Ok(Message::Close(_))) | None => {
                         info!("WebSocket connection closed: {}", addr);
-                        CONNECTION_COUNT.fetch_sub(1, Ordering::SeqCst);
+                        if CONNECTION_COUNT.fetch_sub(1, Ordering::SeqCst) == 1 {
+                             let _ = conn_tx.send(false);
+                        }
                         let _ =
                             app_handle.emit("ws-disconnection", format!("Disconnected: {addr}"));
                         break;
@@ -180,8 +192,9 @@ mod tests {
         let port = addr.port();
         drop(listener);
 
+        let (conn_tx, _) = crossbeam_channel::unbounded();
         tokio::spawn(async move {
-            start_ws_server(port, tx, shutdown_rx, app_handle).await;
+            start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -230,8 +243,9 @@ mod tests {
         drop(listener);
 
         let tx_server = tx.clone();
+        let (conn_tx, _) = crossbeam_channel::unbounded();
         tokio::spawn(async move {
-            start_ws_server(port, tx_server, shutdown_rx, app_handle).await;
+            start_ws_server(port, tx_server, shutdown_rx, app_handle, conn_tx).await;
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -281,8 +295,9 @@ mod tests {
         let port = addr.port();
         drop(listener);
 
+        let (conn_tx, _) = crossbeam_channel::unbounded();
         tokio::spawn(async move {
-            start_ws_server(port, tx, shutdown_rx, app_handle).await;
+            start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -367,8 +382,9 @@ mod tests {
         let port = addr.port();
         drop(listener);
 
+        let (conn_tx, _) = crossbeam_channel::unbounded();
         tokio::spawn(async move {
-            start_ws_server(port, tx, shutdown_rx, app_handle).await;
+            start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -426,8 +442,9 @@ mod tests {
         let port = addr.port();
         drop(listener);
 
+        let (conn_tx, _) = crossbeam_channel::unbounded();
         tokio::spawn(async move {
-            start_ws_server(port, tx, shutdown_rx, app_handle).await;
+            start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -491,9 +508,10 @@ mod tests {
         drop(listener_1);
 
         let tx_clone = tx.clone();
+        let (conn_tx, _) = crossbeam_channel::unbounded();
         let app_handle_clone = app_handle.clone();
         let h1 = tokio::spawn(async move {
-            start_ws_server(port_1, tx_clone, shutdown_rx_1, app_handle_clone).await;
+            start_ws_server(port_1, tx_clone, shutdown_rx_1, app_handle_clone, conn_tx).await;
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -524,9 +542,17 @@ mod tests {
         drop(listener_2);
 
         let tx_clone_2 = tx.clone();
+        let (conn_tx, _) = crossbeam_channel::unbounded();
         let app_handle_clone_2 = app_handle.clone();
         let h2 = tokio::spawn(async move {
-            start_ws_server(port_2, tx_clone_2, shutdown_rx_2, app_handle_clone_2).await;
+            start_ws_server(
+                port_2,
+                tx_clone_2,
+                shutdown_rx_2,
+                app_handle_clone_2,
+                conn_tx,
+            )
+            .await;
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;

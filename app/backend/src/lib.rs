@@ -16,13 +16,17 @@ use tauri_plugin_store::StoreExt;
 use tracing::{debug, error, info};
 
 const TRAY_ID: &str = "main-tray";
-const ICON_IDLE: &[u8] = include_bytes!("../icons/tray-idle.png");
-const ICON_ACTIVE: &[u8] = include_bytes!("../icons/tray-active.png");
+const ICON_ACTIVE_ONLINE: &[u8] = include_bytes!("../../../assets/icons/active_online_icon.png");
+const ICON_INACTIVE_ONLINE: &[u8] =
+    include_bytes!("../../../assets/icons/inactive_online_icon.png");
+const ICON_INACTIVE_OFFLINE: &[u8] =
+    include_bytes!("../../../assets/icons/inactive_offline_icon.png");
 
 pub struct WsState {
     pub port: Mutex<u16>,
     pub ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
     pub server_shutdown_tx: Mutex<tokio::sync::broadcast::Sender<()>>,
+    pub conn_tx: crossbeam_channel::Sender<bool>,
 }
 
 fn setup_logging() {
@@ -46,6 +50,7 @@ fn handle_ws_server(
     port: u16,
     ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
     ws_shutdown_rx: tokio::sync::broadcast::Receiver<()>,
+    conn_tx: crossbeam_channel::Sender<bool>,
 ) {
     thread::spawn(move || {
         let rt_result = tokio::runtime::Builder::new_multi_thread()
@@ -55,7 +60,7 @@ fn handle_ws_server(
         match rt_result {
             Ok(rt) => {
                 rt.block_on(async {
-                    server::start_ws_server(port, ws_tx, ws_shutdown_rx, app_handle).await;
+                    server::start_ws_server(port, ws_tx, ws_shutdown_rx, app_handle, conn_tx).await;
                 });
             }
             Err(e) => {
@@ -68,9 +73,11 @@ fn handle_ws_server(
 struct PttHandler {
     app_handle: tauri::AppHandle,
     ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
-    idle_img: Option<Image<'static>>,
-    active_img: Option<Image<'static>>,
+    active_online_img: Option<Image<'static>>,
+    inactive_online_img: Option<Image<'static>>,
+    inactive_offline_img: Option<Image<'static>>,
     is_active: bool,
+    is_connected: bool,
 }
 
 impl PttHandler {
@@ -78,47 +85,58 @@ impl PttHandler {
         Self {
             app_handle,
             ws_tx,
-            idle_img: Image::from_bytes(ICON_IDLE).ok(),
-            active_img: Image::from_bytes(ICON_ACTIVE).ok(),
+            active_online_img: Image::from_bytes(ICON_ACTIVE_ONLINE).ok(),
+            inactive_online_img: Image::from_bytes(ICON_INACTIVE_ONLINE).ok(),
+            inactive_offline_img: Image::from_bytes(ICON_INACTIVE_OFFLINE).ok(),
             is_active: false,
+            is_connected: false,
         }
     }
 
-    fn handle(&mut self, msg: &state::OutgoingMessage) {
+    fn handle_ptt(&mut self, msg: &state::OutgoingMessage) {
         // Notify Frontend
         let _ = self.app_handle.emit("ptt-event", msg);
 
-        // Update Tray Icon efficiently
-        self.update_tray(msg);
+        // Update internal state
+        match msg {
+            state::OutgoingMessage::PttDown { is_repeat, .. } => {
+                if !is_repeat {
+                    self.is_active = true;
+                }
+            }
+            state::OutgoingMessage::PttUp { .. } => {
+                self.is_active = false;
+            }
+            _ => {}
+        }
+
+        self.update_tray();
 
         // Broadcast to WebSocket
         let bin = msg.to_flatbuffer();
         let _ = self.ws_tx.send(bin);
     }
 
-    fn update_tray(&mut self, msg: &state::OutgoingMessage) {
+    fn handle_connection_change(&mut self, is_connected: bool) {
+        self.is_connected = is_connected;
+        self.update_tray();
+    }
+
+    fn update_tray(&self) {
         let Some(tray) = self.app_handle.tray_by_id(TRAY_ID) else {
             return;
         };
 
-        match msg {
-            state::OutgoingMessage::PttDown { is_repeat, .. } => {
-                if !is_repeat && !self.is_active {
-                    self.is_active = true;
-                    if let Some(img) = self.active_img.as_ref() {
-                        let _ = tray.set_icon(Some(img.clone()));
-                    }
-                }
-            }
-            state::OutgoingMessage::PttUp { .. } => {
-                if self.is_active {
-                    self.is_active = false;
-                    if let Some(img) = self.idle_img.as_ref() {
-                        let _ = tray.set_icon(Some(img.clone()));
-                    }
-                }
-            }
-            _ => {}
+        let img = if !self.is_connected {
+            self.inactive_offline_img.as_ref()
+        } else if self.is_active {
+            self.active_online_img.as_ref()
+        } else {
+            self.inactive_online_img.as_ref()
+        };
+
+        if let Some(img) = img {
+            let _ = tray.set_icon(Some(img.clone()));
         }
     }
 }
@@ -127,11 +145,25 @@ fn handle_ptt_events(
     app_handle: tauri::AppHandle,
     event_rx: crossbeam_channel::Receiver<state::OutgoingMessage>,
     ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
+    conn_rx: crossbeam_channel::Receiver<bool>,
 ) {
     thread::spawn(move || {
         let mut handler = PttHandler::new(app_handle, ws_tx);
-        while let Ok(msg) = event_rx.recv() {
-            handler.handle(&msg);
+        loop {
+            crossbeam_channel::select! {
+                recv(event_rx) -> msg => {
+                    if let Ok(msg) = msg {
+                        handler.handle_ptt(&msg);
+                    } else {
+                        break;
+                    }
+                },
+                recv(conn_rx) -> connected => {
+                     if let Ok(connected) = connected {
+                        handler.handle_connection_change(connected);
+                     }
+                }
+            }
         }
     });
 }
@@ -170,17 +202,27 @@ pub fn run() {
                 }
             }
 
+            // Channel for connection state updates
+            let (conn_tx, conn_rx) = crossbeam_channel::unbounded::<bool>();
+
             // Manage WsState
             app.manage(WsState {
                 port: Mutex::new(port),
                 ws_tx: ws_tx_clone.clone(),
                 server_shutdown_tx: Mutex::new(ws_shutdown_tx_clone),
+                conn_tx: conn_tx.clone(),
             });
 
-            handle_ws_server(app.handle().clone(), port, ws_tx_clone, ws_shutdown_rx);
+            handle_ws_server(
+                app.handle().clone(),
+                port,
+                ws_tx_clone,
+                ws_shutdown_rx,
+                conn_tx,
+            );
 
             let (event_tx, event_rx) = crossbeam_channel::unbounded();
-            handle_ptt_events(app.handle().clone(), event_rx, ws_tx.clone());
+            handle_ptt_events(app.handle().clone(), event_rx, ws_tx.clone(), conn_rx);
 
             let handle_tap = app.handle().clone();
             thread::spawn(move || {
@@ -194,7 +236,7 @@ pub fn run() {
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
-            let tray_icon = Image::from_bytes(ICON_IDLE)?;
+            let tray_icon = Image::from_bytes(ICON_INACTIVE_OFFLINE)?;
 
             let _tray = TrayIconBuilder::with_id(TRAY_ID)
                 .icon(tray_icon)

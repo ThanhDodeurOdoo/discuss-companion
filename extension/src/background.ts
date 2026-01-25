@@ -3,8 +3,9 @@ import { Message } from "./discuss/flatbuffers/message";
 import { MessageBody } from "./discuss/flatbuffers/message-body";
 import { Ping } from "./discuss/flatbuffers/ping";
 
-const ACTIVE_APP_ICON = "/assets/icons/active_icon.png";
-const INACTIVE_APP_ICON = "/assets/icons/inactive_icon.png";
+const ACTIVE_ONLINE_ICON = "/assets/icons/active_online_icon.png";
+const INACTIVE_ONLINE_ICON = "/assets/icons/inactive_online_icon.png";
+const INACTIVE_OFFLINE_ICON = "/assets/icons/inactive_offline_icon.png";
 
 let socket: WebSocket | null = null;
 let wsPort = 49152; // Default port
@@ -62,9 +63,15 @@ chrome.action.onClicked.addListener(function () {
 });
 
 async function updateAppIcon() {
+    const isConnected = socket?.readyState === WebSocket.OPEN;
+    if (!isConnected) {
+        chrome.action.setIcon({ path: INACTIVE_OFFLINE_ICON });
+        return;
+    }
+
     const isTalkingByTabId = await getIsTalkingByTabId();
     const isTalking = Object.values(isTalkingByTabId).some(Boolean);
-    chrome.action.setIcon({ path: isTalking ? ACTIVE_APP_ICON : INACTIVE_APP_ICON });
+    chrome.action.setIcon({ path: isTalking ? ACTIVE_ONLINE_ICON : INACTIVE_ONLINE_ICON });
 }
 
 async function handleMessage(
@@ -192,6 +199,7 @@ function connectToApp() {
     socket.onopen = () => {
         console.log(`Connected to Discuss Companion via WebSocket on port ${wsPort}`);
         chrome.alarms.clear(RECONNECT_ALARM_NAME);
+        updateAppIcon();
 
         // Send initial Ping
         sendPing();
@@ -232,16 +240,19 @@ function connectToApp() {
             clearInterval(pingInterval);
         }
         socket = null;
+        updateAppIcon();
         chrome.alarms.create(RECONNECT_ALARM_NAME, { delayInMinutes: 0.1 });
     };
 
     socket.onerror = (error) => {
         console.error("WebSocket connection error");
+        updateAppIcon();
     };
 }
 
 function sendPing() {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
+        updateAppIcon();
         return;
     }
 
