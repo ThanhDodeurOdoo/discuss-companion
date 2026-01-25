@@ -7,4 +7,5 @@ import template from "./footer.xml?raw";
 export class Footer extends Component {
     static template = xml`${template}`;
     app = plugin(AppPlugin);
+    version = __APP_VERSION__;
 }

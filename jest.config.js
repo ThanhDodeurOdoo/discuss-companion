@@ -3,6 +3,9 @@ export default {
     preset: "ts-jest/presets/default-esm",
     testEnvironment: "jsdom",
     extensionsToTreatAsEsm: [".ts", ".xml"],
+    globals: {
+        __APP_VERSION__: "0.0.0"
+    },
     moduleNameMapper: {
         "^@odoo/owl$": "<rootDir>/vendor/owl/dist/owl.es.js",
         // Map .js imports to .ts for FlatBuffers generated code

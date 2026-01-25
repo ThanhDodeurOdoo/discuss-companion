@@ -17,6 +17,9 @@ module.exports = {
         webextensions: true,
         es2024: true
     },
+    globals: {
+        __APP_VERSION__: "readonly"
+    },
     parser: "@typescript-eslint/parser",
     plugins: ["@typescript-eslint"],
     overrides: [

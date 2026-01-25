@@ -8,6 +8,6 @@
     </div>
 
     <a class="text-btn source-btn" href="https://github.com/ThanhDodeurOdoo/discuss-companion" target="_blank" rel="noreferrer">
-        source
+        <t t-out="'v' + this.version"/>
     </a>
 </div>
