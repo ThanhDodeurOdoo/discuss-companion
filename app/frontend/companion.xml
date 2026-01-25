@@ -1,10 +1,8 @@
-<templates xml:space="preserve">
-    <t t-name="discuss.Companion">
-        <Header />
-        <main>
-            <ControlPage />
-            <LogPage />
-            <Footer />
-        </main>
-    </t>
-</templates>
+<t>
+    <Header />
+    <main>
+        <ControlPage />
+        <LogPage />
+        <Footer />
+    </main>
+</t>

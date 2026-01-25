@@ -1,5 +1,1 @@
-<templates xml:space="preserve">
-    <t t-name="discuss.Root">
-        <Companion/>
-    </t>
-</templates>
+<Companion/>

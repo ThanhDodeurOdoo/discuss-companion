@@ -1,19 +1,15 @@
-<templates xml:space="preserve">
-    <t t-name="discuss.LogPage">
-        <div class="logs-section">
-            <div class="logs-header">
-                <h2>Event Logs</h2>
-                <button class="clear-btn prevent-select" t-on-click="() => this.app.clearLogs()">Clear</button>
+<div class="logs-section">
+    <div class="logs-header">
+        <h2>Event Logs</h2>
+        <button class="clear-btn prevent-select" t-on-click="() => this.app.clearLogs()">Clear</button>
+    </div>
+    <div class="logs-container">
+        <t t-foreach="this.app.logs()" t-as="log" t-key="log.id">
+            <div class="log-entry">
+                <span class="log-ts" t-out="log.ts"/>
+                <span t-attf-class="log-type type-{{log.type.toLowerCase()}}" t-out="log.type"/>
+                <span class="log-msg" t-out="log.message"/>
             </div>
-            <div class="logs-container">
-                <t t-foreach="this.app.logs()" t-as="log" t-key="log.id">
-                    <div class="log-entry">
-                        <span class="log-ts" t-out="log.ts"/>
-                        <span t-attf-class="log-type type-{{log.type.toLowerCase()}}" t-out="log.type"/>
-                        <span class="log-msg" t-out="log.message"/>
-                    </div>
-                </t>
-            </div>
-        </div>
-    </t>
-</templates>
+        </t>
+    </div>
+</div>

@@ -13,7 +13,6 @@ jest.unstable_mockModule("@tauri-apps/api/event", () => ({
     listen: listenMock
 }));
 
-// Import the component under test after mocking dependencies
 const { Root } = await import("../root");
 
 describe("Companion Component Interactions", () => {
@@ -52,21 +51,8 @@ describe("Companion Component Interactions", () => {
     });
 
     async function mountApp() {
-        // Register the plugin needed by Root
         const { AppPlugin } = await import("../app_plugin");
         owlApp = new OwlApp({ plugins: [AppPlugin] });
-
-        // Load all templates
-        const templates = await Promise.all([
-            import("../root.xml?raw"),
-            import("../companion.xml?raw"),
-            import("../header.xml?raw"),
-            import("../footer.xml?raw"),
-            import("../control_page.xml?raw"),
-            import("../log_page.xml?raw")
-        ]);
-        templates.forEach((t) => owlApp.addTemplates(t.default));
-
         await owlApp.createRoot(Root).mount(target);
     }
 

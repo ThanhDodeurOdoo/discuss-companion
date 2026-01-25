@@ -1,10 +1,10 @@
-import { Component, plugin, computed } from "@odoo/owl";
+import { Component, plugin, computed, xml } from "@odoo/owl";
 import "./control_page.css";
-
 import { AppPlugin } from "./app_plugin";
+import template from "./control_page.xml?raw";
 
 export class ControlPage extends Component {
-    static template = "discuss.ControlPage";
+    static template = xml`${template}`;
     app = plugin(AppPlugin);
 
     keyName = computed(() => {

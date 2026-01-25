@@ -1,7 +1,6 @@
 import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globals";
 import { App as OwlApp } from "@odoo/owl";
 
-// Mock Tauri APIs
 const invokeMock = jest.fn();
 const listenMock = jest.fn(() => Promise.resolve(() => {}));
 
@@ -13,7 +12,6 @@ jest.unstable_mockModule("@tauri-apps/api/event", () => ({
     listen: listenMock
 }));
 
-// Real imports
 const { Root } = await import("../root");
 const { AppPlugin } = await import("../app_plugin");
 
@@ -53,29 +51,15 @@ describe("Root Integration Tests", () => {
 
     async function mountApp() {
         owlApp = new OwlApp({ plugins: [AppPlugin] });
-        // Load all templates
-        const templates = await Promise.all([
-            import("../root.xml?raw"),
-            import("../companion.xml?raw"),
-            import("../header.xml?raw"),
-            import("../footer.xml?raw"),
-            import("../control_page.xml?raw"),
-            import("../log_page.xml?raw")
-        ]);
-        templates.forEach((t) => owlApp.addTemplates(t.default));
-
         await owlApp.createRoot(Root).mount(target);
     }
 
     test("renders the full app hierarchy", async () => {
         await mountApp();
 
-        // Check for Header title
         const title = target.querySelector("h1");
-        expect(title).toBeTruthy();
         expect(title?.textContent).toBe("Discuss Companion");
 
-        // Check for permission status (mocked to false)
         const permStatus = target.querySelectorAll(".status-item")[0];
         expect(permStatus?.textContent).toContain("Permission Required");
     });

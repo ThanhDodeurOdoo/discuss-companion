@@ -1,14 +1,10 @@
-<templates xml:space="preserve">
-    <t t-name="discuss.ControlPage">
-        <div class="ptt-control prevent-select">
-            <button 
-                class="key-display" 
-                t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }" 
-                t-on-click="() => this.app.toggleRecording()">
-                <span t-if="this.app.isRecording()" class="key-text">PRESS ANY KEY...</span>
-                <span t-elif="this.app.showSymbols()" class="key-text" t-out="this.keySymbol()"/>
-                <span t-else="" class="key-text" t-out="this.keyName()"/>
-            </button>
-        </div>
-    </t>
-</templates>
+<div class="ptt-control prevent-select">
+    <button 
+        class="key-display" 
+        t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }" 
+        t-on-click="() => this.app.toggleRecording()">
+        <span t-if="this.app.isRecording()" class="key-text">PRESS ANY KEY...</span>
+        <span t-elif="this.app.showSymbols()" class="key-text" t-out="this.keySymbol()"/>
+        <span t-else="" class="key-text" t-out="this.keyName()"/>
+    </button>
+</div>
