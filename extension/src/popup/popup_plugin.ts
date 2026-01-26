@@ -1,5 +1,5 @@
 import { Plugin, signal } from "@odoo/owl";
-import { executeInMainWorld, OdooWindow } from "../utils";
+import { executeInMainWorld } from "../utils";
 
 export class PopupPlugin extends Plugin {
     port = signal(49152);
@@ -12,6 +12,10 @@ export class PopupPlugin extends Plugin {
     setup() {
         this.restoreOptions();
         this.checkIsOdoo();
+        /**
+         * TODO: could do more fun stuff with:
+         * odoo.__WOWL_DEBUG__.root.env.services["mail.store"].rtc
+         */
     }
 
     async restoreOptions() {
@@ -50,15 +54,14 @@ export class PopupPlugin extends Plugin {
 
     async checkIsOdoo() {
         const result = await executeInMainWorld(() => {
-            const win = window as unknown as OdooWindow;
-            const isOdoo = !!(win.owl && win.odoo);
+            const isOdoo = Boolean(window.owl && window.odoo);
             if (!isOdoo) {
-                return { isOdoo: false };
+                return { isOdoo };
             }
             return {
-                isOdoo: true,
-                serverVersion: win.odoo?.info?.server_version || "Unknown",
-                owlVersion: win.owl?.__info__?.version || "Unknown"
+                isOdoo,
+                serverVersion: window.odoo?.info?.server_version || "Unknown",
+                owlVersion: window.owl?.__info__?.version || "Unknown"
             };
         });
 

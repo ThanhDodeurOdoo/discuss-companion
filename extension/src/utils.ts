@@ -1,16 +1,3 @@
-export interface OdooWindow extends Window {
-    odoo?: {
-        info?: {
-            server_version?: string;
-        };
-    };
-    owl?: {
-        __info__?: {
-            version?: string;
-        };
-    };
-}
-
 export async function executeInMainWorld<T>(mainFunc: () => T): Promise<T | undefined> {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab.id) {
