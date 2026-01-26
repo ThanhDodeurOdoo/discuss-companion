@@ -22,16 +22,12 @@ interface ExtensionMessage {
 
 chrome.storage.local.get({ wsPort: 49152 }, (items) => {
     wsPort = items.wsPort as number;
-    console.log(`[Discussion Companion] Initialized with port: ${wsPort}`);
     connectToApp();
 });
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === "local" && changes.wsPort) {
         const newPort = changes.wsPort.newValue as number;
-        console.log(
-            `[Discussion Companion] Port changed from ${wsPort} to ${newPort}. Reconnecting...`
-        );
         wsPort = newPort;
         if (socket) {
             socket.close(); // Close will trigger reconnect logic via onclose/alarm or we can force it
@@ -83,14 +79,10 @@ async function handleMessage(
     const tabId = sender.tab ? sender.tab.id : null;
 
     if (!tabId && type !== "ask-version") {
-        console.warn(`Received ${type} message without a valid Tab ID.`);
         sendResponse?.({ error: "no-tab" });
         return;
     }
 
-    console.log(`Received message: ${type}, tab: ${tabId}`);
-
-    // Non-null assertion for tabId where required, checked above.
     const safeTabId = tabId as number;
 
     switch (type) {
@@ -99,7 +91,6 @@ async function handleMessage(
                 const isTalkingByTabId = await getIsTalkingByTabId();
                 isTalkingByTabId[safeTabId] = false;
                 await chrome.storage.session.set({ isTalkingByTabId });
-                console.log(`Tab ${safeTabId} subscribed to PTT events.`);
                 sendResponse?.({ status: "ok" });
             }
             break;
@@ -148,7 +139,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function onCommand(command: "toggle-voice" | "ptt-pressed" | "ptt-released") {
     const isTalkingByTabId = await getIsTalkingByTabId();
     const tabIds = Object.keys(isTalkingByTabId);
-    console.log(`onCommand: ${command}, targets: ${tabIds.length} tabs`, tabIds);
 
     for (const tabIdStr of tabIds) {
         const tabId = Number(tabIdStr);
@@ -160,14 +150,12 @@ async function onCommand(command: "toggle-voice" | "ptt-pressed" | "ptt-released
                 });
                 break;
             case "ptt-pressed":
-                console.log(`Sending ptt-pressed to tab ${tabId}`);
                 chrome.tabs.sendMessage(tabId, {
                     from: "discuss-push-to-talk",
                     type: "push-to-talk-pressed"
                 });
                 break;
             case "ptt-released":
-                console.log(`Sending ptt-released to tab ${tabId}`);
                 chrome.tabs.sendMessage(tabId, {
                     from: "discuss-push-to-talk",
                     type: "push-to-talk-released"
@@ -186,7 +174,6 @@ function connectToApp() {
     }
 
     const wsUrl = `ws://127.0.0.1:${wsPort}`;
-    console.log("Attempting to connect to WS:", wsUrl);
     try {
         socket = new WebSocket(wsUrl);
         socket.binaryType = "arraybuffer";
@@ -197,7 +184,6 @@ function connectToApp() {
     let pingInterval: ReturnType<typeof setInterval>;
 
     socket.onopen = () => {
-        console.log(`Connected to Discuss Companion via WebSocket on port ${wsPort}`);
         chrome.alarms.clear(RECONNECT_ALARM_NAME);
         updateAppIcon();
 
@@ -227,15 +213,14 @@ function connectToApp() {
                 case MessageBody.Pong:
                     break;
                 default:
-                    console.warn(`Unknown message type: ${message.bodyType()}`);
+                    break;
             }
-        } catch (e) {
-            console.error("Failed to parse message:", e);
+        } catch {
+            // skip
         }
     };
 
     socket.onclose = (e) => {
-        console.log("WS Disconnected. code:", e.code, "reason:", e.reason);
         if (pingInterval) {
             clearInterval(pingInterval);
         }
@@ -245,7 +230,6 @@ function connectToApp() {
     };
 
     socket.onerror = (error) => {
-        console.error("WebSocket connection error");
         updateAppIcon();
     };
 }
@@ -271,7 +255,6 @@ function sendPing() {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === RECONNECT_ALARM_NAME) {
-        console.log("Reconnection alarm fired");
         connectToApp();
     }
 });

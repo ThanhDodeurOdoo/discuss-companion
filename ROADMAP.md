@@ -14,6 +14,11 @@ closing the app from the red button should also remove the app from the dock
 
 Make a linux compilation target.
 
+### Extension initialization handshake
+(not to confuse with Firefox's extension own handshake)
+
+The extension should send an initialization message through the ws to the app
+with its version number (so we can check and maybe guard features).
 
 ### Support the toggle ptt API
 
@@ -36,16 +41,11 @@ and extension files when a new version is released.
 For example if the user has multiple chrome profiles or firefox and chrome
 at the same time, we need to be able to choose which connection to use.
 
-Another option would be that only the extension with a tab actually in-call can
-establish a connection, but i don't tihnk we can know that without modifying the
-odoo code. And anyways, the user can have multiple browsers/profiles in-call
-at the same time if they have multiple users or guests.
-
+Maybe a sidebar where we can select which ones receive the key events.
 
 ### Ability to control mute/deaf/... state
 
-This requires an improved Odoo side API to control the state of the user in the call,
-unless we can send arbitrary code to the browser but that's sketchy.
+could be done with extension execution (see [extension utils](extension/src/utils.ts)) at `executeInMainWorld()`.
 
 # Nice-to-have
 

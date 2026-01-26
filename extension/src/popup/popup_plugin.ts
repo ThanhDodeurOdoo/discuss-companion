@@ -15,14 +15,14 @@ export class PopupPlugin extends Plugin {
         /**
          * TODO: could do more fun stuff with:
          * odoo.__WOWL_DEBUG__.root.env.services["mail.store"].rtc
+         * but execution should be well guarded in case
+         * features change in the future
          */
     }
 
     async restoreOptions() {
-        console.log("[Discuss Companion Options] Restoring options...");
         const items = (await chrome.storage.local.get({ wsPort: 49152 })) as { wsPort: number };
         this.port.set(items.wsPort);
-        console.log("[Discuss Companion Options] Options restored. Port:", items.wsPort);
     }
 
     async save() {
@@ -36,12 +36,9 @@ export class PopupPlugin extends Plugin {
             return;
         }
 
-        console.log("[Discuss Companion Options] Saving port:", portNum);
-
         await chrome.storage.local.set({ wsPort: portNum });
         this.status.set("Options saved. Extension reloading connection...");
         this.statusColor.set("#2da44e");
-        console.log("[Discuss Companion Options] Port saved.");
 
         setTimeout(() => {
             this.status.set("");
@@ -71,6 +68,5 @@ export class PopupPlugin extends Plugin {
             this.serverVersion.set(finalResult.serverVersion!);
             this.owlVersion.set(finalResult.owlVersion!);
         }
-        console.log("[Discuss Companion] Is Odoo:", finalResult.isOdoo);
     }
 }
