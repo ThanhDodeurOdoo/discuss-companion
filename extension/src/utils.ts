@@ -1,3 +1,8 @@
+/**
+ * https://developer.chrome.com/docs/extensions/reference/api/scripting
+ *
+ * @param mainFunc to execute in the window's context, can be async
+ */
 export async function executeInMainWorld<T>(mainFunc: () => T): Promise<T | undefined> {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab.id) {

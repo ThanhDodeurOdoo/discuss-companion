@@ -17,6 +17,10 @@ export class PopupPlugin extends Plugin {
          * odoo.__WOWL_DEBUG__.root.env.services["mail.store"].rtc
          * but execution should be well guarded in case
          * features change in the future
+         *
+         * could even use executeInMainWorld() to bootstrap some
+         * kind of script that would run in the main world
+         * and setup communication with the extension
          */
     }
 

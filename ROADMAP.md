@@ -10,6 +10,11 @@ top menu icon.
 closing the app from the red button should also remove the app from the dock
 (but not the process, which is already implemented).
 
+### Cleaner extension architecture
+
+There should be some kind of action/request interface that exposes
+all the features of the app (ptt and other interactions with the main dwindow), then the extension can execute these actions from messages from the websocket or from extension shortcuts, or from popup buttons.
+
 ### Support for Linux [@Issue#1](https://github.com/ThanhDodeurOdoo/discuss-companion/issues/1)
 
 Make a linux compilation target.
@@ -20,7 +25,12 @@ Make a linux compilation target.
 The extension should send an initialization message through the ws to the app
 with its version number (so we can check and maybe guard features).
 
+the extension could also collect information on tabs (like which ones are odoo tabs, and send that origin to the app), although from the extension
+point of view it's not clear which tab is relevant since it blindly sends
+ptt commands to everything.
+
 ### Support the toggle ptt API
+(could actually also directly interact with the rtc.mute() function)
 
 see the switch/case `switch (message.bodyType())` in [background.ts](extension/src/background.ts),
 this should implement the `"toggle-voice"` command.
@@ -41,7 +51,8 @@ and extension files when a new version is released.
 For example if the user has multiple chrome profiles or firefox and chrome
 at the same time, we need to be able to choose which connection to use.
 
-Maybe a sidebar where we can select which ones receive the key events.
+Maybe a sidebar where we can select which ones receive the key events
+and track some metadata about them (browser, version, origin, ...)
 
 ### Ability to control mute/deaf/... state
 
