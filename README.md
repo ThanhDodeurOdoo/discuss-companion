@@ -9,16 +9,17 @@
 The Discuss Companion is a companion app for Odoo Discuss, currently supporting macOS (Linux support is Work in Progress). It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus.
 
 ![Discuss Companion Example](assets/example.gif)
+
+The app backend is written in Rust, the app frontend (and the extension) is written in TypeScript using [Owl v3](https://github.com/odoo/owl) as the framework.
+
 ## Architecture
 
 The repository contains 2 parts:
 1.  **The App (macOS and Linux\*)**:
     -   Captures global key events using platform-specific APIs and runs a WebSocket server.
-    -   front-end built with [Owl v3](https://github.com/odoo/owl).
-    -   back-end built with [Rust](https://www.rust-lang.org/).
 2.  **The Extension (Chrome & Firefox)**:
     -   Connects to the desktop agent via WebSockets and relays PTT signals to the Odoo web page.
-  
+
 *: not yet
 
 The communication between the App and the Extension uses [FlatBuffers](https://google.github.io/flatbuffers/), The schema is defined in `protocol.fbs`. These messages are sent through websocket.
@@ -30,9 +31,11 @@ The communication between the App and the Extension uses [FlatBuffers](https://g
 ### Prerequisites
 
 #### Dev:
--  **Rust Toolchain**: [Install Rust](https://rustup.rs/) (v1.92+)
--  **flatbuffers**: Required for the `flatbuffers` code generation (if you need to change the protocol).
--  **Node.js**: Version 24.13.0 and `npm`
+- For the App deployment and building the extension:
+    -  **Rust (v1.92+)** ([link](https://rustup.rs/))
+    -  **Node.js (v24.13.0+)** ([link](https://nodejs.org/en/download))
+-  If you need to change the protocol schema:
+    -  **flatbuffers (latests)** ([link](https://flatbuffers.dev/flatc/))
 #### Main:
 -  **Browser**: Google Chrome or Mozilla Firefox required for the extension.
 -  **OS**: macOS (Linux support coming soon).
