@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
 import { viteStaticCopy } from "vite-plugin-static-copy";
+import owlXmlPlugin from "./vite-plugin-owl-xml";
 
 export default defineConfig(({ mode }) => {
     const target = process.env.TARGET || "chrome";
@@ -12,21 +13,18 @@ export default defineConfig(({ mode }) => {
         build: {
             outDir,
             emptyOutDir: true,
-            lib: {
-                entry: resolve(__dirname, "src/background.ts"),
-                formats: ["es"],
-                fileName: () => "background.js"
-            },
             rollupOptions: {
                 input: {
-                    background: resolve(__dirname, "src/background.ts")
+                    background: resolve(__dirname, "src/background.ts"),
+                    main: resolve(__dirname, "src/popup/main.ts")
                 },
                 output: {
-                    entryFileNames: "background.js"
+                    entryFileNames: "[name].js"
                 }
             }
         },
         plugins: [
+            owlXmlPlugin(),
             viteStaticCopy({
                 targets: [
                     {
@@ -45,10 +43,6 @@ export default defineConfig(({ mode }) => {
                     },
                     {
                         src: "extension/options.html",
-                        dest: "."
-                    },
-                    {
-                        src: "extension/options.js",
                         dest: "."
                     }
                 ]

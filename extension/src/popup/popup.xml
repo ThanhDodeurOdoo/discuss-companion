@@ -1,0 +1,16 @@
+<templates>
+    <div t-name="Popup" class="container">
+        <h1>Settings</h1>
+        <div class="form-group">
+            <label for="port">WebSocket Port</label>
+            <input type="number" id="port"
+                t-att-value="this.popup.port()"
+                t-on-input="(ev) => this.popup.updatePort(ev.target.value)"
+                min="1" max="65535" />
+        </div>
+        <button id="save" t-on-click="() => this.popup.save()">Save</button>
+        <div id="status" class="status" t-att-style="'color: ' + this.popup.statusColor()">
+            <t t-out="this.popup.status()"/>
+        </div>
+    </div>
+</templates>
