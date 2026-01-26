@@ -5,6 +5,9 @@
             <div class="status-item" t-att-class="this.app.permissionGranted() ? 'granted' : ''" t-att-title="'Whether the accessibility permission is granted'">
                 <div class="status-dot"></div>
                 <span t-out="this.app.permissionGranted() ? 'Accessibility Granted' : 'Permission Required'"/>
+                <button t-if="!this.app.permissionGranted()" class="retry-btn" t-on-click="() => this.app.checkPermission()">
+                    Retry
+                </button>
             </div>
             <div class="status-item" t-att-class="this.app.extensionConnected() ? 'connected' : ''" t-att-title="'Whether the extension WebSocket is connected'">
                 <div class="status-dot"></div>

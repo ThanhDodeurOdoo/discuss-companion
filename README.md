@@ -59,6 +59,10 @@ The communication between the App and the Extension uses [FlatBuffers](https://g
 
 ## Extension Setup
 
+> [!WARNING]  
+> The extension is not compatible with the Odoo Discuss extension
+>
+
 To link the app with Odoo:
 
 1.  **Build the Extension**:
@@ -90,7 +94,7 @@ The output will be generated in `app/backend/target/release/bundle/`.
 ### Choosing the Target OS
 The application automatically detects the target OS based on the build environment. If you want to build for a specific target manually using Cargo:
 
-- **macOS**: `cargo build --target x86_64-apple-darwin` or `aarch64-apple-darwin`
+- **macOS**: `npm run tauri build -- --target aarch64-apple-darwin`
 - **Linux**: `cargo build --target x86_64-unknown-linux-gnu` (Note: PTT engine not yet implemented)
 
 > [!WARNING]  

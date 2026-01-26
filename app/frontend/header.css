@@ -116,3 +116,21 @@ input[type=number] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+.retry-btn {
+    background: transparent;
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    margin-left: 4px;
+    transition: all 0.2s;
+}
+
+.retry-btn:hover {
+    background: rgba(139, 148, 158, 0.1);
+    color: var(--text-primary);
+    border-color: var(--text-primary);
+}
