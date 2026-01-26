@@ -4,6 +4,7 @@ version = "0.3.0"
 description = "Odoo Discuss Companion"
 authors = ["ThanhDodeurOdoo"]
 edition = "2021"
+rust-version = "1.92"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

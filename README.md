@@ -30,9 +30,9 @@ The communication between the App and the Extension uses [FlatBuffers](https://g
 ### Prerequisites
 
 #### Dev:
--  **Rust Toolchain**: [Install Rust](https://rustup.rs/)
+-  **Rust Toolchain**: [Install Rust](https://rustup.rs/) (v1.92+)
 -  **flatbuffers**: Required for the `flatbuffers` code generation (if you need to change the protocol).
--  **Node.js**: Version 18+ and `npm`
+-  **Node.js**: Version 24.13.0 and `npm`
 #### Main:
 -  **Browser**: Google Chrome or Mozilla Firefox required for the extension.
 -  **OS**: macOS (Linux support coming soon).

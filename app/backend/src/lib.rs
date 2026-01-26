@@ -161,7 +161,6 @@ pub fn run() {
     let shutdown = Arc::new(AtomicBool::new(false));
     let shutdown_clone = Arc::clone(&shutdown);
     let (ws_tx, _) = tokio::sync::broadcast::channel::<Vec<u8>>(100);
-    // Initial shutdown channel
     let (ws_shutdown_tx, ws_shutdown_rx) = tokio::sync::broadcast::channel::<()>(1);
     let ws_tx_clone = ws_tx.clone();
     let ws_shutdown_tx_clone = ws_shutdown_tx.clone();
