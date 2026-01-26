@@ -16,7 +16,7 @@ use std::ptr;
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 type CGEventRef = *mut c_void;
 type CGEventTapProxy = *mut c_void;
@@ -34,6 +34,7 @@ extern "C" {
 
     fn CGEventGetIntegerValueField(event: CGEventRef, field: u32) -> i64;
     fn CGEventGetFlags(event: CGEventRef) -> u64;
+    fn CGEventTapEnable(tap: CFMachPortRef, enable: bool);
 
     fn CFMachPortCreateRunLoopSource(
         allocator: *const c_void,
@@ -58,9 +59,14 @@ const K_CG_EVENT_FLAG_MASK_CONTROL: u64 = 0x0004_0000;
 const K_CG_EVENT_FLAG_MASK_ALTERNATE: u64 = 0x0008_0000; // Option/Alt
 const K_CG_EVENT_FLAG_MASK_COMMAND: u64 = 0x0010_0000;
 
+const K_CG_EVENT_TAP_DISABLED_BY_TIMEOUT: u32 = 0xFFFF_FFFE;
+const K_CG_EVENT_TAP_DISABLED_BY_USER_INTEREST: u32 = 0xFFFF_FFFF;
+
 static HELD: AtomicBool = AtomicBool::new(false);
 static TARGET_KEYCODE: AtomicU16 = AtomicU16::new(49); // Default: Space
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
+static GLOBAL_TAP: std::sync::atomic::AtomicPtr<c_void> =
+    std::sync::atomic::AtomicPtr::new(ptr::null_mut());
 
 static EVENT_SENDER: OnceLock<Sender<OutgoingMessage>> = OnceLock::new();
 static CURRENT_BINDING: OnceLock<RwLock<KeyBinding>> = OnceLock::new();
@@ -110,7 +116,9 @@ impl PttEngine for MacosEngine {
             let key = CFString::from_static_string("AXTrustedCheckOptionPrompt");
             let value = CFBoolean::true_value();
             let options = CFDictionary::from_CFType_pairs(&[(key.as_CFType(), value.as_CFType())]);
-            AXIsProcessTrustedWithOptions(options.as_concrete_TypeRef()) != 0
+            let trusted = AXIsProcessTrustedWithOptions(options.as_concrete_TypeRef()) != 0;
+            debug!("Accessibility permission check: {}", trusted);
+            trusted
         }
     }
 
@@ -140,12 +148,16 @@ impl PttEngine for MacosEngine {
             )
         };
 
+        GLOBAL_TAP.store(tap.cast::<c_void>(), Ordering::SeqCst);
+
         if tap.is_null() {
+            error!("Failed to create event tap - NULL return");
             return Err(anyhow!(
                 "Failed to create event tap. Accessibility permission may be missing. \
                  Grant permission in System Settings → Privacy & Security → Accessibility."
             ));
         }
+        debug!("CGEventTap created successfully");
 
         // SAFETY: CFMachPortCreateRunLoopSource requires a valid CFMachPort
         #[allow(unsafe_code)]
@@ -211,12 +223,35 @@ const K_CG_EVENT_FLAGS_CHANGED: u32 = 12;
 
 static PRIMARY_KEY_HELD: AtomicBool = AtomicBool::new(false);
 
+#[allow(clippy::too_many_lines)]
 extern "C" fn event_callback(
     _proxy: CGEventTapProxy,
     event_type: u32,
     event: CGEventRef,
     _user_info: *mut c_void,
 ) -> CGEventRef {
+    // Handle disabled tap events
+    if event_type == K_CG_EVENT_TAP_DISABLED_BY_TIMEOUT
+        || event_type == K_CG_EVENT_TAP_DISABLED_BY_USER_INTEREST
+    {
+        let tap = GLOBAL_TAP.load(Ordering::SeqCst);
+        if !tap.is_null() {
+            info!(
+                "Event tap disabled by system (type={}), re-enabling...",
+                event_type
+            );
+            #[allow(unsafe_code)]
+            unsafe {
+                CGEventTapEnable(tap as CFMachPortRef, true);
+            }
+        }
+        return event;
+    }
+
+    if event.is_null() {
+        return event;
+    }
+
     // SAFETY: CGEventGetIntegerValueField is safe with a valid event pointer.
     // Key codes are always small positive integers (0-127), so truncation is intentional.
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -227,6 +262,11 @@ extern "C" fn event_callback(
     #[allow(unsafe_code)]
     let flags = unsafe { CGEventGetFlags(event) };
     let modifiers = get_modifiers_from_flags(flags);
+
+    debug!(
+        "CGEvent: type={} keycode={} flags={:?} mods={:?}",
+        event_type, keycode, flags, modifiers
+    );
 
     let target_code = TARGET_KEYCODE.load(Ordering::SeqCst);
     let recording = IS_RECORDING.load(Ordering::SeqCst);
@@ -250,6 +290,11 @@ extern "C" fn event_callback(
     let current_ptt_state = get_ptt_state();
     let engine = get_engine();
     let binding = engine.get_binding();
+
+    debug!(
+        "State: primary_held={} target={} recording={}",
+        primary_held, target_code, recording
+    );
     let ts = current_timestamp();
 
     if recording {
@@ -279,6 +324,11 @@ extern "C" fn event_callback(
 
     let modifiers_match = binding_mods == current_mods;
     let should_be_active = primary_held && modifiers_match;
+
+    debug!(
+        "Logic: mods_match={} should_active={} current_state={:?}",
+        modifiers_match, should_be_active, current_ptt_state
+    );
 
     match current_ptt_state {
         PttState::Idle => {

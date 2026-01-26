@@ -128,15 +128,18 @@ async function handleMessage(
 }
 
 chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+    console.log("[BG] onMessageExternal", request, sender);
     handleMessage(request, sender, sendResponse);
     return true; // Keep channel open for async sendResponse
 });
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log("[BG] onMessage", request, sender);
     handleMessage(request, sender, sendResponse);
     return true; // Keep channel open for async sendResponse
 });
 
 async function onCommand(command: "toggle-voice" | "ptt-pressed" | "ptt-released") {
+    console.log("[BG] onCommand", command);
     const isTalkingByTabId = await getIsTalkingByTabId();
     const tabIds = Object.keys(isTalkingByTabId);
 
@@ -175,15 +178,18 @@ function connectToApp() {
 
     const wsUrl = `ws://127.0.0.1:${wsPort}`;
     try {
+        console.log("[BG] Connecting to WS", wsUrl);
         socket = new WebSocket(wsUrl);
         socket.binaryType = "arraybuffer";
-    } catch {
+    } catch (e) {
+        console.error("[BG] WebSocket creation failed", e);
         return;
     }
 
     let pingInterval: ReturnType<typeof setInterval>;
 
     socket.onopen = () => {
+        console.log("[BG] WS Open");
         chrome.alarms.clear(RECONNECT_ALARM_NAME);
         updateAppIcon();
 
@@ -203,6 +209,7 @@ function connectToApp() {
             const buf = new flatbuffers.ByteBuffer(data);
             const message = Message.getRootAsMessage(buf);
 
+            console.log("[BG] WS Message bodyType:", message.bodyType());
             switch (message.bodyType()) {
                 case MessageBody.PttDown:
                     onCommand("ptt-pressed");
@@ -221,6 +228,7 @@ function connectToApp() {
     };
 
     socket.onclose = (e) => {
+        console.log("[BG] WS Close", e);
         if (pingInterval) {
             clearInterval(pingInterval);
         }
@@ -230,6 +238,7 @@ function connectToApp() {
     };
 
     socket.onerror = (error) => {
+        console.error("[BG] WS Error", error);
         updateAppIcon();
     };
 }

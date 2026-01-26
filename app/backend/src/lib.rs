@@ -82,6 +82,7 @@ impl PttHandler {
     }
 
     fn handle_ptt(&mut self, msg: &state::OutgoingMessage) {
+        debug!("PttHandler handling event: {:?}", msg);
         let _ = self.app_handle.emit("ptt-event", msg);
 
         match msg {
@@ -102,6 +103,7 @@ impl PttHandler {
     }
 
     fn handle_connection_change(&mut self, is_connected: bool) {
+        debug!("Connection state changed: connected={}", is_connected);
         self.is_connected = is_connected;
         self.update_tray();
     }

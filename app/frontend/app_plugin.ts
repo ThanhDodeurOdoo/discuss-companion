@@ -166,6 +166,11 @@ export class AppPlugin extends Plugin {
     }
 
     async checkPermission() {
+        if (this.permissionGranted() && this.permissionInterval) {
+            clearInterval(this.permissionInterval);
+            this.permissionInterval = null;
+            return;
+        }
         const isGranted = await invoke<boolean>("is_accessibility_granted");
         this.permissionGranted.set(isGranted);
     }
