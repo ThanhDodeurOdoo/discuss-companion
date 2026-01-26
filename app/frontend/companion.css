@@ -1,8 +1,16 @@
 main {
   flex: 1;
+  background: var(--border-color);
+  overflow: hidden;
+}
+
+main:not(.settings-view) {
   display: grid;
   grid-template-columns: 350px 1fr;
   gap: 1px;
-  background: var(--border-color);
-  overflow: hidden;
+}
+
+main.settings-view {
+  background: var(--bg-color);
+  overflow-y: auto;
 }

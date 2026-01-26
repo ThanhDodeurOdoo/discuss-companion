@@ -2,10 +2,7 @@
     <button class="text-btn safety-btn prevent-select" t-on-click="() => this.app.forceRelease()" title="Force stop microphone">
         force release
     </button>
-    <div class="toggle-container">
-        <input type="checkbox" id="show-symbols" t-model="this.app.showSymbols"/>
-        <label for="show-symbols" class="prevent-select">Show icons</label>
-    </div>
+
 
     <a class="text-btn source-btn" href="https://github.com/ThanhDodeurOdoo/discuss-companion" target="_blank" rel="noreferrer">
         <t t-out="'v' + this.version"/>

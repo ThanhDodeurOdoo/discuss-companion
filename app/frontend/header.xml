@@ -1,30 +1,20 @@
 <header class="prevent-select">
     <h1>Discuss Companion</h1>
-    <div class="port-control">
-            <label for="ws-port" class="prevent-select">WS Port</label>
-            <input type="number" id="ws-port" 
-            t-model="this.app.wsPort" 
-            t-att-disabled="this.app.isWsReloading()"
-            min="1024"
-            max="65535"
-            class="port-input"
-            />
-            <button class="text-btn reload-btn prevent-select" 
-            t-on-click="() => this.app.reloadWsServer()" 
-            t-att-disabled="this.app.isWsReloading()"
-            title="Reload WebSocket Server">
-            <t t-if="this.app.isWsReloading()">Reloading...</t>
-            <t t-else="">Reload</t>
-            </button>
-    </div>
-    <div class="status-indicators">
-        <div class="status-item" t-att-class="this.app.permissionGranted() ? 'granted' : ''" t-att-title="'Whether the accessibility permission is granted'">
-            <div class="status-dot"></div>
-            <span t-out="this.app.permissionGranted() ? 'Accessibility Granted' : 'Permission Required'"/>
+    <div class="header-controls">
+        <div class="status-indicators">
+            <div class="status-item" t-att-class="this.app.permissionGranted() ? 'granted' : ''" t-att-title="'Whether the accessibility permission is granted'">
+                <div class="status-dot"></div>
+                <span t-out="this.app.permissionGranted() ? 'Accessibility Granted' : 'Permission Required'"/>
+            </div>
+            <div class="status-item" t-att-class="this.app.extensionConnected() ? 'connected' : ''" t-att-title="'Whether the extension WebSocket is connected'">
+                <div class="status-dot"></div>
+                <span t-out="this.app.extensionConnected() ? 'Ext. Connected' : 'Ext. Disconnected'"/>
+            </div>
         </div>
-        <div class="status-item" t-att-class="this.app.extensionConnected() ? 'connected' : ''" t-att-title="'Whether the extension WebSocket is connected'">
-            <div class="status-dot"></div>
-            <span t-out="this.app.extensionConnected() ? 'Ext. Connected' : 'Ext. Disconnected'"/>
+        <div class="view-controls">
+             <button class="settings-btn" t-att-class="{ 'active': this.app.showSettings() }" t-on-click="() => this.app.toggleSettings()">
+                ⚙︎
+            </button>
         </div>
     </div>
 </header>

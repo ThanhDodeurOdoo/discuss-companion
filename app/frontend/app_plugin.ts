@@ -1,4 +1,3 @@
-// SAFETY: requires unsafe code for macOS Core Graphics FFI calls.
 import { Plugin, signal, onWillDestroy } from "@odoo/owl";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -42,6 +41,7 @@ export class AppPlugin extends Plugin {
     currentBinding = signal<PttBinding>({ code: 0, modifiers: [] });
     isForcingRelease = false;
     logs = signal.Array<LogEntry>([]);
+    showSettings = signal(false);
 
     // WS Port Management
     wsPort = signal(DEFAULT_PORT);
@@ -246,6 +246,10 @@ export class AppPlugin extends Plugin {
 
     clearLogs() {
         this.logs.set([]);
+    }
+
+    toggleSettings() {
+        this.showSettings.set(!this.showSettings());
     }
 
     formatKeyBinding(code: number, modifiers: number[] = []): string {

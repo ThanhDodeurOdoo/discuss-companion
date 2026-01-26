@@ -9,22 +9,7 @@
     align-items: center;
 }
 
-.toggle-container {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-    user-select: none;
-}
 
-.toggle-container input {
-    cursor: pointer;
-}
-
-.toggle-container label {
-    cursor: pointer;
-}
 
 .text-btn.source-btn {
     color: var(--text-secondary);

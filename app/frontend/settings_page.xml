@@ -1,0 +1,34 @@
+<div class="settings-page">
+    <h2 class="settings-title">Settings</h2>
+    
+    <div class="setting-item">
+        <div class="setting-label">
+            <label for="show-symbols" class="prevent-select">Show icons in PTT button</label>
+            <span class="setting-desc">Toggle between key names and icons</span>
+        </div>
+        <input type="checkbox" id="show-symbols" t-model="this.app.showSymbols"/>
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <label for="ws-port" class="prevent-select">WebSocket Port</label>
+            <span class="setting-desc">Port for extension communication with te extension</span>
+        </div>
+        <div class="port-control-group">
+            <input type="number" id="ws-port" 
+                t-model="this.app.wsPort" 
+                t-att-disabled="this.app.isWsReloading()"
+                min="1024"
+                max="65535"
+                class="port-input"
+            />
+            <button class="text-btn reload-btn prevent-select" 
+                t-on-click="() => this.app.reloadWsServer()" 
+                t-att-disabled="this.app.isWsReloading()"
+                title="Reload WebSocket Server">
+                <t t-if="this.app.isWsReloading()">Reloading...</t>
+                <t t-else="">Reload</t>
+            </button>
+        </div>
+    </div>
+</div>

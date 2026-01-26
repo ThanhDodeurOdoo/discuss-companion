@@ -86,6 +86,13 @@ describe("Companion Component Interactions", () => {
 
     test("Reload WS button triggers update_ws_port", async () => {
         await mountApp();
+
+        // Navigate to settings page
+        const settingsBtn = target.querySelector(".settings-btn") as HTMLButtonElement;
+        expect(settingsBtn).toBeTruthy();
+        await settingsBtn.click();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
         const reloadBtn = target.querySelector(".reload-btn") as HTMLButtonElement;
         const portInput = target.querySelector("#ws-port") as HTMLInputElement;
 

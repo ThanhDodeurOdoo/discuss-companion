@@ -1,8 +1,13 @@
 <t>
     <Header />
-    <main>
-        <ControlPage />
-        <LogPage />
+    <main t-att-class="{ 'settings-view': this.app.showSettings() }">
+        <t t-if="this.app.showSettings()">
+            <SettingsPage />
+        </t>
+        <t t-else="">
+            <ControlPage />
+            <LogPage />
+        </t>
         <Footer />
     </main>
 </t>

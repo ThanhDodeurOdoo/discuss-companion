@@ -68,50 +68,40 @@ h1 {
   100% { opacity: 1; }
 }
 
-.port-control {
+.header-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
+    gap: 16px;
 }
 
-.port-input {
+.settings-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.settings-btn:hover {
     background: rgba(139, 148, 158, 0.1);
-    border: 1px solid var(--border-color);
     color: var(--text-primary);
-    padding: 4px 8px;
-    border-radius: 4px;
-    width: 70px;
-    font-family: inherit;
-    font-size: 0.8rem;
+    border-color: var(--text-secondary);
+    padding-bottom: 3px;
 }
 
-.port-input:focus {
-    outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 1px var(--accent-color);
-}
-
-.port-input:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.reload-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-}
-
-.reload-btn:hover:not(:disabled) {
+.settings-btn.active {
+    background: rgba(56, 139, 253, 0.15);
     color: var(--accent-color);
     border-color: var(--accent-color);
-}
-
-.reload-btn:disabled {
-    opacity: 0.5;
-    cursor: wait;
 }
 
 /* Chrome, Safari, Edge, Opera */

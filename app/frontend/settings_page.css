@@ -1,0 +1,94 @@
+.settings-page {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    color: var(--text-primary);
+}
+
+.settings-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: rgba(139, 148, 158, 0.1);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.setting-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--accent-color);
+}
+
+.setting-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.setting-label label {
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.setting-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.port-control-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.port-input {
+    background: rgba(139, 148, 158, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    width: 80px;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.port-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 1px var(--accent-color);
+}
+
+.port-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.reload-btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.reload-btn:hover:not(:disabled) {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.reload-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
