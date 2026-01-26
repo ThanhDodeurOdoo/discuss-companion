@@ -6,3 +6,18 @@ declare module "*.xml" {
 declare module "*/compile_templates.mjs" {
     export function compileTemplates(paths: string[]): Promise<string>;
 }
+
+declare global {
+    interface Window {
+        odoo?: {
+            info?: {
+                server_version?: string;
+            };
+        };
+        owl?: {
+            __info__?: {
+                version?: string;
+            };
+        };
+    }
+}

@@ -12,5 +12,11 @@
         <div id="status" class="status" t-att-style="'color: ' + this.popup.statusColor()">
             <t t-out="this.popup.status()"/>
         </div>
+        <div class="odoo-info" t-if="this.popup.isOdoo()">
+             <hr/>
+             <div><strong>Odoo detected</strong></div>
+             <div>Server Version: <t t-out="this.popup.serverVersion()"/></div>
+             <div>Owl Version: <t t-out="this.popup.owlVersion()"/></div>
+        </div>
     </div>
 </templates>

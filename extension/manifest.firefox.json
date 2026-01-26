@@ -11,7 +11,11 @@
     },
     "permissions": [
         "storage",
-        "alarms"
+        "alarms",
+        "scripting",
+        "activeTab",
+        "http://*/*",
+        "https://*/*"
     ],
     "action": {
         "default_popup": "options.html"

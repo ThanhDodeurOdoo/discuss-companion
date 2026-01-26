@@ -1,12 +1,17 @@
 import { Plugin, signal } from "@odoo/owl";
+import { executeInMainWorld, OdooWindow } from "../utils";
 
 export class PopupPlugin extends Plugin {
     port = signal(49152);
     status = signal("");
     statusColor = signal("#24292f");
+    isOdoo = signal(false);
+    serverVersion = signal("");
+    owlVersion = signal("");
 
     setup() {
         this.restoreOptions();
+        this.checkIsOdoo();
     }
 
     async restoreOptions() {
@@ -41,5 +46,28 @@ export class PopupPlugin extends Plugin {
 
     updatePort(value: string) {
         this.port.set(parseInt(value) || 0);
+    }
+
+    async checkIsOdoo() {
+        const result = await executeInMainWorld(() => {
+            const win = window as unknown as OdooWindow;
+            const isOdoo = !!(win.owl && win.odoo);
+            if (!isOdoo) {
+                return { isOdoo: false };
+            }
+            return {
+                isOdoo: true,
+                serverVersion: win.odoo?.info?.server_version || "Unknown",
+                owlVersion: win.owl?.__info__?.version || "Unknown"
+            };
+        });
+
+        const finalResult = result || { isOdoo: false };
+        this.isOdoo.set(finalResult.isOdoo);
+        if (finalResult.isOdoo) {
+            this.serverVersion.set(finalResult.serverVersion!);
+            this.owlVersion.set(finalResult.owlVersion!);
+        }
+        console.log("[Discuss Companion] Is Odoo:", finalResult.isOdoo);
     }
 }
