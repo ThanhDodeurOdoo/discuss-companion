@@ -20,7 +20,8 @@ export class PopupPlugin extends Plugin {
          *
          * could even use executeInMainWorld() to bootstrap some
          * kind of script that would run in the main world
-         * and setup communication with the extension
+         * and setup communication with the extension.
+         * Maybe even an override of rtc_service?
          */
     }
 
