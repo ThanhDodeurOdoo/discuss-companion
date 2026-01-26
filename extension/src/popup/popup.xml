@@ -10,8 +10,8 @@
                 <button id="save" t-on-click="() => this.popup.save()">Save</button>
             </div>
         </div>
-        <div id="status" class="status" t-att-style="'color: ' + this.popup.statusColor()">
-            <t t-out="this.popup.status()"/>
+        <div id="status" class="status" t-att-class="{ 'status-default': this.popup.isStatusDefault, 'status-error': this.popup.isStatusError, 'status-success': this.popup.isStatusSuccess }">
+            <t t-out="this.popup.statusText"/>
         </div>
         <div class="odoo-info" t-if="this.popup.isOdoo()">
              <hr/>

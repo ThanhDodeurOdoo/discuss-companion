@@ -19,7 +19,8 @@ export default defineConfig(({ mode }) => {
                     main: resolve(__dirname, "src/popup/main.ts")
                 },
                 output: {
-                    entryFileNames: "[name].js"
+                    entryFileNames: "[name].js",
+                    assetFileNames: "[name].[ext]"
                 }
             }
         },

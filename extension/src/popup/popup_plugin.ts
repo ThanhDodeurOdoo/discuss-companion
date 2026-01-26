@@ -1,10 +1,16 @@
 import { Plugin, signal } from "@odoo/owl";
 import { executeInMainWorld } from "../utils";
 
+export enum StatusCode {
+    Default = 0,
+    Saving = 1,
+    Success = 2,
+    InvalidPort = 3
+}
+
 export class PopupPlugin extends Plugin {
     port = signal(49152);
-    status = signal("");
-    statusColor = signal("#24292f");
+    statusCode = signal(StatusCode.Default);
     isOdoo = signal(false);
     serverVersion = signal("");
     owlVersion = signal("");
@@ -25,28 +31,53 @@ export class PopupPlugin extends Plugin {
          */
     }
 
+    get isStatusDefault() {
+        return this.statusCode() === StatusCode.Default || this.statusCode() === StatusCode.Saving;
+    }
+
+    get isStatusSuccess() {
+        return this.statusCode() === StatusCode.Success;
+    }
+
+    get isStatusError() {
+        return this.statusCode() === StatusCode.InvalidPort;
+    }
+
+    get statusText() {
+        switch (this.statusCode()) {
+            case StatusCode.Saving:
+                return "Saving...";
+            case StatusCode.Success:
+                return "Options saved. Extension reloading connection...";
+            case StatusCode.InvalidPort:
+                return "Invalid port number.";
+            case StatusCode.Default:
+            default:
+                return "";
+        }
+    }
+
     async restoreOptions() {
         const items = (await chrome.storage.local.get({ wsPort: 49152 })) as { wsPort: number };
         this.port.set(items.wsPort);
     }
 
     async save() {
-        this.status.set("Saving...");
-        this.statusColor.set("#24292f");
+        this.statusCode.set(StatusCode.Saving);
 
         const portNum = this.port();
         if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-            this.status.set("Invalid port number.");
-            this.statusColor.set("#cf222e");
+            this.statusCode.set(StatusCode.InvalidPort);
             return;
         }
 
         await chrome.storage.local.set({ wsPort: portNum });
-        this.status.set("Options saved. Extension reloading connection...");
-        this.statusColor.set("#2da44e");
+        this.statusCode.set(StatusCode.Success);
 
         setTimeout(() => {
-            this.status.set("");
+            if (this.statusCode() === StatusCode.Success) {
+                this.statusCode.set(StatusCode.Default);
+            }
         }, 2000);
     }
 

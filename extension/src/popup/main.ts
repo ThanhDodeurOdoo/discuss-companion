@@ -2,6 +2,7 @@ import { App as OwlApp } from "@odoo/owl";
 import { Popup } from "./popup_component";
 import { PopupPlugin } from "./popup_plugin";
 import { templates } from "./popup.xml";
+import "./popup.css";
 
 async function start() {
     const app = new OwlApp({
