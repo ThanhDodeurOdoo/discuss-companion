@@ -7,7 +7,9 @@
         "storage",
         "alarms"
     ],
-    "action": {},
+    "action": {
+        "default_popup": "options.html"
+    },
     "background": {
         "service_worker": "background.js",
         "type": "module"
@@ -37,9 +39,6 @@
     ],
     "content_security_policy": {
         "extension_pages": "script-src 'self'; object-src 'none'; connect-src ws://127.0.0.1:*;"
-    },
-    "options_ui": {
-        "page": "options.html",
-        "open_in_tab": false
     }
+
 }
