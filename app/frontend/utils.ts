@@ -48,7 +48,7 @@ export const KEY_MAP: Record<number, string> = {
     22: "6",
     26: "7",
     28: "8",
-    213: "9",
+    25: "9",
     10: "§",
     50: "`",
     37: "L",
