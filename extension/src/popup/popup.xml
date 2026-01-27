@@ -4,11 +4,16 @@
             <label for="port">WebSocket Port</label>
             <div class="input-row">
                 <input type="number" id="port"
-                    t-att-value="this.popup.port()"
-                    t-on-input="(ev) => this.popup.updatePort(ev.target.value)"
+                    t-model="this.popup.port"
                     min="1" max="65535" />
                 <button id="save" t-on-click="() => this.popup.save()">Save</button>
             </div>
+        </div>
+        <div class="form-group checkbox-group">
+            <label for="logging">Logging Enabled</label>
+            <input type="checkbox" id="logging"
+                t-model="this.popup.isLoggingEnabled"
+                t-on-change="() => this.popup.updateLogging()" />
         </div>
         <div id="status" class="status" t-att-class="{ 'status-default': this.popup.isStatusDefault, 'status-error': this.popup.isStatusError, 'status-success': this.popup.isStatusSuccess }">
             <t t-out="this.popup.statusText"/>

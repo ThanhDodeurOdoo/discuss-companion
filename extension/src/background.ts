@@ -20,19 +20,34 @@ interface ExtensionMessage {
     value?: unknown;
 }
 
-chrome.storage.local.get({ wsPort: 49152 }, (items) => {
+const mutedLog = (...args: unknown[]) => {};
+let log = mutedLog;
+
+chrome.storage.local.get({ wsPort: 49152, isLoggingEnabled: false }, (items) => {
     wsPort = items.wsPort as number;
+    if (items.isLoggingEnabled) {
+        log = console.log;
+    }
     connectToApp();
 });
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === "local" && changes.wsPort) {
-        const newPort = changes.wsPort.newValue as number;
-        wsPort = newPort;
-        if (socket) {
-            socket.close(); // Close will trigger reconnect logic via onclose/alarm or we can force it
-        } else {
-            connectToApp();
+    if (namespace === "local") {
+        if (changes.wsPort) {
+            const newPort = changes.wsPort.newValue as number;
+            wsPort = newPort;
+            if (socket) {
+                socket.close(); // Close will trigger reconnect logic via onclose/alarm or we can force it
+            } else {
+                connectToApp();
+            }
+        }
+        if (changes.isLoggingEnabled) {
+            if (changes.isLoggingEnabled.newValue) {
+                log = console.log;
+            } else {
+                log = mutedLog;
+            }
         }
     }
 });
@@ -128,18 +143,18 @@ async function handleMessage(
 }
 
 chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
-    console.log("[BG] onMessageExternal", request, sender);
+    log("[BG] onMessageExternal", request, sender);
     handleMessage(request, sender, sendResponse);
     return true; // Keep channel open for async sendResponse
 });
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log("[BG] onMessage", request, sender);
+    log("[BG] onMessage", request, sender);
     handleMessage(request, sender, sendResponse);
     return true; // Keep channel open for async sendResponse
 });
 
 async function onCommand(command: "toggle-voice" | "ptt-pressed" | "ptt-released") {
-    console.log("[BG] onCommand", command);
+    log("[BG] onCommand", command);
     const isTalkingByTabId = await getIsTalkingByTabId();
     const tabIds = Object.keys(isTalkingByTabId);
 
@@ -178,18 +193,18 @@ function connectToApp() {
 
     const wsUrl = `ws://127.0.0.1:${wsPort}`;
     try {
-        console.log("[BG] Connecting to WS", wsUrl);
+        log("[BG] Connecting to WS", wsUrl);
         socket = new WebSocket(wsUrl);
         socket.binaryType = "arraybuffer";
     } catch (e) {
-        console.error("[BG] WebSocket creation failed", e);
+        log("[BG] WebSocket creation failed", e);
         return;
     }
 
     let pingInterval: ReturnType<typeof setInterval>;
 
     socket.onopen = () => {
-        console.log("[BG] WS Open");
+        log("[BG] WS Open");
         chrome.alarms.clear(RECONNECT_ALARM_NAME);
         updateAppIcon();
 
@@ -209,7 +224,7 @@ function connectToApp() {
             const buf = new flatbuffers.ByteBuffer(data);
             const message = Message.getRootAsMessage(buf);
 
-            console.log("[BG] WS Message bodyType:", message.bodyType());
+            log("[BG] WS Message bodyType:", message.bodyType());
             switch (message.bodyType()) {
                 case MessageBody.PttDown:
                     onCommand("ptt-pressed");
@@ -228,7 +243,7 @@ function connectToApp() {
     };
 
     socket.onclose = (e) => {
-        console.log("[BG] WS Close", e);
+        log("[BG] WS Close", e);
         if (pingInterval) {
             clearInterval(pingInterval);
         }

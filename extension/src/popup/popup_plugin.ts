@@ -14,6 +14,7 @@ export class PopupPlugin extends Plugin {
     isOdoo = signal(false);
     serverVersion = signal("");
     owlVersion = signal("");
+    isLoggingEnabled = signal(true);
 
     setup() {
         this.restoreOptions();
@@ -58,8 +59,12 @@ export class PopupPlugin extends Plugin {
     }
 
     async restoreOptions() {
-        const items = (await chrome.storage.local.get({ wsPort: 49152 })) as { wsPort: number };
+        const items = (await chrome.storage.local.get({
+            wsPort: 49152,
+            isLoggingEnabled: true
+        })) as { wsPort: number; isLoggingEnabled: boolean };
         this.port.set(items.wsPort);
+        this.isLoggingEnabled.set(items.isLoggingEnabled);
     }
 
     async save() {
@@ -81,8 +86,10 @@ export class PopupPlugin extends Plugin {
         }, 2000);
     }
 
-    updatePort(value: string) {
-        this.port.set(parseInt(value) || 0);
+    async updateLogging() {
+        await chrome.storage.local.set({
+            isLoggingEnabled: this.isLoggingEnabled()
+        });
     }
 
     async checkIsOdoo() {
