@@ -1,7 +1,9 @@
-use crate::flatbuffers::protocol_generated::discuss::flatbuffers as protocol;
+use std::time::SystemTime;
+
 use flatbuffers::FlatBufferBuilder;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::time::SystemTime;
+
+use crate::flatbuffers::protocol_generated::discuss::flatbuffers as protocol;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]

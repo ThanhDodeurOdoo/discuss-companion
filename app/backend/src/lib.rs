@@ -1,19 +1,19 @@
-mod commands;
-mod platform;
-
-mod flatbuffers;
-mod server;
-mod state;
-
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 use tracing::{debug, error, info};
+
+mod commands;
+mod flatbuffers;
+mod platform;
+mod server;
+mod state;
 
 pub const DEFAULT_PORT: u16 = 49152;
 const TRAY_ID: &str = "main-tray";

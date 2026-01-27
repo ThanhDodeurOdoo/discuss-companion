@@ -1,9 +1,12 @@
+use std::ffi::c_void;
+use std::ptr;
+use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
+use std::sync::{Arc, OnceLock, RwLock};
+use std::time::Duration;
+
+use anyhow::{Result, anyhow};
 // SAFETY: requires unsafe code for macOS Core Graphics FFI calls.
 // The CGEventTap API is inherently unsafe as it involves C callbacks and raw pointers.
-
-use crate::platform::PttEngine;
-use crate::state::{KeyBinding, Modifier, OutgoingMessage, PttState, current_timestamp};
-use anyhow::{Result, anyhow};
 use core_foundation::base::TCFType;
 use core_foundation::mach_port::CFMachPortRef;
 use core_foundation::runloop::{
@@ -11,12 +14,10 @@ use core_foundation::runloop::{
 };
 use core_graphics::event::{CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement};
 use crossbeam_channel::Sender;
-use std::ffi::c_void;
-use std::ptr;
-use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
-use std::sync::{Arc, OnceLock, RwLock};
-use std::time::Duration;
 use tracing::{debug, error, info};
+
+use crate::platform::PttEngine;
+use crate::state::{KeyBinding, Modifier, OutgoingMessage, PttState, current_timestamp};
 
 type CGEventRef = *mut c_void;
 type CGEventTapProxy = *mut c_void;
