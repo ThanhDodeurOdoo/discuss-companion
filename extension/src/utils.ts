@@ -21,3 +21,14 @@ export async function executeInMainWorld<T>(mainFunc: () => T): Promise<T | unde
         return undefined;
     }
 }
+
+export function throttle<A extends unknown[], R>(func: (...args: A) => R, wait: number) {
+    let inThrottle = false;
+    return function (...args: A) {
+        if (!inThrottle) {
+            func(...args);
+            inThrottle = true;
+            setTimeout(() => (inThrottle = false), wait);
+        }
+    };
+}

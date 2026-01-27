@@ -2,6 +2,7 @@ import * as flatbuffers from "flatbuffers";
 import { Message } from "./discuss/flatbuffers/message";
 import { MessageBody } from "./discuss/flatbuffers/message-body";
 import { Ping } from "./discuss/flatbuffers/ping";
+import { throttle } from "./utils";
 
 const ACTIVE_ONLINE_ICON = "/assets/icons/active_online_icon.png";
 const INACTIVE_ONLINE_ICON = "/assets/icons/inactive_online_icon.png";
@@ -9,6 +10,7 @@ const INACTIVE_OFFLINE_ICON = "/assets/icons/inactive_offline_icon.png";
 
 let socket: WebSocket | null = null;
 let wsPort = 49152; // Default port
+let echoTimeout: ReturnType<typeof setTimeout> | number;
 const RECONNECT_ALARM_NAME = "reconnect_alarm";
 
 interface IsTalkingMap {
@@ -18,6 +20,12 @@ interface IsTalkingMap {
 interface ExtensionMessage {
     type: string;
     value?: unknown;
+}
+
+enum Command {
+    PTT_PRESSED = "ptt-pressed",
+    PTT_RELEASED = "ptt-released",
+    TOGGLE_VOICE = "toggle-voice"
 }
 
 const mutedLog = (...args: unknown[]) => {};
@@ -67,7 +75,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 chrome.action.onClicked.addListener(function () {
     const isFirefox = /Firefox/i.test(navigator.userAgent);
     if (isFirefox) {
-        // Firefox doesn't simplify linking to extension shortcuts yet
+        chrome.tabs.create({ url: "about:addons" });
         return;
     }
     chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
@@ -84,6 +92,8 @@ async function updateAppIcon() {
     const isTalking = Object.values(isTalkingByTabId).some(Boolean);
     chrome.action.setIcon({ path: isTalking ? ACTIVE_ONLINE_ICON : INACTIVE_ONLINE_ICON });
 }
+
+const throttledCommand = throttle(onCommand, 150);
 
 async function handleMessage(
     request: ExtensionMessage,
@@ -153,11 +163,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep channel open for async sendResponse
 });
 
-async function onCommand(command: "toggle-voice" | "ptt-pressed" | "ptt-released") {
+async function onCommand(command: Command) {
     log("[BG] onCommand", command);
     const isTalkingByTabId = await getIsTalkingByTabId();
     const tabIds = Object.keys(isTalkingByTabId);
-
     for (const tabIdStr of tabIds) {
         const tabId = Number(tabIdStr);
         switch (command) {
@@ -227,10 +236,14 @@ function connectToApp() {
             log("[BG] WS Message bodyType:", message.bodyType());
             switch (message.bodyType()) {
                 case MessageBody.PttDown:
-                    onCommand("ptt-pressed");
+                    throttledCommand(Command.PTT_PRESSED);
+                    echoTimeout = setTimeout(async () => {
+                        throttledCommand(Command.PTT_PRESSED);
+                    }, 500);
                     break;
                 case MessageBody.PttUp:
-                    onCommand("ptt-released");
+                    clearTimeout(echoTimeout);
+                    onCommand(Command.PTT_RELEASED);
                     break;
                 case MessageBody.Pong:
                     break;
@@ -281,4 +294,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === RECONNECT_ALARM_NAME) {
         connectToApp();
     }
+});
+
+chrome.commands.onCommand.addListener((command) => {
+    throttledCommand(command as Command);
 });

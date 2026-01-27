@@ -46,6 +46,14 @@
             "<all_urls>"
         ]
     },
+    "commands": {
+        "ptt-pressed": {
+            "description": "Push-to-Talk"
+        },
+        "toggle-voice": {
+            "description": "Voice Toggle"
+        }
+    },
     "host_permissions": [
         "ws://127.0.0.1/*"
     ],

@@ -1,6 +1,8 @@
 import { Plugin, signal } from "@odoo/owl";
 import { executeInMainWorld } from "../utils";
 
+const IS_FIREFOX = /Firefox/i.test(navigator.userAgent);
+
 export enum StatusCode {
     Default = 0,
     Saving = 1,
@@ -55,6 +57,15 @@ export class PopupPlugin extends Plugin {
             case StatusCode.Default:
             default:
                 return "";
+        }
+    }
+
+    openShortcuts() {
+        if (IS_FIREFOX) {
+            // @ts-expect-error browser is not defined
+            browser.commands.openShortcutSettings();
+        } else {
+            chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
         }
     }
 

@@ -18,6 +18,7 @@
         <div id="status" class="status" t-att-class="{ 'status-default': this.popup.isStatusDefault, 'status-error': this.popup.isStatusError, 'status-success': this.popup.isStatusSuccess }">
             <t t-out="this.popup.statusText"/>
         </div>
+        <button t-on-click="() => this.popup.openShortcuts()">Open Shortcuts</button>
         <div class="odoo-info" t-if="this.popup.isOdoo()">
              <hr/>
              <div><strong>Odoo detected</strong></div>

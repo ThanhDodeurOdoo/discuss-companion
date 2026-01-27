@@ -47,7 +47,8 @@ module.exports = {
                 "no-console": "off"
             },
             globals: {
-                chrome: "readonly"
+                chrome: "readonly",
+                browser: "readonly"
             }
         }
     ],

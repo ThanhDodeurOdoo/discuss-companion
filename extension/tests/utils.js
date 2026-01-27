@@ -49,6 +49,11 @@ export function mockChrome(storageInitial = {}) {
                 addListener: jest.fn()
             }
         },
+        commands: {
+            onCommand: {
+                addListener: jest.fn()
+            }
+        },
         alarms: {
             onAlarm: { addListener: jest.fn() },
             create: jest.fn(),

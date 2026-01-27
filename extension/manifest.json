@@ -41,6 +41,16 @@
     "host_permissions": [
         "ws://127.0.0.1/*"
     ],
+    "commands": {
+        "ptt-pressed": {
+            "suggested_key": "Alt+Shift+Y",
+            "description": "Push-to-Talk"
+        },
+        "toggle-voice": {
+            "suggested_key": "Alt+Shift+U",
+            "description": "Voice Toggle"
+        }
+    },
     "content_security_policy": {
         "extension_pages": "script-src 'self'; object-src 'none'; connect-src ws://127.0.0.1:*;"
     }
