@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 use std::ptr;
-use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU16, Ordering};
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
 
@@ -8,9 +8,10 @@ use anyhow::{Result, anyhow};
 // SAFETY: requires unsafe code for macOS Core Graphics FFI calls.
 // The CGEventTap API is inherently unsafe as it involves C callbacks and raw pointers.
 use core_foundation::base::TCFType;
+use core_foundation::dictionary;
 use core_foundation::mach_port::CFMachPortRef;
 use core_foundation::runloop::{
-    CFRunLoop, CFRunLoopAddSource, CFRunLoopSourceRef, kCFRunLoopCommonModes,
+    CFRunLoop, CFRunLoopAddSource, CFRunLoopSourceRef, kCFRunLoopCommonModes, kCFRunLoopDefaultMode,
 };
 use core_graphics::event::{CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement};
 use crossbeam_channel::Sender;
@@ -23,10 +24,13 @@ type CGEventRef = *mut c_void;
 type CGEventTapProxy = *mut c_void;
 
 #[link(name = "CoreGraphics", kind = "framework")]
-// SAFETY: required for macOS Core Graphics FFI.
-// The extern declarations match the official Core Graphics header definitions (CGEventTypes.h, CGEvent.h),
-// ensuring correct ABI compatibility for the linked framework.
-#[allow(unsafe_code)]
+#[allow(
+    unsafe_code,
+    reason = "
+    SAFETY: required for macOS Core Graphics FFI.
+    The extern declarations match the official Core Graphics header definitions (CGEventTypes.h, CGEvent.h),
+    ensuring correct ABI compatibility for the linked framework."
+)]
 unsafe extern "C" {
     fn CGEventTapCreate(
         tap: u32,
@@ -49,12 +53,15 @@ unsafe extern "C" {
 }
 
 #[link(name = "ApplicationServices", kind = "framework")]
-// SAFETY: required for macOS ApplicationServices FFI.
-// The extern declarations match the official Application Services header definitions (AXUIElement.h),
-// ensuring correct ABI compatibility for the linked framework.
-#[allow(unsafe_code)]
+#[allow(
+    unsafe_code,
+    reason = "
+    SAFETY: required for macOS ApplicationServices FFI.
+    The extern declarations match the official Application Services header definitions (AXUIElement.h),
+    ensuring correct ABI compatibility for the linked framework."
+)]
 unsafe extern "C" {
-    fn AXIsProcessTrustedWithOptions(options: core_foundation::dictionary::CFDictionaryRef) -> u8;
+    fn AXIsProcessTrustedWithOptions(options: dictionary::CFDictionaryRef) -> u8;
 }
 
 const K_CG_EVENT_KEY_DOWN: u32 = 10;
@@ -74,8 +81,7 @@ const K_CG_EVENT_TAP_DISABLED_BY_USER_INTEREST: u32 = 0xFFFF_FFFF;
 static HELD: AtomicBool = AtomicBool::new(false);
 static TARGET_KEYCODE: AtomicU16 = AtomicU16::new(49); // Default: Space
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
-static GLOBAL_TAP: std::sync::atomic::AtomicPtr<c_void> =
-    std::sync::atomic::AtomicPtr::new(ptr::null_mut());
+static GLOBAL_TAP: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 
 static EVENT_SENDER: OnceLock<Sender<OutgoingMessage>> = OnceLock::new();
 static CURRENT_BINDING: OnceLock<RwLock<KeyBinding>> = OnceLock::new();
@@ -118,12 +124,15 @@ impl PttEngine for MacosEngine {
         use core_foundation::dictionary::CFDictionary;
         use core_foundation::string::CFString;
 
-        // SAFETY: Interacting with macOS ApplicationServices to check accessibility permissions.
-        // We create valid CFString and CFBoolean objects using safe wrappers (core_foundation crate).
-        // The CFDictionary is constructed from these valid safe types.
-        // The raw pointer passed to `AXIsProcessTrustedWithOptions` comes from `as_concrete_TypeRef()`,
-        // which is guaranteed to be a valid CFDictionaryRef by the type system.
-        #[allow(unsafe_code)]
+        #[allow(
+            unsafe_code,
+            reason = "
+            SAFETY: Interacting with macOS ApplicationServices to check accessibility permissions.
+            We create valid CFString and CFBoolean objects using safe wrappers (core_foundation crate).
+            The CFDictionary is constructed from these valid safe types.
+            The raw pointer passed to `AXIsProcessTrustedWithOptions` comes from `as_concrete_TypeRef()`,
+            which is guaranteed to be a valid CFDictionaryRef by the type system."
+        )]
         unsafe {
             // The actual key string for kAXTrustedCheckOptionPrompt
             let key = CFString::from_static_string("AXTrustedCheckOptionPrompt");
@@ -148,13 +157,16 @@ impl PttEngine for MacosEngine {
         let event_mask: u64 =
             (1 << K_CG_EVENT_KEY_DOWN) | (1 << K_CG_EVENT_KEY_UP) | (1 << K_CG_EVENT_FLAGS_CHANGED);
 
-        // SAFETY: CGEventTapCreate is called with:
-        // - Valid numeric constants for location, placement, and options.
-        // - A valid event mask.
-        // - `event_callback`: A valid extern "C" function pointer matching the required signature.
-        // - `ptr::null_mut()`: Null user_info is explicitly allowed by the API.
-        // The returned CFMachPortRef is checked for NULL immediately after this block.
-        #[allow(unsafe_code)]
+        #[allow(
+            unsafe_code,
+            reason = "
+            SAFETY: CGEventTapCreate is called with:
+            - Valid numeric constants for location, placement, and options.
+            - A valid event mask.
+            - `event_callback`: A valid extern 'C' function pointer matching the required signature.
+            - `ptr::null_mut()`: Null user_info is explicitly allowed by the API.
+            The returned CFMachPortRef is checked for NULL immediately after this block."
+        )]
         let tap: CFMachPortRef = unsafe {
             CGEventTapCreate(
                 CGEventTapLocation::AnnotatedSession as u32,
@@ -177,12 +189,15 @@ impl PttEngine for MacosEngine {
         }
         debug!("CGEventTap created successfully");
 
-        // SAFETY: CFMachPortCreateRunLoopSource is called with:
-        // - `ptr::null()`: Allowed for default allocator.
-        // - `tap`: Verified to be non-null in the check above.
-        // - `0`: Valid order parameter.
-        // The result is checked for NULL immediately after.
-        #[allow(unsafe_code)]
+        #[allow(
+            unsafe_code,
+            reason = "
+            SAFETY: CFMachPortCreateRunLoopSource is called with:
+            - `ptr::null()`: Allowed for default allocator.
+            - `tap`: Verified to be non-null in the check above.
+            - `0`: Valid order parameter.
+            The result is checked for NULL immediately after."
+        )]
         let source: CFRunLoopSourceRef =
             unsafe { CFMachPortCreateRunLoopSource(ptr::null(), tap, 0) };
 
@@ -192,11 +207,14 @@ impl PttEngine for MacosEngine {
 
         let run_loop = CFRunLoop::get_current();
 
-        // SAFETY: CFRunLoopAddSource is called with:
-        // - `run_loop`: Obtained securely via `CFRunLoop::get_current()`, guaranteed to be valid.
-        // - `source`: Verified to be non-null in the check above.
-        // - `kCFRunLoopCommonModes`: A valid constant from the `core_foundation` crate.
-        #[allow(unsafe_code)]
+        #[allow(
+            unsafe_code,
+            reason = "
+            SAFETY: CFRunLoopAddSource is called with:
+            - `run_loop`: Obtained securely via `CFRunLoop::get_current()`, guaranteed to be valid.
+            - `source`: Verified to be non-null in the check above.
+            - `kCFRunLoopCommonModes`: A valid constant from the `core_foundation` crate."
+        )]
         unsafe {
             CFRunLoopAddSource(
                 run_loop.as_concrete_TypeRef(),
@@ -208,10 +226,13 @@ impl PttEngine for MacosEngine {
         info!("Event tap started, listening for PTT key events");
 
         while !shutdown.load(Ordering::SeqCst) {
-            // SAFETY: kCFRunLoopDefaultMode is a valid extern static provided by core_foundation.
-            // Accessing it is safe as it is a constant global symbol.
-            #[allow(unsafe_code)]
-            let mode = unsafe { core_foundation::runloop::kCFRunLoopDefaultMode };
+            #[allow(
+                unsafe_code,
+                reason = "
+                SAFETY: kCFRunLoopDefaultMode is a valid extern static provided by core_foundation.
+                Accessing it is safe as it is a constant global symbol."
+            )]
+            let mode = unsafe { kCFRunLoopDefaultMode };
             CFRunLoop::run_in_mode(mode, Duration::from_millis(100), false);
         }
 
@@ -249,7 +270,7 @@ const K_CG_EVENT_FLAGS_CHANGED: u32 = 12;
 
 static PRIMARY_KEY_HELD: AtomicBool = AtomicBool::new(false);
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, reason = "cyclomatic complexity is ok though")]
 extern "C" fn event_callback(
     _proxy: CGEventTapProxy,
     event_type: u32,
@@ -266,10 +287,13 @@ extern "C" fn event_callback(
                 "Event tap disabled by system (type={}), re-enabling...",
                 event_type
             );
-            // SAFETY: CGEventTapEnable is called with:
-            // - `tap`: Loaded from the global atomic. We verified `!tap.is_null()` right above.
-            // - `true`: Boolean literal.
-            #[allow(unsafe_code)]
+            #[allow(
+                unsafe_code,
+                reason = "
+                SAFETY: CGEventTapEnable is called with:
+                - `tap`: Loaded from the global atomic. We verified `!tap.is_null()` right above.
+                - `true`: Boolean literal."
+            )]
             unsafe {
                 CGEventTapEnable(tap as CFMachPortRef, true);
             }
@@ -281,17 +305,26 @@ extern "C" fn event_callback(
         return event;
     }
 
-    // SAFETY: CGEventGetIntegerValueField is called with:
-    // - `event`: Checked to be non-null at the start of the function.
-    // - `K_CG_KEYBOARD_EVENT_KEYCODE`: A valid field constant.
-    // The cast to u16 is safe because keycodes are small integers (0-127).
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    #[allow(unsafe_code)]
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: CGEventGetIntegerValueField is called with:
+        - `event`: Checked to be non-null at the start of the function.
+        - `K_CG_KEYBOARD_EVENT_KEYCODE`: A valid field constant."
+    )]
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "The cast to u16 is safe because keycodes are small integers (0-127)"
+    )]
     let keycode = unsafe { CGEventGetIntegerValueField(event, K_CG_KEYBOARD_EVENT_KEYCODE) as u16 };
 
-    // SAFETY: CGEventGetFlags is called with:
-    // - `event`: Checked to be non-null at the start of the function.
-    #[allow(unsafe_code)]
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: CGEventGetFlags is called with:
+        - `event`: Checked to be non-null at the start of the function."
+    )]
     let flags = unsafe { CGEventGetFlags(event) };
     let modifiers = get_modifiers_from_flags(flags);
 
@@ -309,10 +342,13 @@ extern "C" fn event_callback(
         if keycode == target_code {
             PRIMARY_KEY_HELD.store(true, Ordering::SeqCst);
         }
-        // SAFETY: CGEventGetIntegerValueField is called with:
-        // - `event`: Checked to be non-null at the start of the function.
-        // - `K_CG_KEYBOARD_EVENT_AUTOREPEAT`: A valid field constant.
-        #[allow(unsafe_code)]
+        #[allow(
+            unsafe_code,
+            reason = "
+            SAFETY: CGEventGetIntegerValueField is called with:
+            - `event`: Checked to be non-null at the start of the function.
+            - `K_CG_KEYBOARD_EVENT_AUTOREPEAT`: A valid field constant."
+        )]
         unsafe {
             is_repeat = CGEventGetIntegerValueField(event, K_CG_KEYBOARD_EVENT_AUTOREPEAT) != 0;
         }

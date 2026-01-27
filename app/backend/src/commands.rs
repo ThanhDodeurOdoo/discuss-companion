@@ -1,10 +1,20 @@
+use std::sync::atomic::Ordering;
+
 use tauri::{Emitter, State};
 use tauri_plugin_store::StoreExt;
+use tokio::sync::broadcast;
 use tracing::info;
 
 use crate::WsState;
+use crate::platform;
 use crate::platform::{check_accessibility_permission, get_binding, set_binding, set_recording};
+use crate::server;
 use crate::state::{KeyBinding, VERSION};
+
+/// JUSTIFICATION: for `clippy::needless_pass_by_value`
+/// Tauri commands require owned values for dependency injection of the app handle
+/// and for deserialization of arguments.
+/// see uses below
 
 #[tauri::command]
 pub fn get_version() -> String {
@@ -12,10 +22,7 @@ pub fn get_version() -> String {
 }
 
 #[tauri::command]
-/// JUSTIFICATION: `clippy::needless_pass_by_value`
-/// Tauri commands require owned values for dependency injection of the app handle
-/// and for deserialization of arguments.
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 pub fn update_binding(app_handle: tauri::AppHandle, binding: KeyBinding) {
     set_binding(binding.clone());
 
@@ -46,22 +53,22 @@ pub fn is_accessibility_granted() -> bool {
 
 #[tauri::command]
 pub fn is_extension_connected() -> bool {
-    crate::server::is_connected()
+    server::is_connected()
 }
 
 #[tauri::command]
 pub fn force_ptt_up() {
-    crate::platform::force_ptt_up();
+    platform::force_ptt_up();
 }
 
 #[tauri::command]
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 pub fn get_ws_port(state: State<'_, WsState>) -> u16 {
-    state.port.load(std::sync::atomic::Ordering::SeqCst)
+    state.port.load(Ordering::SeqCst)
 }
 
 #[tauri::command]
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 pub fn update_ws_port(app_handle: tauri::AppHandle, port: u16, state: State<'_, WsState>) {
     info!("Updating WS port to: {}", port);
 
@@ -71,7 +78,7 @@ pub fn update_ws_port(app_handle: tauri::AppHandle, port: u16, state: State<'_, 
         let _ = store.save();
     }
 
-    let current_port = state.port.load(std::sync::atomic::Ordering::SeqCst);
+    let current_port = state.port.load(Ordering::SeqCst);
     if current_port == port {
         let _ = app_handle.emit(
             "ws-server-status",
@@ -83,17 +90,17 @@ pub fn update_ws_port(app_handle: tauri::AppHandle, port: u16, state: State<'_, 
         info!("WS server port unchanged, frontend notified.");
         return;
     }
-    state.port.store(port, std::sync::atomic::Ordering::SeqCst);
+    state.port.store(port, Ordering::SeqCst);
 
     // Shutdown previous server
     // SAFETY: Mutex poisoning is fatal/unrecoverable in this context
-    #[allow(clippy::unwrap_used)]
+    #[allow(clippy::unwrap_used, reason = "tauri API")]
     let mut shutdown_guard = state.server_shutdown_tx.lock().unwrap();
     info!("Shutting down previous WS server...");
     let _ = shutdown_guard.send(());
 
     // Create new shutdown channel
-    let (tx, rx) = tokio::sync::broadcast::channel(1);
+    let (tx, rx) = broadcast::channel(1);
     *shutdown_guard = tx;
 
     // Start new server

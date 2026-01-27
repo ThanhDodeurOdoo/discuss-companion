@@ -48,8 +48,11 @@ correctness = { level = "deny", priority = -1 }
 suspicious = { level = "deny", priority = -1 }
 unwrap_used = { level = "deny", priority = -1 }
 expect_used = { level = "deny", priority = -1 }
+indexing_slicing = { level = "deny", priority = -1 }
 panic = { level = "deny", priority = -1 }
 
+allow_attributes_without_reason = "warn"
+absolute_paths = "warn"
 pedantic = "warn"
 perf = "warn"
 complexity = "warn"

@@ -6,6 +6,9 @@
     clippy::all,
     clippy::unwrap_used,
     clippy::pedantic,
-    clippy::nursery
+    clippy::nursery,
+    clippy::allow_attributes_without_reason,
+    clippy::absolute_paths,
+    reason = "flatbuffers generated code"
 )]
 pub mod protocol_generated;

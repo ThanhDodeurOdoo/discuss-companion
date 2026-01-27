@@ -1,6 +1,7 @@
 use std::time::SystemTime;
 
 use flatbuffers::FlatBufferBuilder;
+use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::flatbuffers::protocol_generated::discuss::flatbuffers as protocol;
@@ -34,9 +35,7 @@ impl<'de> Deserialize<'de> for Modifier {
             1 => Ok(Self::Control),
             2 => Ok(Self::Alt),
             3 => Ok(Self::Meta),
-            _ => Err(serde::de::Error::custom(format!(
-                "Invalid modifier value: {v}"
-            ))),
+            _ => Err(Error::custom(format!("Invalid modifier value: {v}"))),
         }
     }
 }
@@ -53,14 +52,14 @@ impl From<Modifier> for protocol::Modifier {
 }
 
 impl From<protocol::Modifier> for Modifier {
-    #[allow(clippy::match_same_arms)]
+    #[allow(clippy::match_same_arms, reason = "shift is a valid default")]
     fn from(m: protocol::Modifier) -> Self {
         match m {
             protocol::Modifier::Shift => Self::Shift,
             protocol::Modifier::Control => Self::Control,
             protocol::Modifier::Alt => Self::Alt,
             protocol::Modifier::Meta => Self::Meta,
-            _ => Self::Shift, // Fallback, though shouldn't happen with valid data
+            _ => Self::Shift,
         }
     }
 }
@@ -119,13 +118,17 @@ pub enum OutgoingMessage {
     },
 }
 
-/// JUSTIFICATION: `clippy::too_many_lines`
-/// This function is a bit long,
-/// but it's a simple match statement with no nested logic.
-/// JUSTIFICATION: `clippy::use_self`
-/// As the function is long, it's easier to read and understand
-/// if we don't use self.
-#[allow(clippy::use_self, clippy::too_many_lines)]
+#[allow(
+    clippy::use_self,
+    clippy::too_many_lines,
+    reason = "
+        JUSTIFICATION: `clippy::too_many_lines`
+        This function is a bit long,
+        but it's a simple match statement with no nested logic.
+        JUSTIFICATION: `clippy::use_self`
+        As the function is long, it's easier to read and understand
+        if we don't use self."
+)]
 impl OutgoingMessage {
     pub fn to_flatbuffer(&self) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();

@@ -5,7 +5,7 @@ use futures_util::{SinkExt, StreamExt};
 use tauri::Emitter;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
-use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::tungstenite::{Message, handshake};
 use tracing::{error, info};
 
 use crate::flatbuffers::protocol_generated::discuss::flatbuffers as protocol;
@@ -20,7 +20,7 @@ pub fn is_connected() -> bool {
 pub async fn start_ws_server<R: tauri::Runtime>(
     port: u16,
     tx: broadcast::Sender<Vec<u8>>,
-    mut shutdown_rx: tokio::sync::broadcast::Receiver<()>,
+    mut shutdown_rx: broadcast::Receiver<()>,
     app_handle: tauri::AppHandle<R>,
     conn_tx: crossbeam_channel::Sender<bool>,
 ) {
@@ -71,15 +71,13 @@ async fn handle_connection<R: tauri::Runtime>(
     app_handle: tauri::AppHandle<R>,
     conn_tx: crossbeam_channel::Sender<bool>,
 ) {
-    let callback =
-        |request: &tokio_tungstenite::tungstenite::handshake::server::Request,
-         response: tokio_tungstenite::tungstenite::handshake::server::Response| {
-            info!("Received handshake request from: {:?}", addr);
-            for (name, value) in request.headers() {
-                info!("Header: {:?}: {:?}", name, value);
-            }
-            Ok(response)
-        };
+    let callback = |request: &handshake::server::Request, response: handshake::server::Response| {
+        info!("Received handshake request from: {:?}", addr);
+        for (name, value) in request.headers() {
+            info!("Header: {:?}: {:?}", name, value);
+        }
+        Ok(response)
+    };
 
     let ws_stream = match tokio_tungstenite::accept_hdr_async(stream, callback).await {
         Ok(s) => s,
@@ -169,7 +167,12 @@ async fn handle_connection<R: tauri::Runtime>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{Modifier, root_as_message};
+    use flatbuffers::FlatBufferBuilder;
+    use std::time::Duration;
     use tauri::test::{mock_builder, mock_context, noop_assets};
+    use tokio::time::sleep;
+    use tokio_tungstenite::tungstenite::Message::Binary;
 
     #[tokio::test]
     async fn test_is_connected_initial() {
@@ -198,14 +201,14 @@ mod tests {
             start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
 
         // Connect client 1
         let stream1 = TcpStream::connect(addr).await.unwrap();
         let (ws1, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream1)
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        sleep(Duration::from_millis(50)).await;
         assert!(is_connected());
 
         // Connect client 2
@@ -213,17 +216,17 @@ mod tests {
         let (ws2, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream2)
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        sleep(Duration::from_millis(50)).await;
         assert!(is_connected());
 
         // Drop client 1
         drop(ws1);
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        sleep(Duration::from_millis(50)).await;
         assert!(is_connected()); // Still connected via ws2
 
         // Drop client 2
         drop(ws2);
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        sleep(Duration::from_millis(50)).await;
         assert!(!is_connected());
 
         let _ = shutdown_tx.send(());
@@ -249,7 +252,7 @@ mod tests {
             start_ws_server(port, tx_server, shutdown_rx, app_handle, conn_tx).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
 
         let stream = TcpStream::connect(addr).await.unwrap();
         let (mut ws, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream)
@@ -262,7 +265,7 @@ mod tests {
 
         // Verify client receives it
         let resp = ws.next().await.unwrap().unwrap();
-        if let tokio_tungstenite::tungstenite::Message::Binary(bin) = resp {
+        if let Binary(bin) = resp {
             assert_eq!(bin.as_ref(), &test_payload);
         } else {
             panic!("Expected binary message");
@@ -304,15 +307,14 @@ mod tests {
             start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
         let stream = TcpStream::connect(addr).await.unwrap();
         let (mut ws, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream)
             .await
             .unwrap();
 
-        let mut builder = flatbuffers::FlatBufferBuilder::new();
-        let mods =
-            vec![crate::flatbuffers::protocol_generated::discuss::flatbuffers::Modifier::Shift];
+        let mut builder = FlatBufferBuilder::new();
+        let mods = vec![Modifier::Shift];
         let mods_vec = builder.create_vector(&mods);
         let key_binding =
             crate::flatbuffers::protocol_generated::discuss::flatbuffers::KeyBinding::create(
@@ -338,12 +340,10 @@ mod tests {
         builder.finish(msg_offset, None);
         let bin = builder.finished_data().to_vec();
 
-        ws.send(tokio_tungstenite::tungstenite::Message::Binary(bin.into()))
-            .await
-            .unwrap();
+        ws.send(Binary(bin.into())).await.unwrap();
 
         // Wait for event to be processed and emitted
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        sleep(Duration::from_millis(200)).await;
 
         let event_payload = received_event.lock().unwrap();
         assert!(
@@ -389,14 +389,14 @@ mod tests {
             start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
         let stream = TcpStream::connect(addr).await.unwrap();
         let (mut ws, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream)
             .await
             .unwrap();
 
         // Construct Shutdown flatbuffer
-        let mut builder = flatbuffers::FlatBufferBuilder::new();
+        let mut builder = FlatBufferBuilder::new();
         let shutdown_body = Shutdown::create(&mut builder, &ShutdownArgs {});
         let msg_offset = FBMessage::create(
             &mut builder,
@@ -408,12 +408,10 @@ mod tests {
         builder.finish(msg_offset, None);
         let bin = builder.finished_data().to_vec();
 
-        ws.send(tokio_tungstenite::tungstenite::Message::Binary(bin.into()))
-            .await
-            .unwrap();
+        ws.send(Binary(bin.into())).await.unwrap();
 
         // Wait for event to be processed and emitted
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        sleep(Duration::from_millis(200)).await;
 
         let event_payload = received_event.lock().unwrap();
         assert!(
@@ -449,7 +447,7 @@ mod tests {
             start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
 
         let stream = TcpStream::connect(addr).await.expect("Failed to connect");
         let (mut ws_stream, _) =
@@ -457,11 +455,11 @@ mod tests {
                 .await
                 .expect("Failed to handshake");
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
         assert!(is_connected());
 
         // Construct a Ping flatbuffer
-        let mut builder = flatbuffers::FlatBufferBuilder::new();
+        let mut builder = FlatBufferBuilder::new();
         let ping_offset = Ping::create(&mut builder, &PingArgs {});
         let msg_offset = FBMessage::create(
             &mut builder,
@@ -473,18 +471,13 @@ mod tests {
         builder.finish(msg_offset, None);
         let ping_bin = builder.finished_data().to_vec();
 
-        ws_stream
-            .send(tokio_tungstenite::tungstenite::Message::Binary(
-                ping_bin.into(),
-            ))
-            .await
-            .unwrap();
+        ws_stream.send(Binary(ping_bin.into())).await.unwrap();
 
         // Wait for response
         let resp = ws_stream.next().await.unwrap().unwrap();
-        if let tokio_tungstenite::tungstenite::Message::Binary(bin) = resp {
-            let message = protocol::root_as_message(&bin).unwrap();
-            assert_eq!(message.body_type(), protocol::MessageBody::Pong);
+        if let Binary(bin) = resp {
+            let message = root_as_message(&bin).unwrap();
+            assert_eq!(message.body_type(), MessageBody::Pong);
         } else {
             panic!("Expected binary message (Pong)");
         }
@@ -513,7 +506,7 @@ mod tests {
             start_ws_server(port_1, tx_clone, shutdown_rx_1, app_handle_clone, conn_tx).await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
 
         // Verify connection to Port A
         let stream_1 = TcpStream::connect(addr_1)
@@ -530,7 +523,7 @@ mod tests {
         shutdown_tx_1.send(()).unwrap();
         h1.await.unwrap(); // Wait for server to finish
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
 
         // Start on Port B
         let (shutdown_tx_2, shutdown_rx_2) = broadcast::channel(1);
@@ -554,7 +547,7 @@ mod tests {
             .await;
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
 
         // Verify connection to Port B
         let stream_2 = TcpStream::connect(addr_2)

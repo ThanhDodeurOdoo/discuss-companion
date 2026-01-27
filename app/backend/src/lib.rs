@@ -1,14 +1,27 @@
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))] // tests are allowed to panic
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        reason = "tests are allowed to panic"
+    )
+)]
+use std::io::stderr;
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::thread::sleep;
+use std::time::Duration;
 
+use tauri::async_runtime;
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
-use tracing::{debug, error, info};
+use tokio::sync::broadcast;
+use tracing::{debug, error, info, level_filters::LevelFilter};
 
 mod commands;
 mod flatbuffers;
@@ -26,8 +39,8 @@ const ICON_INACTIVE_OFFLINE: &[u8] =
 
 pub struct WsState {
     pub port: AtomicU16,
-    pub ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
-    pub server_shutdown_tx: Mutex<tokio::sync::broadcast::Sender<()>>,
+    pub ws_tx: broadcast::Sender<Vec<u8>>,
+    pub server_shutdown_tx: Mutex<broadcast::Sender<()>>,
     pub conn_tx: crossbeam_channel::Sender<bool>,
 }
 
@@ -39,10 +52,10 @@ fn setup_logging() {
             EnvFilter::from_default_env().add_directive(
                 "discuss_agent_app=warn"
                     .parse()
-                    .unwrap_or_else(|_| tracing::level_filters::LevelFilter::WARN.into()),
+                    .unwrap_or_else(|_| LevelFilter::WARN.into()),
             ),
         )
-        .with_writer(std::io::stderr)
+        .with_writer(stderr)
         .with_target(false)
         .init();
 }
@@ -50,18 +63,18 @@ fn setup_logging() {
 fn handle_ws_server(
     app_handle: tauri::AppHandle,
     port: u16,
-    ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
-    ws_shutdown_rx: tokio::sync::broadcast::Receiver<()>,
+    ws_tx: broadcast::Sender<Vec<u8>>,
+    ws_shutdown_rx: broadcast::Receiver<()>,
     conn_tx: crossbeam_channel::Sender<bool>,
 ) {
-    tauri::async_runtime::spawn(async move {
+    async_runtime::spawn(async move {
         server::start_ws_server(port, ws_tx, ws_shutdown_rx, app_handle, conn_tx).await;
     });
 }
 
 struct PttHandler {
     app_handle: tauri::AppHandle,
-    ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
+    ws_tx: broadcast::Sender<Vec<u8>>,
     active_online_img: Option<Image<'static>>,
     inactive_online_img: Option<Image<'static>>,
     inactive_offline_img: Option<Image<'static>>,
@@ -70,7 +83,7 @@ struct PttHandler {
 }
 
 impl PttHandler {
-    fn new(app_handle: tauri::AppHandle, ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>) -> Self {
+    fn new(app_handle: tauri::AppHandle, ws_tx: broadcast::Sender<Vec<u8>>) -> Self {
         Self {
             app_handle,
             ws_tx,
@@ -131,7 +144,7 @@ impl PttHandler {
 fn handle_ptt_events(
     app_handle: tauri::AppHandle,
     event_rx: crossbeam_channel::Receiver<state::OutgoingMessage>,
-    ws_tx: tokio::sync::broadcast::Sender<Vec<u8>>,
+    ws_tx: broadcast::Sender<Vec<u8>>,
     conn_rx: crossbeam_channel::Receiver<bool>,
 ) {
     thread::spawn(move || {
@@ -163,8 +176,8 @@ pub fn run() {
 
     let shutdown = Arc::new(AtomicBool::new(false));
     let shutdown_clone = Arc::clone(&shutdown);
-    let (ws_tx, _) = tokio::sync::broadcast::channel::<Vec<u8>>(100);
-    let (ws_shutdown_tx, ws_shutdown_rx) = tokio::sync::broadcast::channel::<()>(1);
+    let (ws_tx, _) = broadcast::channel::<Vec<u8>>(100);
+    let (ws_shutdown_tx, ws_shutdown_rx) = broadcast::channel::<()>(1);
     let ws_tx_clone = ws_tx.clone();
     let ws_shutdown_tx_clone = ws_shutdown_tx.clone();
 
@@ -263,7 +276,7 @@ pub fn run() {
     // Safety: Ensure PTT is released when app quits
     platform::force_ptt_up();
     // Allow a brief moment for the message to traverse the channel and WS
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    sleep(Duration::from_millis(100));
 
     // Cleanup: Send shutdown to WS server if still running
     let _ = ws_shutdown_tx.send(());
