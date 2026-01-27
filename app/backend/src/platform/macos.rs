@@ -168,6 +168,10 @@ impl PttEngine for MacosEngine {
             The returned CFMachPortRef is checked for NULL immediately after this block."
         )]
         let tap: CFMachPortRef = unsafe {
+            #[allow(
+                clippy::as_conversions,
+                reason = "The Core Graphics FFI function expects raw u32 values for enum-backed parameters."
+            )]
             CGEventTapCreate(
                 CGEventTapLocation::AnnotatedSession as u32,
                 CGEventTapPlacement::HeadInsertEventTap as u32,
@@ -289,10 +293,12 @@ extern "C" fn event_callback(
             );
             #[allow(
                 unsafe_code,
+                clippy::as_conversions,
                 reason = "
                 SAFETY: CGEventTapEnable is called with:
                 - `tap`: Loaded from the global atomic. We verified `!tap.is_null()` right above.
-                - `true`: Boolean literal."
+                - `true`: Boolean literal.
+                The `as` conversion is required to cast the raw pointer from AtomicPtr back to CFMachPortRef."
             )]
             unsafe {
                 CGEventTapEnable(tap as CFMachPortRef, true);
@@ -313,6 +319,7 @@ extern "C" fn event_callback(
         - `K_CG_KEYBOARD_EVENT_KEYCODE`: A valid field constant."
     )]
     #[allow(
+        clippy::as_conversions,
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
         reason = "The cast to u16 is safe because keycodes are small integers (0-127)"

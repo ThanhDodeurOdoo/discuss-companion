@@ -45,24 +45,30 @@ unsafe_code = "deny"
 
 [lints.clippy] # https://rust-lang.github.io/rust-clippy/
 correctness = { level = "deny", priority = -1 }
-suspicious = { level = "deny", priority = -1 }
-unwrap_used = { level = "deny", priority = -1 }
 expect_used = { level = "deny", priority = -1 }
 indexing_slicing = { level = "deny", priority = -1 }
 panic = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+unwrap_used = { level = "deny", priority = -1 }
 
-allow_attributes_without_reason = "warn"
 absolute_paths = "warn"
+allow_attributes_without_reason = "warn"
+as_conversions = "warn"
+as_ptr_cast_mut = "warn"
+as_underscore = "warn"
+assigning_clones = "warn"
+clone_on_ref_ptr = "warn"
+cognitive_complexity = "warn"
+complexity = "warn"
 pedantic = "warn"
 perf = "warn"
-complexity = "warn"
 style = "warn"
 
 # nursery as of rust 1.92 https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html?groups=nursery
 needless_pass_by_ref_mut = "warn"
-redundant_clone = "warn"
 nonstandard_macro_braces = "warn"
 option_if_let_else = "warn"
+redundant_clone = "warn"
 single_option_map = "warn"
 type_repetition_in_bounds = "warn"
 uninhabited_references = "warn"

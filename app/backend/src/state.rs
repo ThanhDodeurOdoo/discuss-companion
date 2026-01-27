@@ -16,6 +16,10 @@ pub enum Modifier {
 }
 
 impl Serialize for Modifier {
+    #[allow(
+        clippy::as_conversions,
+        reason = "Modifier is repr(u8) and can be safely cast to u8 for serialization."
+    )]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
