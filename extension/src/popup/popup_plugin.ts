@@ -1,4 +1,4 @@
-import { Plugin, signal } from "@odoo/owl";
+import { Plugin, signal, computed } from "@odoo/owl";
 import { executeInMainWorld } from "../utils";
 
 const IS_FIREFOX = /Firefox/i.test(navigator.userAgent);
@@ -18,6 +18,24 @@ export class PopupPlugin extends Plugin {
     owlVersion = signal("");
     isLoggingEnabled = signal(true);
     hasCallTab = signal(false);
+    isStatusDefault = computed(
+        () => this.statusCode() === StatusCode.Default || this.statusCode() === StatusCode.Saving
+    );
+    isStatusSuccess = computed(() => this.statusCode() === StatusCode.Success);
+    isStatusError = computed(() => this.statusCode() === StatusCode.InvalidPort);
+    statusText = computed(() => {
+        switch (this.statusCode()) {
+            case StatusCode.Saving:
+                return "Saving...";
+            case StatusCode.Success:
+                return "Options saved. Extension reloading connection...";
+            case StatusCode.InvalidPort:
+                return "Invalid port number.";
+            case StatusCode.Default:
+            default:
+                return "";
+        }
+    });
 
     setup() {
         this.restoreOptions();
@@ -34,32 +52,6 @@ export class PopupPlugin extends Plugin {
          * and setup communication with the extension.
          * Maybe even an override of rtc_service?
          */
-    }
-
-    get isStatusDefault() {
-        return this.statusCode() === StatusCode.Default || this.statusCode() === StatusCode.Saving;
-    }
-
-    get isStatusSuccess() {
-        return this.statusCode() === StatusCode.Success;
-    }
-
-    get isStatusError() {
-        return this.statusCode() === StatusCode.InvalidPort;
-    }
-
-    get statusText() {
-        switch (this.statusCode()) {
-            case StatusCode.Saving:
-                return "Saving...";
-            case StatusCode.Success:
-                return "Options saved. Extension reloading connection...";
-            case StatusCode.InvalidPort:
-                return "Invalid port number.";
-            case StatusCode.Default:
-            default:
-                return "";
-        }
     }
 
     openShortcuts() {
@@ -95,6 +87,7 @@ export class PopupPlugin extends Plugin {
                 if (tab) {
                     await chrome.tabs.update(tabId, { active: true });
                     await chrome.windows.update(tab.windowId, { focused: true });
+                    // could even execute on that tab a: "odoo.__WOWL_DEBUG__.root.env.services["mail.store"].rtc?.channel?.open()"
                     window.close();
                 }
             } catch (e) {

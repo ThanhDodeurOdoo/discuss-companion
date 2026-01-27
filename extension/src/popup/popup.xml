@@ -15,8 +15,8 @@
                 t-model="this.popup.isLoggingEnabled"
                 t-on-change="() => this.popup.updateLogging()" />
         </div>
-        <div id="status" class="status" t-att-class="{ 'status-default': this.popup.isStatusDefault, 'status-error': this.popup.isStatusError, 'status-success': this.popup.isStatusSuccess }">
-            <t t-out="this.popup.statusText"/>
+        <div id="status" class="status" t-att-class="{ 'status-default': this.popup.isStatusDefault(), 'status-error': this.popup.isStatusError(), 'status-success': this.popup.isStatusSuccess() }">
+            <t t-out="this.popup.statusText()"/>
         </div>
         <div class="button-group">
             <button t-if="this.popup.hasCallTab()" t-on-click="() => this.popup.goToCall()">Go to Call</button>
