@@ -55,6 +55,28 @@ could be done with extension execution (see [extension utils](extension/src/util
 
 # Nice-to-have
 
+### Use flatbuffers for tauri IPC
+
+frontend:
+```typescript
+const bytes = builder.asUint8Array();
+await invoke("update_binding_binary", bytes);
+```
+backend:
+```rust
+#[tauri::command]
+pub fn update_binding_binary(request: tauri::ipc::Request) {
+    if let tauri::ipc::InvokeBody::Raw(data) = request.body() {
+        let binding = PttBinding::from_bytes(&data);
+        update_binding(binding);
+    }
+}
+```
+
+note: the directory organization should be well thought out to avoid
+confusion between the flatbuffers used for IPC and the flatbuffers used for
+the websocket messages between the extension and the backend.
+
 ### Show partial key press
 
 purely cosmetic,

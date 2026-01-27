@@ -7,13 +7,14 @@
     "node": "24.13.0"
   },
   "scripts": {
+    "verify": "npm run lint && npm run test",
     "dev": "tauri dev --config app/backend/tauri.conf.json",
+    "dev:debug": "RUST_LOG=debug tauri dev --config app/backend/tauri.conf.json",
+    "build:flatbuffers": "flatc --rust -o app/backend/src/flatbuffers protocol.fbs && flatc --ts -o extension/src protocol.fbs",
     "build:app": "tauri build --config app/backend/tauri.conf.json",
     "build:extension": "npm run build:extension:chrome && npm run build:extension:firefox",
     "build:extension:chrome": "TARGET=chrome vite build -c extension/vite.config.ts",
     "build:extension:firefox": "TARGET=firefox vite build -c extension/vite.config.ts",
-    "preview": "vite preview",
-    "tauri": "tauri",
     "lint": "npm run lint:extension && npm run lint:frontend && npm run lint:backend",
     "lint:extension": "eslint extension/src --ext .ts",
     "lint:frontend": "eslint app/frontend --ext .ts",
@@ -22,7 +23,6 @@
     "test:frontend": "NODE_OPTIONS=--experimental-vm-modules jest app/frontend/",
     "test:extension": "NODE_OPTIONS=--experimental-vm-modules jest extension/tests/",
     "test:backend": "cd app/backend && cargo test",
-    "verify": "npm run lint && npm run test",
     "pre:dev": "vite",
     "pre:build": "tsc && vite build"
   },

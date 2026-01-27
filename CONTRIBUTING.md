@@ -7,7 +7,7 @@
 
 ### Rust (Backend)
 
-The backend is located in `src-tauri`. We follow standard Rust idioms and enforce strict safety.
+The backend is located in `app/backend`. We follow standard Rust idioms and enforce strict safety.
 
 - **Formatting**: Always run `cargo fmt` before committing.
 - **Linting**: We use Clippy with warnings denied (`cargo clippy -- -D warnings`).
@@ -22,24 +22,11 @@ The backend is located in `src-tauri`. We follow standard Rust idioms and enforc
 
 ### TypeScript & JavaScript (Frontend & Extension)
 
-The frontend uses Owl v3 and is in `src`. The extension is in the `extension` folder.
+The frontend uses Owl v3 and is in `app/frontend`. The extension is in the `extension` folder.
 
 - **No `any` (or lazy typing)**: The use of the `any` type is strictly forbidden. Use proper interfaces or types.
 - **Type Assertions**: Avoid `as unknown as...`. If you must use it, provide a justifying comment.
 - **Defined Assertions**: Use the `!` operator only when you are absolutely certain the value is neither `null` nor `undefined`.
-
-### Linting & Code Quality
-
-```bash
-# Lint Frontend (TypeScript)
-npm run lint
-
-# Check Backend (Rust)
-cd app/backend
-cargo clippy -- -D warnings
-cargo fmt --check
-cargo fmt --check
-```
 
 ## What do to when you modify something:
 
@@ -53,6 +40,10 @@ cargo fmt --check
     ```bash
     flatc --rust -o app/backend/src/flatbuffers protocol.fbs
     flatc --ts -o extension/src protocol.fbs
+    ```
+    or
+    ```bash
+    npm run build:flatbuffers
     ```
 
 ### If you modify the extension
