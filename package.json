@@ -25,7 +25,6 @@
     "verify": "npm run lint && npm run test",
     "pre:dev": "vite",
     "pre:build": "tsc && vite build"
-
   },
   "dependencies": {
     "@odoo/owl": "file:vendor/owl",

@@ -95,7 +95,7 @@ The output will be generated in `app/backend/target/release/bundle/`.
 The application automatically detects the target OS based on the build environment. If you want to build for a specific target manually using Cargo:
 
 - **macOS**: `npm run tauri build -- --target aarch64-apple-darwin`
-- **Linux**: `cargo build --target x86_64-unknown-linux-gnu` (Note: PTT engine not yet implemented)
+- **Linux**: `npm run tauri build -- --target x86_64-unknown-linux-gnu` (Note: PTT engine not yet implemented)
 
 > [!WARNING]  
 > LINUX TARGET IS NOT YET IMPLEMENTED, pull requests are welcome I do not have a Linux machine to test on.
