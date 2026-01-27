@@ -15,9 +15,9 @@ closing the app from the red button should also remove the app from the dock
 There should be some kind of action/request interface that exposes
 all the features of the app (ptt and other interactions with the main dwindow), then the extension can execute these actions from messages from the websocket or from extension shortcuts, or from popup buttons.
 
-### Support for Linux [@Issue#1](https://github.com/ThanhDodeurOdoo/discuss-companion/issues/1)
+### Support for Linux
+[@Issue#1](https://github.com/ThanhDodeurOdoo/discuss-companion/issues/1)
 
-Make a linux compilation target.
 
 ### Extension initialization handshake
 (not to confuse with Firefox's extension own handshake)
@@ -30,13 +30,8 @@ point of view it's not clear which tab is relevant since it blindly sends
 ptt commands to everything.
 
 ### Support the toggle ptt API
-(could actually also directly interact with the rtc.mute() function)
+[@Issue#2](https://github.com/ThanhDodeurOdoo/discuss-companion/issues/2)
 
-see the switch/case `switch (message.bodyType())` in [background.ts](extension/src/background.ts),
-this should implement the `"toggle-voice"` command.
-
-The user experience may be a bit sketchy without feedback from Odoo though because we can
-only guess if the command was successful or not, and cannot know if the state was altered in-app.
 
 ### Add github build script to auto generate file?
 
@@ -56,7 +51,7 @@ and track some metadata about them (browser, version, origin, ...)
 
 ### Ability to control mute/deaf/... state
 
-could be done with extension execution (see [extension utils](extension/src/utils.ts)) at `executeInMainWorld()`.
+could be done with extension execution (see [extension utils](extension/src/utils.ts)) at `executeInCurrentTab()`.
 
 # Nice-to-have
 

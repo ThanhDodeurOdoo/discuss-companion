@@ -1,5 +1,5 @@
 import { Plugin, signal, computed } from "@odoo/owl";
-import { executeInMainWorld } from "../utils";
+import { executeInCurrentTab } from "../utils";
 
 const IS_FIREFOX = /Firefox/i.test(navigator.userAgent);
 
@@ -47,7 +47,7 @@ export class PopupPlugin extends Plugin {
          * but execution should be well guarded in case
          * features change in the future
          *
-         * could even use executeInMainWorld() to bootstrap some
+         * could even use executeInCurrentTab() to bootstrap some
          * kind of script that would run in the main world
          * and setup communication with the extension.
          * Maybe even an override of rtc_service?
@@ -131,7 +131,7 @@ export class PopupPlugin extends Plugin {
     }
 
     async checkIsOdoo() {
-        const result = await executeInMainWorld(() => {
+        const result = await executeInCurrentTab(() => {
             const isOdoo = Boolean(window.owl && window.odoo);
             if (!isOdoo) {
                 return { isOdoo };
