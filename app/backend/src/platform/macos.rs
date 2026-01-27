@@ -431,7 +431,7 @@ mod tests {
             code: 123,
             modifiers: vec![Modifier::Meta],
         };
-        engine.set_binding(binding.clone());
+        engine.set_binding(binding);
         let stored = engine.get_binding();
         assert_eq!(stored.code, 123);
         assert_eq!(stored.modifiers, vec![Modifier::Meta]);

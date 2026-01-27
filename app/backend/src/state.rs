@@ -297,7 +297,7 @@ mod tests {
     #[test]
     fn test_ptt_down_flatbuffer() {
         let msg = OutgoingMessage::PttDown {
-            ts: 123456789,
+            ts: 123_456_789,
             key: KeyBinding {
                 code: 1,
                 modifiers: vec![Modifier::Shift],
@@ -308,8 +308,8 @@ mod tests {
         let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
         assert_eq!(decoded.body_type(), protocol::MessageBody::PttDown);
         let body = decoded.body_as_ptt_down().expect("Body is PttDown");
-        assert_eq!(body.ts(), 123456789);
-        assert_eq!(body.is_repeat(), true);
+        assert_eq!(body.ts(), 123_456_789);
+        assert!(body.is_repeat());
         let key = body.key().expect("Key present");
         assert_eq!(key.code(), 1);
         let mods = key.modifiers().expect("Modifiers present");
@@ -320,14 +320,14 @@ mod tests {
     #[test]
     fn test_ptt_up_flatbuffer() {
         let msg = OutgoingMessage::PttUp {
-            ts: 987654321,
+            ts: 987_654_321,
             key: KeyBinding::default(),
         };
         let bin = msg.to_flatbuffer();
         let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
         assert_eq!(decoded.body_type(), protocol::MessageBody::PttUp);
         let body = decoded.body_as_ptt_up().expect("Body is PttUp");
-        assert_eq!(body.ts(), 987654321);
+        assert_eq!(body.ts(), 987_654_321);
     }
 
     #[test]

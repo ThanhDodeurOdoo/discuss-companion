@@ -202,7 +202,7 @@ mod tests {
 
         // Connect client 1
         let stream1 = TcpStream::connect(addr).await.unwrap();
-        let (ws1, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream1)
+        let (ws1, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream1)
             .await
             .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -210,7 +210,7 @@ mod tests {
 
         // Connect client 2
         let stream2 = TcpStream::connect(addr).await.unwrap();
-        let (ws2, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream2)
+        let (ws2, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream2)
             .await
             .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -252,10 +252,9 @@ mod tests {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         let stream = TcpStream::connect(addr).await.unwrap();
-        let (mut ws, _) =
-            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream)
-                .await
-                .unwrap();
+        let (mut ws, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream)
+            .await
+            .unwrap();
 
         // Send message to broadcast channel
         let test_payload = vec![1, 2, 3, 4];
@@ -275,6 +274,10 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_set_binding_message_handling() {
+        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
+            KeyBindingArgs, Message as FBMessage, MessageArgs, MessageBody, SetBinding,
+            SetBindingArgs,
+        };
         use std::sync::{Arc, Mutex};
         use tauri::Listener;
 
@@ -303,15 +306,10 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         let stream = TcpStream::connect(addr).await.unwrap();
-        let (mut ws, _) =
-            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream)
-                .await
-                .unwrap();
+        let (mut ws, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream)
+            .await
+            .unwrap();
 
-        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
-            KeyBindingArgs, Message as FBMessage, MessageArgs, MessageBody, SetBinding,
-            SetBindingArgs,
-        };
         let mut builder = flatbuffers::FlatBufferBuilder::new();
         let mods =
             vec![crate::flatbuffers::protocol_generated::discuss::flatbuffers::Modifier::Shift];
@@ -362,6 +360,9 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_shutdown_message_handling() {
+        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
+            Message as FBMessage, MessageArgs, MessageBody, Shutdown, ShutdownArgs,
+        };
         use std::sync::{Arc, Mutex};
         use tauri::Listener;
 
@@ -390,15 +391,11 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         let stream = TcpStream::connect(addr).await.unwrap();
-        let (mut ws, _) =
-            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream)
-                .await
-                .unwrap();
+        let (mut ws, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream)
+            .await
+            .unwrap();
 
         // Construct Shutdown flatbuffer
-        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
-            Message as FBMessage, MessageArgs, MessageBody, Shutdown, ShutdownArgs,
-        };
         let mut builder = flatbuffers::FlatBufferBuilder::new();
         let shutdown_body = Shutdown::create(&mut builder, &ShutdownArgs {});
         let msg_offset = FBMessage::create(
@@ -432,6 +429,10 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_handshake_and_ping_pong() {
+        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
+            Message as FBMessage, MessageArgs, MessageBody, Ping, PingArgs,
+        };
+
         CONNECTION_COUNT.store(0, Ordering::SeqCst);
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
@@ -452,7 +453,7 @@ mod tests {
 
         let stream = TcpStream::connect(addr).await.expect("Failed to connect");
         let (mut ws_stream, _) =
-            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port), stream)
+            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream)
                 .await
                 .expect("Failed to handshake");
 
@@ -460,9 +461,6 @@ mod tests {
         assert!(is_connected());
 
         // Construct a Ping flatbuffer
-        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
-            Message as FBMessage, MessageArgs, MessageBody, Ping, PingArgs,
-        };
         let mut builder = flatbuffers::FlatBufferBuilder::new();
         let ping_offset = Ping::create(&mut builder, &PingArgs {});
         let msg_offset = FBMessage::create(
@@ -522,7 +520,7 @@ mod tests {
             .await
             .expect("Failed to connect to Port A");
         let (ws_1, _) =
-            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port_1), stream_1)
+            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port_1}"), stream_1)
                 .await
                 .expect("Failed to handshake Port A");
         assert!(is_connected());
@@ -563,7 +561,7 @@ mod tests {
             .await
             .expect("Failed to connect to Port B");
         let (_ws_2, _) =
-            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{}", port_2), stream_2)
+            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port_2}"), stream_2)
                 .await
                 .expect("Failed to handshake Port B");
         assert!(is_connected());
