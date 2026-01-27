@@ -17,10 +17,12 @@ export class PopupPlugin extends Plugin {
     serverVersion = signal("");
     owlVersion = signal("");
     isLoggingEnabled = signal(true);
+    hasCallTab = signal(false);
 
     setup() {
         this.restoreOptions();
         this.checkIsOdoo();
+        this.updateHasCallTab();
         /**
          * TODO: could do more fun stuff with:
          * odoo.__WOWL_DEBUG__.root.env.services["mail.store"].rtc
@@ -66,6 +68,38 @@ export class PopupPlugin extends Plugin {
             browser.commands.openShortcutSettings();
         } else {
             chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+        }
+    }
+
+    async updateHasCallTab() {
+        const { isTalkingByTabId = {} } = (await chrome.storage.session.get(
+            "isTalkingByTabId"
+        )) as {
+            isTalkingByTabId: Record<string, boolean>;
+        };
+        console.log("isTalkingByTabId", Object.keys(isTalkingByTabId));
+        this.hasCallTab.set(Object.keys(isTalkingByTabId).length > 0);
+    }
+
+    async goToCall() {
+        const { isTalkingByTabId = {} } = (await chrome.storage.session.get(
+            "isTalkingByTabId"
+        )) as {
+            isTalkingByTabId: Record<string, boolean>;
+        };
+        const tabIds = Object.keys(isTalkingByTabId);
+        if (tabIds.length > 0) {
+            const tabId = parseInt(tabIds[0], 10);
+            try {
+                const tab = await chrome.tabs.get(tabId);
+                if (tab) {
+                    await chrome.tabs.update(tabId, { active: true });
+                    await chrome.windows.update(tab.windowId, { focused: true });
+                    window.close();
+                }
+            } catch (e) {
+                console.error("Failed to focus tab", e);
+            }
         }
     }
 

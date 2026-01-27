@@ -18,7 +18,10 @@
         <div id="status" class="status" t-att-class="{ 'status-default': this.popup.isStatusDefault, 'status-error': this.popup.isStatusError, 'status-success': this.popup.isStatusSuccess }">
             <t t-out="this.popup.statusText"/>
         </div>
-        <button t-on-click="() => this.popup.openShortcuts()">Open Shortcuts</button>
+        <div class="button-group">
+            <button t-if="this.popup.hasCallTab()" t-on-click="() => this.popup.goToCall()">Go to Call</button>
+            <button class="big-emoji" t-on-click="() => this.popup.openShortcuts()">⌨</button>
+        </div>
         <div class="odoo-info" t-if="this.popup.isOdoo()">
              <hr/>
              <div><strong>Odoo detected</strong></div>

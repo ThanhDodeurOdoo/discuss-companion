@@ -95,6 +95,16 @@ button:active {
     min-height: 20px;
 }
 
+.big-emoji {
+    font-size: 46px;
+}
+
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
 .status-default {
     color: #24292f;
 }
