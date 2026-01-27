@@ -1,6 +1,6 @@
+use crate::WsState;
 use crate::platform::{check_accessibility_permission, get_binding, set_binding, set_recording};
 use crate::state::{KeyBinding, VERSION};
-use crate::WsState;
 use tauri::{Emitter, State};
 use tauri_plugin_store::StoreExt;
 use tracing::info;

@@ -1,8 +1,8 @@
 use crate::state::{KeyBinding, OutgoingMessage};
 use anyhow::Result;
 use crossbeam_channel::Sender;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 #[cfg(target_os = "linux")]
 mod linux;

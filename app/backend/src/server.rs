@@ -8,7 +8,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tracing::{error, info};
 
 use crate::flatbuffers::protocol_generated::discuss::flatbuffers as protocol;
-use crate::state::{current_timestamp, IncomingMessage, KeyBinding, Modifier, OutgoingMessage};
+use crate::state::{IncomingMessage, KeyBinding, Modifier, OutgoingMessage, current_timestamp};
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
@@ -99,11 +99,11 @@ async fn handle_connection<R: tauri::Runtime>(
     loop {
         tokio::select! {
             msg = rx.recv() => {
-                if let Ok(msg) = msg {
-                    if let Err(e) = ws_sender.send(Message::Binary(msg.into())).await {
-                        error!("Error sending message to {}: {}", addr, e);
-                        break;
-                    }
+                if let Ok(msg) = msg
+                    && let Err(e) = ws_sender.send(Message::Binary(msg.into())).await
+                {
+                    error!("Error sending message to {}: {}", addr, e);
+                    break;
                 }
             }
             msg = ws_receiver.next() => {
@@ -120,16 +120,16 @@ async fn handle_connection<R: tauri::Runtime>(
                                         }
                                     }
                                     protocol::MessageBody::SetBinding => {
-                                        if let Some(binding_table) = message.body_as_set_binding() {
-                                            if let Some(key) = binding_table.binding() {
-                                                let modifiers: Vec<Modifier> = key.modifiers().map(|m| m.iter().map(Modifier::from).collect()).unwrap_or_default();
-                                                let binding = KeyBinding {
-                                                    code: key.code(),
-                                                    modifiers,
-                                                };
-                                                let incoming = IncomingMessage::SetBinding { binding };
-                                                let _ = app_handle.emit("ws-message", &incoming);
-                                            }
+                                        if let Some(binding_table) = message.body_as_set_binding()
+                                            && let Some(key) = binding_table.binding()
+                                        {
+                                            let modifiers: Vec<Modifier> = key.modifiers().map(|m| m.iter().map(Modifier::from).collect()).unwrap_or_default();
+                                            let binding = KeyBinding {
+                                                code: key.code(),
+                                                modifiers,
+                                            };
+                                            let incoming = IncomingMessage::SetBinding { binding };
+                                            let _ = app_handle.emit("ws-message", &incoming);
                                         }
                                     }
                                     protocol::MessageBody::GetBinding => {

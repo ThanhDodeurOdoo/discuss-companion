@@ -173,17 +173,16 @@ pub fn run() {
         .setup(move |app| {
             let mut port = DEFAULT_PORT;
             if let Ok(store) = app.app_handle().store("settings.json") {
-                if let Some(value) = store.get("ptt_binding") {
-                    if let Ok(binding) = serde_json::from_value(value) {
-                        platform::set_binding(binding);
-                    }
+                if let Some(value) = store.get("ptt_binding")
+                    && let Ok(binding) = serde_json::from_value(value)
+                {
+                    platform::set_binding(binding);
                 }
-                if let Some(value) = store.get("ws_port") {
-                    if let Some(p) = value.as_u64() {
-                        if let Ok(p_u16) = u16::try_from(p) {
-                            port = p_u16;
-                        }
-                    }
+                if let Some(value) = store.get("ws_port")
+                    && let Some(p) = value.as_u64()
+                    && let Ok(p_u16) = u16::try_from(p)
+                {
+                    port = p_u16;
                 }
             }
 
