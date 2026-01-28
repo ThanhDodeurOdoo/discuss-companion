@@ -1,0 +1,16 @@
+namespace Discuss.IpcProtocol;
+
+enum Modifier : ubyte { Shift, Control, Alt, Meta }
+
+table PttBinding {
+  code: ushort;
+  modifiers: [Modifier];
+}
+
+table SetRecordingMode {
+  recording: bool;
+}
+
+table SetWsPort {
+  port: ushort;
+}

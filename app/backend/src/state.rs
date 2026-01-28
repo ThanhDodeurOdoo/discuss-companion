@@ -4,6 +4,7 @@ use flatbuffers::FlatBufferBuilder;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::flatbuffers::ipc_protocol_generated::discuss::ipc_protocol;
 use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -64,6 +65,31 @@ impl From<ws_protocol::Modifier> for Modifier {
             ws_protocol::Modifier::Alt => Self::Alt,
             ws_protocol::Modifier::Meta => Self::Meta,
             _ => Self::Shift,
+        }
+    }
+}
+
+impl From<ipc_protocol::Modifier> for Modifier {
+    #[allow(clippy::match_same_arms, reason = "shift is a valid default")]
+    fn from(m: ipc_protocol::Modifier) -> Self {
+        match m {
+            ipc_protocol::Modifier::Shift => Self::Shift,
+            ipc_protocol::Modifier::Control => Self::Control,
+            ipc_protocol::Modifier::Alt => Self::Alt,
+            ipc_protocol::Modifier::Meta => Self::Meta,
+            _ => Self::Shift,
+        }
+    }
+}
+
+impl<'a> From<ipc_protocol::PttBinding<'a>> for KeyBinding {
+    fn from(binding: ipc_protocol::PttBinding<'a>) -> Self {
+        Self {
+            code: binding.code(),
+            modifiers: binding
+                .modifiers()
+                .map(|mods| mods.iter().map(Into::into).collect())
+                .unwrap_or_default(),
         }
     }
 }
