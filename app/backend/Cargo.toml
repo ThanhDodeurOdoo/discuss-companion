@@ -1,6 +1,6 @@
 [package]
 name = "discuss-companion"
-version = "0.3.0"
+version = "0.4.0"
 description = "Odoo Discuss Companion"
 authors = ["ThanhDodeurOdoo"]
 edition = "2024"
