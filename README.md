@@ -1,6 +1,7 @@
 # Discuss Companion
 [![UI](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml)
 [![Extension](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/extension.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/extension.yml)
+[![API Tests](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/api_tests.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/api_tests.yml)
 
 [![CodeQuality](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/github-code-scanning/codeql)
 
@@ -112,6 +113,7 @@ The project includes three main GitHub Actions suites that run on every push and
 - **UI**: Handles frontend linting (ESLint) and app-specific testing. Tests only run if linting passes.
 - **Extension**: Handles testing for the Chrome extension components.
 - **Systems**: Handles backend (Rust) linting (fmt, clippy) and testing. Tests only run if linting passes.
+- **API Tests**: Handles integration testing for both IPC and WebSocket APIs.
 
 ---
 

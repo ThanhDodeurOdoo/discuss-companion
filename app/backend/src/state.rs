@@ -171,6 +171,7 @@ pub enum OutgoingMessage {
         if we don't use self."
 )]
 impl OutgoingMessage {
+    #[must_use]
     pub fn to_flatbuffer(&self) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
         let message_offset = match self {
@@ -315,6 +316,7 @@ pub enum IncomingMessage {
 }
 
 impl IncomingMessage {
+    #[must_use]
     pub fn to_ipc_flatbuffer(&self) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
         let union_offset = match self {
@@ -380,6 +382,7 @@ impl IncomingMessage {
     }
 }
 
+#[must_use]
 pub fn encode_ws_connection(status: ipc_protocol::ConnectionStatus) -> Vec<u8> {
     let mut builder = FlatBufferBuilder::new();
 
@@ -400,6 +403,7 @@ pub fn encode_ws_connection(status: ipc_protocol::ConnectionStatus) -> Vec<u8> {
     builder.finished_data().to_vec()
 }
 
+#[must_use]
 pub fn encode_ptt_state(
     is_active: bool,
     code: u16,
@@ -433,6 +437,7 @@ pub fn encode_ptt_state(
     builder.finished_data().to_vec()
 }
 
+#[must_use]
 pub fn encode_backend_error(message: &str) -> Vec<u8> {
     let mut builder = FlatBufferBuilder::new();
     let message_offset = builder.create_string(message);
@@ -456,6 +461,7 @@ pub fn encode_backend_error(message: &str) -> Vec<u8> {
     builder.finished_data().to_vec()
 }
 
+#[must_use]
 pub fn current_timestamp() -> u64 {
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)

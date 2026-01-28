@@ -27,11 +27,11 @@ use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, level_filters::LevelFilter};
 
-mod commands;
-mod flatbuffers;
-mod platform;
-mod server;
-mod state;
+pub mod commands;
+pub mod flatbuffers;
+pub mod platform;
+pub mod server;
+pub mod state;
 
 pub const DEFAULT_PORT: u16 = 49152;
 const TRAY_ID: &str = "main-tray";

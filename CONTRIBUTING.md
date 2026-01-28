@@ -74,12 +74,14 @@ npm run lint:backend
 npm run test:extension
 npm run test:frontend
 npm run test:backend
+npm run test:api:ipc
+npm run test:api:ws
 ```
 by group:
 
 ```bash
 npm run lint # all 3 lints
-npm run test # all 3 tests suites
+npm run test # all test suites (including API tests)
 ```
 
 or all at the same time:
