@@ -1,5 +1,5 @@
 import { Plugin, signal, computed } from "@odoo/owl";
-import { executeInCurrentTab } from "../utils";
+import { executeInCurrentTab, executeInCallTab } from "../utils";
 
 const IS_FIREFOX = /Firefox/i.test(navigator.userAgent);
 
@@ -16,8 +16,9 @@ export class PopupPlugin extends Plugin {
     isOdoo = signal(false);
     serverVersion = signal("");
     owlVersion = signal("");
-    isLoggingEnabled = signal(true);
+    isLoggingEnabled = signal(false);
     hasCallTab = signal(false);
+    isMute = signal(false);
     isStatusDefault = computed(
         () => this.statusCode() === StatusCode.Default || this.statusCode() === StatusCode.Saving
     );
@@ -39,19 +40,8 @@ export class PopupPlugin extends Plugin {
 
     setup() {
         this.restoreOptions();
-        this.checkIsOdoo();
-        this.updateHasCallTab();
-        /**
-         * TODO: could do more fun stuff with:
-         * odoo.__WOWL_DEBUG__.root.env.services["mail.store"].rtc
-         * but execution should be well guarded in case
-         * features change in the future
-         *
-         * could even use executeInCurrentTab() to bootstrap some
-         * kind of script that would run in the main world
-         * and setup communication with the extension.
-         * Maybe even an override of rtc_service?
-         */
+        this.collectCurrentTabData();
+        this.collectCallTabData();
     }
 
     openShortcuts() {
@@ -63,14 +53,54 @@ export class PopupPlugin extends Plugin {
         }
     }
 
-    async updateHasCallTab() {
+    async collectCurrentTabData() {
+        const result = await executeInCurrentTab(() => {
+            const isOdoo = Boolean(window.owl && window.odoo);
+            if (!isOdoo) {
+                return { isOdoo };
+            }
+            return {
+                isOdoo,
+                serverVersion: window.odoo?.info?.server_version || "Unknown",
+                owlVersion: window.owl?.__info__?.version || "Unknown"
+            };
+        });
+
+        const finalResult = result || { isOdoo: false };
+        this.isOdoo.set(finalResult.isOdoo);
+        if (finalResult.isOdoo) {
+            this.serverVersion.set(finalResult.serverVersion!);
+            this.owlVersion.set(finalResult.owlVersion!);
+        }
+    }
+
+    async collectCallTabData() {
         const { isTalkingByTabId = {} } = (await chrome.storage.session.get(
             "isTalkingByTabId"
         )) as {
             isTalkingByTabId: Record<string, boolean>;
         };
-        console.log("isTalkingByTabId", Object.keys(isTalkingByTabId));
-        this.hasCallTab.set(Object.keys(isTalkingByTabId).length > 0);
+        const hasCall = Object.keys(isTalkingByTabId).length > 0;
+        this.hasCallTab.set(hasCall);
+        if (hasCall) {
+            const result = await executeInCallTab(() => {
+                const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+                return store?.rtc?.selfSession?.isMute ?? false;
+            });
+            this.isMute.set(Boolean(result));
+        }
+    }
+
+    async toggleMicrophone() {
+        const result = await executeInCallTab(async () => {
+            const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+            if (store?.rtc?.selfSession) {
+                await store.rtc.toggleMicrophone();
+                return store.rtc.selfSession.isMute;
+            }
+            return false;
+        });
+        this.isMute.set(Boolean(result));
     }
 
     async goToCall() {
@@ -99,7 +129,7 @@ export class PopupPlugin extends Plugin {
     async restoreOptions() {
         const items = (await chrome.storage.local.get({
             wsPort: 49152,
-            isLoggingEnabled: true
+            isLoggingEnabled: this.isLoggingEnabled()
         })) as { wsPort: number; isLoggingEnabled: boolean };
         this.port.set(items.wsPort);
         this.isLoggingEnabled.set(items.isLoggingEnabled);
@@ -128,26 +158,5 @@ export class PopupPlugin extends Plugin {
         await chrome.storage.local.set({
             isLoggingEnabled: this.isLoggingEnabled()
         });
-    }
-
-    async checkIsOdoo() {
-        const result = await executeInCurrentTab(() => {
-            const isOdoo = Boolean(window.owl && window.odoo);
-            if (!isOdoo) {
-                return { isOdoo };
-            }
-            return {
-                isOdoo,
-                serverVersion: window.odoo?.info?.server_version || "Unknown",
-                owlVersion: window.owl?.__info__?.version || "Unknown"
-            };
-        });
-
-        const finalResult = result || { isOdoo: false };
-        this.isOdoo.set(finalResult.isOdoo);
-        if (finalResult.isOdoo) {
-            this.serverVersion.set(finalResult.serverVersion!);
-            this.owlVersion.set(finalResult.owlVersion!);
-        }
     }
 }

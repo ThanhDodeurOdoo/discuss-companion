@@ -17,9 +17,14 @@ interface Window {
                 env: {
                     services: {
                         "mail.store": {
-                            rtc: object;
+                            rtc: {
+                                selfSession?: {
+                                    isMute: boolean;
+                                };
+                                toggleMicrophone(): Promise<void>;
+                            };
                         };
-                    };
+                    } & Record<string, unknown>;
                 };
             };
         };
