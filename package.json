@@ -10,6 +10,7 @@
     "verify": "npm run lint && npm run test",
     "dev": "tauri dev --config app/backend/tauri.conf.json",
     "dev:debug": "RUST_LOG=debug tauri dev --config app/backend/tauri.conf.json",
+    "gen:flatbuffers": "npm run build:flatbuffers:ws && npm run build:flatbuffers:ipc",
     "build:flatbuffers:ws": "flatc --rust -o app/backend/src/flatbuffers ws_protocol.fbs && flatc --ts -o extension/src ws_protocol.fbs",
     "build:flatbuffers:ipc": "flatc --rust -o app/backend/src/flatbuffers ipc_protocol.fbs && flatc --ts -o app/frontend/flatbuffers ipc_protocol.fbs",
     "build:app": "tauri build --config app/backend/tauri.conf.json",

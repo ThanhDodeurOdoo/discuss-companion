@@ -2,7 +2,8 @@ import { jest, describe, test, expect, beforeEach } from "@jest/globals";
 
 jest.unstable_mockModule("@tauri-apps/api/core", () => ({
     __esModule: true,
-    invoke: jest.fn()
+    invoke: jest.fn(),
+    Channel: jest.fn()
 }));
 
 jest.unstable_mockModule("@tauri-apps/api/event", () => ({
@@ -14,17 +15,19 @@ jest.unstable_mockModule("../ipc.ts", () => ({
     __esModule: true,
     setRecordingMode: jest.fn(),
     updateBinding: jest.fn(),
-    updateWsPort: jest.fn()
+    updateWsPort: jest.fn(),
+    setupChannel: jest.fn()
 }));
 
 const { invoke } = await import("@tauri-apps/api/core");
 const { listen } = await import("@tauri-apps/api/event");
 const { AppPlugin } = await import("../app_plugin.ts");
-const { setRecordingMode } = await import("../ipc.ts");
+const { setRecordingMode, setupChannel } = await import("../ipc.ts");
 
 const mockedInvoke = invoke as jest.MockedFunction<typeof invoke>;
 const mockedListen = listen as jest.MockedFunction<typeof listen>;
 const mockedSetRecordingMode = setRecordingMode as jest.MockedFunction<typeof setRecordingMode>;
+const mockedSetupChannel = setupChannel as jest.MockedFunction<typeof setupChannel>;
 
 describe("AppPlugin", () => {
     let plugin: InstanceType<typeof AppPlugin>;
@@ -65,11 +68,13 @@ describe("AppPlugin", () => {
     test("setupListeners sets up event listeners", async () => {
         mockedInvoke.mockResolvedValue(true as never);
         mockedListen.mockResolvedValue((() => {}) as never);
+        mockedSetupChannel.mockResolvedValue(undefined as never);
 
         await plugin.setupListeners();
 
         expect(mockedInvoke).toHaveBeenCalledWith("is_extension_connected");
-        expect(mockedListen).toHaveBeenCalledWith("ptt-event", expect.any(Function));
-        expect(mockedListen).toHaveBeenCalledWith("error", expect.any(Function));
+        expect(mockedSetupChannel).toHaveBeenCalled();
+        // expect(mockedListen).toHaveBeenCalledWith("ptt-event", expect.any(Function)); // Moved to channel
+        // expect(mockedListen).toHaveBeenCalledWith("error", expect.any(Function));
     });
 });

@@ -7,9 +7,12 @@ const listenMock = jest.fn(() => Promise.resolve(() => {}));
 const setRecordingModeMock = jest.fn();
 const updateBindingMock = jest.fn();
 const updateWsPortMock = jest.fn();
+const setupChannelMock = jest.fn();
+const ChannelMock = jest.fn();
 
 jest.unstable_mockModule("@tauri-apps/api/core", () => ({
-    invoke: invokeMock
+    invoke: invokeMock,
+    Channel: ChannelMock
 }));
 
 jest.unstable_mockModule("@tauri-apps/api/event", () => ({
@@ -19,7 +22,8 @@ jest.unstable_mockModule("@tauri-apps/api/event", () => ({
 jest.unstable_mockModule("../ipc", () => ({
     setRecordingMode: setRecordingModeMock,
     updateBinding: updateBindingMock,
-    updateWsPort: updateWsPortMock
+    updateWsPort: updateWsPortMock,
+    setupChannel: setupChannelMock
 }));
 
 const { Root } = await import("../root");
@@ -36,6 +40,8 @@ describe("Companion Component Interactions", () => {
         setRecordingModeMock.mockClear();
         updateBindingMock.mockClear();
         updateWsPortMock.mockClear();
+        setupChannelMock.mockClear();
+        ChannelMock.mockClear();
 
         // Default mock implementations
         invokeMock.mockImplementation((cmd) => {

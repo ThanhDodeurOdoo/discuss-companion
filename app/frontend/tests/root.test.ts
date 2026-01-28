@@ -5,7 +5,8 @@ const invokeMock = jest.fn();
 const listenMock = jest.fn(() => Promise.resolve(() => {}));
 
 jest.unstable_mockModule("@tauri-apps/api/core", () => ({
-    invoke: invokeMock
+    invoke: invokeMock,
+    Channel: jest.fn()
 }));
 
 jest.unstable_mockModule("@tauri-apps/api/event", () => ({

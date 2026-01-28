@@ -82,6 +82,17 @@ impl From<ipc_protocol::Modifier> for Modifier {
     }
 }
 
+impl From<Modifier> for ipc_protocol::Modifier {
+    fn from(m: Modifier) -> Self {
+        match m {
+            Modifier::Shift => Self::Shift,
+            Modifier::Control => Self::Control,
+            Modifier::Alt => Self::Alt,
+            Modifier::Meta => Self::Meta,
+        }
+    }
+}
+
 impl<'a> From<ipc_protocol::PttBinding<'a>> for KeyBinding {
     fn from(binding: ipc_protocol::PttBinding<'a>) -> Self {
         Self {
@@ -301,6 +312,148 @@ pub enum IncomingMessage {
     SetBinding { binding: KeyBinding },
     GetBinding,
     Shutdown,
+}
+
+impl IncomingMessage {
+    pub fn to_ipc_flatbuffer(&self) -> Vec<u8> {
+        let mut builder = FlatBufferBuilder::new();
+        let union_offset = match self {
+            Self::SetBinding { binding } => {
+                let modifiers: Vec<ipc_protocol::Modifier> =
+                    binding.modifiers.iter().map(|&m| m.into()).collect();
+                let modifiers_offset = builder.create_vector(&modifiers);
+                let binding_offset = ipc_protocol::PttBinding::create(
+                    &mut builder,
+                    &ipc_protocol::PttBindingArgs {
+                        code: binding.code,
+                        modifiers: Some(modifiers_offset),
+                    },
+                );
+                let incoming_offset = ipc_protocol::IncomingSetBinding::create(
+                    &mut builder,
+                    &ipc_protocol::IncomingSetBindingArgs {
+                        binding: Some(binding_offset),
+                    },
+                );
+                incoming_offset.as_union_value()
+            }
+            Self::GetBinding => {
+                let incoming_offset = ipc_protocol::IncomingGetBinding::create(
+                    &mut builder,
+                    &ipc_protocol::IncomingGetBindingArgs {},
+                );
+                incoming_offset.as_union_value()
+            }
+            Self::Shutdown => {
+                let incoming_offset = ipc_protocol::IncomingShutdown::create(
+                    &mut builder,
+                    &ipc_protocol::IncomingShutdownArgs {},
+                );
+                incoming_offset.as_union_value()
+            }
+        };
+
+        let message_type = match self {
+            Self::SetBinding { .. } => ipc_protocol::IncomingMessageUnion::IncomingSetBinding,
+            Self::GetBinding => ipc_protocol::IncomingMessageUnion::IncomingGetBinding,
+            Self::Shutdown => ipc_protocol::IncomingMessageUnion::IncomingShutdown,
+        };
+
+        let ws_message_offset = ipc_protocol::WsMessageEvent::create(
+            &mut builder,
+            &ipc_protocol::WsMessageEventArgs {
+                message_type,
+                message: Some(union_offset),
+            },
+        );
+
+        let event_offset = ipc_protocol::ToFrontendMessage::create(
+            &mut builder,
+            &ipc_protocol::ToFrontendMessageArgs {
+                event_type: ipc_protocol::ToFrontend::WsMessageEvent,
+                event: Some(ws_message_offset.as_union_value()),
+            },
+        );
+
+        builder.finish(event_offset, None);
+        builder.finished_data().to_vec()
+    }
+}
+
+pub fn encode_ws_connection(status: ipc_protocol::ConnectionStatus) -> Vec<u8> {
+    let mut builder = FlatBufferBuilder::new();
+
+    let connection_offset = ipc_protocol::WsConnection::create(
+        &mut builder,
+        &ipc_protocol::WsConnectionArgs { status },
+    );
+
+    let event_offset = ipc_protocol::ToFrontendMessage::create(
+        &mut builder,
+        &ipc_protocol::ToFrontendMessageArgs {
+            event_type: ipc_protocol::ToFrontend::WsConnection,
+            event: Some(connection_offset.as_union_value()),
+        },
+    );
+
+    builder.finish(event_offset, None);
+    builder.finished_data().to_vec()
+}
+
+pub fn encode_ptt_state(
+    is_active: bool,
+    code: u16,
+    modifiers: &[Modifier],
+    is_repeat: bool,
+) -> Vec<u8> {
+    let mut builder = flatbuffers::FlatBufferBuilder::new();
+
+    let modifiers_vec: Vec<ipc_protocol::Modifier> = modifiers.iter().map(|&m| m.into()).collect();
+    let modifiers_offset = builder.create_vector(&modifiers_vec);
+
+    let ptt_state_offset = ipc_protocol::PttState::create(
+        &mut builder,
+        &ipc_protocol::PttStateArgs {
+            is_active,
+            code,
+            modifiers: Some(modifiers_offset),
+            is_repeat,
+        },
+    );
+
+    let message_offset = ipc_protocol::ToFrontendMessage::create(
+        &mut builder,
+        &ipc_protocol::ToFrontendMessageArgs {
+            event_type: ipc_protocol::ToFrontend::PttState,
+            event: Some(ptt_state_offset.as_union_value()),
+        },
+    );
+
+    builder.finish(message_offset, None);
+    builder.finished_data().to_vec()
+}
+
+pub fn encode_backend_error(message: &str) -> Vec<u8> {
+    let mut builder = FlatBufferBuilder::new();
+    let message_offset = builder.create_string(message);
+
+    let error_offset = ipc_protocol::BackendError::create(
+        &mut builder,
+        &ipc_protocol::BackendErrorArgs {
+            message: Some(message_offset),
+        },
+    );
+
+    let event_offset = ipc_protocol::ToFrontendMessage::create(
+        &mut builder,
+        &ipc_protocol::ToFrontendMessageArgs {
+            event_type: ipc_protocol::ToFrontend::BackendError,
+            event: Some(error_offset.as_union_value()),
+        },
+    );
+
+    builder.finish(event_offset, None);
+    builder.finished_data().to_vec()
 }
 
 pub fn current_timestamp() -> u64 {
