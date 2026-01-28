@@ -2,7 +2,7 @@ import { Plugin, signal, onWillDestroy } from "@odoo/owl";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { KEY_MAP, KEY_SYMBOL_MAP, MODIFIER_SYMBOLS, MODIFIER_NAMES } from "./utils";
-import { setRecordingMode, updateBinding, updateWsPort } from "./ipc";
+import { setRecordingMode, updateBinding, updateWsPort, setupChannel, ChannelEvent } from "./ipc";
 
 const DEFAULT_PORT = 49152;
 
@@ -11,16 +11,6 @@ type LogEntry = {
     ts: string;
     type: string;
     message: string;
-};
-
-type PttEvent = {
-    type: string;
-    ts: number;
-    key: {
-        code: number;
-        modifiers: number[];
-    };
-    is_repeat?: boolean;
 };
 
 type PttBinding = {
@@ -71,65 +61,74 @@ export class AppPlugin extends Plugin {
         const isConnected = await invoke<boolean>("is_extension_connected");
         this.extensionConnected.set(isConnected);
 
-        const pttUnlisten = await listen<PttEvent>("ptt-event", async (event) => {
-            const payload = event.payload;
+        await setupChannel(async (event: ChannelEvent) => {
+            switch (event.type) {
+                case "ptt-event": {
+                    const payload = event.payload as {
+                        type: string;
+                        ts: number;
+                        key: { code: number; modifiers: number[] };
+                        is_repeat: boolean;
+                    };
+                    if (this.isRecording()) {
+                        this.isRecording.set(false);
+                        await setRecordingMode(false);
+                        await updateBinding(payload.key.code, payload.key.modifiers);
+                        this.currentBinding.set({
+                            code: payload.key.code,
+                            modifiers: payload.key.modifiers
+                        });
+                        this.addLog(
+                            "SYSTEM",
+                            `Key binding updated to: ${this.formatKeyBinding(
+                                payload.key.code,
+                                payload.key.modifiers
+                            )}`
+                        );
+                        return;
+                    }
 
-            if (this.isRecording()) {
-                this.isRecording.set(false);
-                await setRecordingMode(false);
-                await updateBinding(payload.key.code, payload.key.modifiers);
-                this.currentBinding.set({
-                    code: payload.key.code,
-                    modifiers: payload.key.modifiers
-                });
-                this.addLog(
-                    "SYSTEM",
-                    `Key binding updated to: ${this.formatKeyBinding(
-                        payload.key.code,
-                        payload.key.modifiers
-                    )}`
-                );
-                return;
+                    if (payload.type === "ptt_down") {
+                        this.isPressed.set(true);
+                    } else {
+                        this.isPressed.set(false);
+                    }
+
+                    if (payload.type === "ptt_down" && payload.is_repeat) {
+                        return;
+                    }
+
+                    if (payload.type === "ptt_up" && this.isForcingRelease) {
+                        this.isForcingRelease = false;
+                        return;
+                    }
+
+                    const type = payload.type === "ptt_down" ? "DOWN" : "UP";
+                    this.addLog(
+                        type,
+                        `Key: ${this.formatKeyBinding(payload.key.code, payload.key.modifiers)}`
+                    );
+                    break;
+                }
+                case "error": {
+                    this.addLog("ERROR", event.payload as string);
+                    break;
+                }
+                case "ws-connection": {
+                    this.extensionConnected.set(true);
+                    this.addLog("WS", "websocket connected");
+                    break;
+                }
+                case "ws-disconnection": {
+                    this.extensionConnected.set(false);
+                    this.addLog("WS", "websocket disconnected");
+                    break;
+                }
+                case "ws-message": {
+                    this.addLog("WS-MSG", JSON.stringify(event.payload));
+                    break;
+                }
             }
-
-            if (payload.type === "ptt_down") {
-                this.isPressed.set(true);
-            } else {
-                this.isPressed.set(false);
-            }
-
-            if (payload.type === "ptt_down" && payload.is_repeat) {
-                return;
-            }
-
-            if (payload.type === "ptt_up" && this.isForcingRelease) {
-                this.isForcingRelease = false;
-                return;
-            }
-
-            const type = payload.type === "ptt_down" ? "DOWN" : "UP";
-            this.addLog(
-                type,
-                `Key: ${this.formatKeyBinding(payload.key.code, payload.key.modifiers)}`
-            );
-        });
-
-        const errorUnlisten = await listen("error", (event) => {
-            this.addLog("ERROR", event.payload as string);
-        });
-
-        const wsConnectUnlisten = await listen("ws-connection", (event) => {
-            this.extensionConnected.set(true);
-            this.addLog("WS", event.payload as string);
-        });
-
-        const wsDisconnectUnlisten = await listen("ws-disconnection", (event) => {
-            this.extensionConnected.set(false);
-            this.addLog("WS", event.payload as string);
-        });
-
-        const wsMsgUnlisten = await listen("ws-message", (event) => {
-            this.addLog("WS-MSG", JSON.stringify(event.payload));
         });
 
         type WsStatusPayload = {
@@ -146,14 +145,7 @@ export class AppPlugin extends Plugin {
             }
         });
 
-        this.unlistenFns.push(
-            pttUnlisten,
-            errorUnlisten,
-            wsConnectUnlisten,
-            wsDisconnectUnlisten,
-            wsMsgUnlisten,
-            wsStatusUnlisten
-        );
+        this.unlistenFns.push(wsStatusUnlisten);
     }
 
     async checkPermission() {

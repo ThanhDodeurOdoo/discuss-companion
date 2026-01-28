@@ -1,28 +1,29 @@
-import { Builder } from "flatbuffers";
-import { invoke } from "@tauri-apps/api/core";
-import { PttBinding, SetRecordingMode, SetWsPort } from "./flatbuffers/discuss/ipc-protocol";
+import { Builder, ByteBuffer } from "flatbuffers";
+import { invoke, Channel } from "@tauri-apps/api/core";
+import {
+    PttBinding,
+    SetRecordingMode,
+    SetWsPort,
+    ToFrontendMessage,
+    ToFrontend,
+    PttState,
+    WsConnection,
+    BackendError,
+    WsMessageEvent,
+    IncomingMessageUnion,
+    IncomingSetBinding,
+    ConnectionStatus
+    // IncomingGetBinding,
+    // IncomingShutdown
+} from "./flatbuffers/discuss/ipc-protocol";
 
 export async function updateBinding(code: number, modifiers: number[]) {
     const builder = new Builder(1024);
 
-    // Create modifiers vector
     const translatedModifiers = modifiers.map((m) => {
         // Map frontend modifiers to flatbuffer modifiers (assuming same order/values or map explicitly)
         // Frontend uses: 0: Cmd, 1: Ctrl, 2: Option, 3: Shift (based on utils.ts MODIFIER_ORDER?)
         // Flatbuffer: Shift=0, Control=1, Alt=2, Meta=3
-
-        // We need to verify the mapping.
-        // In app_plugin.ts: MODIFIER_ORDER: Record<string, number> = { Cmd: 0, Ctrl: 1, Option: 2, Shift: 3 };
-        // But the input `modifiers` to `updateBinding` come from `payload.key.modifiers`.
-        // The payload comes from `rdev` which uses its own values.
-        // Wait, `ipc_protocol.fbs` defines: Shift=0, Control=1, Alt=2, Meta=3.
-        // We should ensure we send the correct values.
-        // The `modifiers` argument here is likely raw from the `rdev` event or re-mapped?
-        // In `app_plugin.ts`, `update_binding` is called with object `{ code, modifiers }`.
-
-        // Let's assume the caller passes modifiers compatible with what the backend expects?
-        // Or we map them here. The backend `state::Modifier` matches `ws_protocol` and `ipc_protocol`.
-
         return m;
     });
 
@@ -54,14 +55,109 @@ export async function setRecordingMode(recording: boolean) {
 
 export async function updateWsPort(port: number) {
     const builder = new Builder(1024);
-
     SetWsPort.startSetWsPort(builder);
     SetWsPort.addPort(builder, port);
     const offset = SetWsPort.endSetWsPort(builder);
-
     builder.finish(offset);
     const bytes = builder.asUint8Array();
-
-    // The backend command is `update_ws_port`
     await invoke("update_ws_port", bytes);
+}
+
+// Define types closer to what app_plugin expects
+export type ChannelEvent =
+    | { type: "ptt-event"; payload: unknown }
+    | { type: "ws-connection" }
+    | { type: "ws-disconnection" }
+    | { type: "error"; payload: string }
+    | { type: "ws-message"; payload: unknown };
+
+export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
+    const channel = new Channel<ArrayBuffer | number[]>();
+    channel.onmessage = (message: ArrayBuffer | number[]) => {
+        let bytes: Uint8Array;
+        if (message instanceof ArrayBuffer) {
+            bytes = new Uint8Array(message);
+        } else if (Array.isArray(message)) {
+            bytes = new Uint8Array(message);
+        } else {
+            console.error("Unknown message type on channel:", message);
+            return;
+        }
+
+        const buf = new ByteBuffer(bytes);
+        const msg = ToFrontendMessage.getRootAsToFrontendMessage(buf);
+        const eventType = msg.eventType();
+
+        switch (eventType) {
+            case ToFrontend.PttState: {
+                const state = msg.event(new PttState()) as PttState;
+                onEvent({
+                    type: "ptt-event",
+                    payload: {
+                        type: state.isActive() ? "ptt_down" : "ptt_up",
+                        ts: Date.now(),
+                        key: {
+                            code: state.code(),
+                            modifiers: Array.from(state.modifiersArray() || [])
+                        },
+                        is_repeat: state.isRepeat()
+                    }
+                });
+                break;
+            }
+            case ToFrontend.WsConnection: {
+                const conn = msg.event(new WsConnection()) as WsConnection;
+                const status = conn.status();
+                if (status === ConnectionStatus.Connected) {
+                    onEvent({ type: "ws-connection" });
+                } else {
+                    onEvent({ type: "ws-disconnection" });
+                }
+                break;
+            }
+            case ToFrontend.BackendError: {
+                const err = msg.event(new BackendError()) as BackendError;
+                onEvent({ type: "error", payload: err.message() || "Unknown backend error" });
+                break;
+            }
+            case ToFrontend.WsMessageEvent: {
+                const wsEvent = msg.event(new WsMessageEvent()) as WsMessageEvent;
+                const msgType = wsEvent.messageType();
+
+                switch (msgType) {
+                    case IncomingMessageUnion.IncomingSetBinding: {
+                        const bindingMsg = wsEvent.message(
+                            new IncomingSetBinding()
+                        ) as IncomingSetBinding;
+                        const binding = bindingMsg.binding();
+                        if (binding) {
+                            onEvent({
+                                type: "ws-message",
+                                payload: {
+                                    SetBinding: {
+                                        binding: {
+                                            code: binding.code(),
+                                            modifiers: Array.from(binding.modifiersArray() || [])
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        break;
+                    }
+                    case IncomingMessageUnion.IncomingGetBinding: {
+                        onEvent({ type: "ws-message", payload: { GetBinding: {} } });
+                        break;
+                    }
+                    case IncomingMessageUnion.IncomingShutdown: {
+                        onEvent({ type: "ws-message", payload: { Shutdown: {} } });
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+    };
+
+    await invoke("establish_channel", { channel });
 }

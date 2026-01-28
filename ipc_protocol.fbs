@@ -14,3 +14,52 @@ table SetRecordingMode {
 table SetWsPort {
   port: ushort;
 }
+
+// Outgoing events (Backend -> Frontend)
+
+table BackendError {
+    message: string;
+}
+
+enum ConnectionStatus : ubyte { Connected, Disconnected }
+
+table WsConnection {
+    status: ConnectionStatus;
+}
+
+table WsMessage {
+    message_type: string;
+}
+
+table IncomingSetBinding {
+    binding: PttBinding;
+}
+table IncomingGetBinding {}
+table IncomingShutdown {}
+
+union IncomingMessageUnion { IncomingSetBinding, IncomingGetBinding, IncomingShutdown }
+
+table WsMessageEvent {
+    message: IncomingMessageUnion;
+}
+
+table PttState {
+    is_active: bool;
+    code: ushort;
+    modifiers: [Modifier];
+    is_repeat: bool;
+}
+
+// Union for all messages sent to frontend
+union ToFrontend { 
+    BackendError, 
+    WsConnection, 
+    WsMessageEvent, 
+    PttState 
+}
+
+table ToFrontendMessage {
+    event: ToFrontend;
+}
+
+root_type ToFrontendMessage;

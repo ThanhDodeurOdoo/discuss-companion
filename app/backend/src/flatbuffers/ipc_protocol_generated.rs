@@ -102,6 +102,282 @@ impl<'a> ::flatbuffers::Verifiable for Modifier {
 }
 
 impl ::flatbuffers::SimpleToVerifyInSlice for Modifier {}
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+pub const ENUM_MIN_CONNECTION_STATUS: u8 = 0;
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+pub const ENUM_MAX_CONNECTION_STATUS: u8 = 1;
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+#[allow(non_camel_case_types)]
+pub const ENUM_VALUES_CONNECTION_STATUS: [ConnectionStatus; 2] = [
+  ConnectionStatus::Connected,
+  ConnectionStatus::Disconnected,
+];
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[repr(transparent)]
+pub struct ConnectionStatus(pub u8);
+#[allow(non_upper_case_globals)]
+impl ConnectionStatus {
+  pub const Connected: Self = Self(0);
+  pub const Disconnected: Self = Self(1);
+
+  pub const ENUM_MIN: u8 = 0;
+  pub const ENUM_MAX: u8 = 1;
+  pub const ENUM_VALUES: &'static [Self] = &[
+    Self::Connected,
+    Self::Disconnected,
+  ];
+  /// Returns the variant's name or "" if unknown.
+  pub fn variant_name(self) -> Option<&'static str> {
+    match self {
+      Self::Connected => Some("Connected"),
+      Self::Disconnected => Some("Disconnected"),
+      _ => None,
+    }
+  }
+}
+impl ::core::fmt::Debug for ConnectionStatus {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+    if let Some(name) = self.variant_name() {
+      f.write_str(name)
+    } else {
+      f.write_fmt(format_args!("<UNKNOWN {:?}>", self.0))
+    }
+  }
+}
+impl<'a> ::flatbuffers::Follow<'a> for ConnectionStatus {
+  type Inner = Self;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    let b = unsafe { ::flatbuffers::read_scalar_at::<u8>(buf, loc) };
+    Self(b)
+  }
+}
+
+impl ::flatbuffers::Push for ConnectionStatus {
+    type Output = ConnectionStatus;
+    #[inline]
+    unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {
+        unsafe { ::flatbuffers::emplace_scalar::<u8>(dst, self.0) };
+    }
+}
+
+impl ::flatbuffers::EndianScalar for ConnectionStatus {
+  type Scalar = u8;
+  #[inline]
+  fn to_little_endian(self) -> u8 {
+    self.0.to_le()
+  }
+  #[inline]
+  #[allow(clippy::wrong_self_convention)]
+  fn from_little_endian(v: u8) -> Self {
+    let b = u8::from_le(v);
+    Self(b)
+  }
+}
+
+impl<'a> ::flatbuffers::Verifiable for ConnectionStatus {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    u8::run_verifier(v, pos)
+  }
+}
+
+impl ::flatbuffers::SimpleToVerifyInSlice for ConnectionStatus {}
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+pub const ENUM_MIN_INCOMING_MESSAGE_UNION: u8 = 0;
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+pub const ENUM_MAX_INCOMING_MESSAGE_UNION: u8 = 3;
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+#[allow(non_camel_case_types)]
+pub const ENUM_VALUES_INCOMING_MESSAGE_UNION: [IncomingMessageUnion; 4] = [
+  IncomingMessageUnion::NONE,
+  IncomingMessageUnion::IncomingSetBinding,
+  IncomingMessageUnion::IncomingGetBinding,
+  IncomingMessageUnion::IncomingShutdown,
+];
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[repr(transparent)]
+pub struct IncomingMessageUnion(pub u8);
+#[allow(non_upper_case_globals)]
+impl IncomingMessageUnion {
+  pub const NONE: Self = Self(0);
+  pub const IncomingSetBinding: Self = Self(1);
+  pub const IncomingGetBinding: Self = Self(2);
+  pub const IncomingShutdown: Self = Self(3);
+
+  pub const ENUM_MIN: u8 = 0;
+  pub const ENUM_MAX: u8 = 3;
+  pub const ENUM_VALUES: &'static [Self] = &[
+    Self::NONE,
+    Self::IncomingSetBinding,
+    Self::IncomingGetBinding,
+    Self::IncomingShutdown,
+  ];
+  /// Returns the variant's name or "" if unknown.
+  pub fn variant_name(self) -> Option<&'static str> {
+    match self {
+      Self::NONE => Some("NONE"),
+      Self::IncomingSetBinding => Some("IncomingSetBinding"),
+      Self::IncomingGetBinding => Some("IncomingGetBinding"),
+      Self::IncomingShutdown => Some("IncomingShutdown"),
+      _ => None,
+    }
+  }
+}
+impl ::core::fmt::Debug for IncomingMessageUnion {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+    if let Some(name) = self.variant_name() {
+      f.write_str(name)
+    } else {
+      f.write_fmt(format_args!("<UNKNOWN {:?}>", self.0))
+    }
+  }
+}
+impl<'a> ::flatbuffers::Follow<'a> for IncomingMessageUnion {
+  type Inner = Self;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    let b = unsafe { ::flatbuffers::read_scalar_at::<u8>(buf, loc) };
+    Self(b)
+  }
+}
+
+impl ::flatbuffers::Push for IncomingMessageUnion {
+    type Output = IncomingMessageUnion;
+    #[inline]
+    unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {
+        unsafe { ::flatbuffers::emplace_scalar::<u8>(dst, self.0) };
+    }
+}
+
+impl ::flatbuffers::EndianScalar for IncomingMessageUnion {
+  type Scalar = u8;
+  #[inline]
+  fn to_little_endian(self) -> u8 {
+    self.0.to_le()
+  }
+  #[inline]
+  #[allow(clippy::wrong_self_convention)]
+  fn from_little_endian(v: u8) -> Self {
+    let b = u8::from_le(v);
+    Self(b)
+  }
+}
+
+impl<'a> ::flatbuffers::Verifiable for IncomingMessageUnion {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    u8::run_verifier(v, pos)
+  }
+}
+
+impl ::flatbuffers::SimpleToVerifyInSlice for IncomingMessageUnion {}
+pub struct IncomingMessageUnionUnionTableOffset {}
+
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+pub const ENUM_MIN_TO_FRONTEND: u8 = 0;
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+pub const ENUM_MAX_TO_FRONTEND: u8 = 4;
+#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
+#[allow(non_camel_case_types)]
+pub const ENUM_VALUES_TO_FRONTEND: [ToFrontend; 5] = [
+  ToFrontend::NONE,
+  ToFrontend::BackendError,
+  ToFrontend::WsConnection,
+  ToFrontend::WsMessageEvent,
+  ToFrontend::PttState,
+];
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[repr(transparent)]
+pub struct ToFrontend(pub u8);
+#[allow(non_upper_case_globals)]
+impl ToFrontend {
+  pub const NONE: Self = Self(0);
+  pub const BackendError: Self = Self(1);
+  pub const WsConnection: Self = Self(2);
+  pub const WsMessageEvent: Self = Self(3);
+  pub const PttState: Self = Self(4);
+
+  pub const ENUM_MIN: u8 = 0;
+  pub const ENUM_MAX: u8 = 4;
+  pub const ENUM_VALUES: &'static [Self] = &[
+    Self::NONE,
+    Self::BackendError,
+    Self::WsConnection,
+    Self::WsMessageEvent,
+    Self::PttState,
+  ];
+  /// Returns the variant's name or "" if unknown.
+  pub fn variant_name(self) -> Option<&'static str> {
+    match self {
+      Self::NONE => Some("NONE"),
+      Self::BackendError => Some("BackendError"),
+      Self::WsConnection => Some("WsConnection"),
+      Self::WsMessageEvent => Some("WsMessageEvent"),
+      Self::PttState => Some("PttState"),
+      _ => None,
+    }
+  }
+}
+impl ::core::fmt::Debug for ToFrontend {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+    if let Some(name) = self.variant_name() {
+      f.write_str(name)
+    } else {
+      f.write_fmt(format_args!("<UNKNOWN {:?}>", self.0))
+    }
+  }
+}
+impl<'a> ::flatbuffers::Follow<'a> for ToFrontend {
+  type Inner = Self;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    let b = unsafe { ::flatbuffers::read_scalar_at::<u8>(buf, loc) };
+    Self(b)
+  }
+}
+
+impl ::flatbuffers::Push for ToFrontend {
+    type Output = ToFrontend;
+    #[inline]
+    unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {
+        unsafe { ::flatbuffers::emplace_scalar::<u8>(dst, self.0) };
+    }
+}
+
+impl ::flatbuffers::EndianScalar for ToFrontend {
+  type Scalar = u8;
+  #[inline]
+  fn to_little_endian(self) -> u8 {
+    self.0.to_le()
+  }
+  #[inline]
+  #[allow(clippy::wrong_self_convention)]
+  fn from_little_endian(v: u8) -> Self {
+    let b = u8::from_le(v);
+    Self(b)
+  }
+}
+
+impl<'a> ::flatbuffers::Verifiable for ToFrontend {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    u8::run_verifier(v, pos)
+  }
+}
+
+impl ::flatbuffers::SimpleToVerifyInSlice for ToFrontend {}
+pub struct ToFrontendUnionTableOffset {}
+
 pub enum PttBindingOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -406,6 +682,1167 @@ impl ::core::fmt::Debug for SetWsPort<'_> {
       ds.field("port", &self.port());
       ds.finish()
   }
+}
+pub enum BackendErrorOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct BackendError<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for BackendError<'a> {
+  type Inner = BackendError<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> BackendError<'a> {
+  pub const VT_MESSAGE: ::flatbuffers::VOffsetT = 4;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    BackendError { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args BackendErrorArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<BackendError<'bldr>> {
+    let mut builder = BackendErrorBuilder::new(_fbb);
+    if let Some(x) = args.message { builder.add_message(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn message(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(BackendError::VT_MESSAGE, None)}
+  }
+}
+
+impl ::flatbuffers::Verifiable for BackendError<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("message", Self::VT_MESSAGE, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct BackendErrorArgs<'a> {
+    pub message: Option<::flatbuffers::WIPOffset<&'a str>>,
+}
+impl<'a> Default for BackendErrorArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    BackendErrorArgs {
+      message: None,
+    }
+  }
+}
+
+pub struct BackendErrorBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> BackendErrorBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_message(&mut self, message: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(BackendError::VT_MESSAGE, message);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> BackendErrorBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    BackendErrorBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<BackendError<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for BackendError<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("BackendError");
+      ds.field("message", &self.message());
+      ds.finish()
+  }
+}
+pub enum WsConnectionOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct WsConnection<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for WsConnection<'a> {
+  type Inner = WsConnection<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> WsConnection<'a> {
+  pub const VT_STATUS: ::flatbuffers::VOffsetT = 4;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    WsConnection { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args WsConnectionArgs
+  ) -> ::flatbuffers::WIPOffset<WsConnection<'bldr>> {
+    let mut builder = WsConnectionBuilder::new(_fbb);
+    builder.add_status(args.status);
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn status(&self) -> ConnectionStatus {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<ConnectionStatus>(WsConnection::VT_STATUS, Some(ConnectionStatus::Connected)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for WsConnection<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<ConnectionStatus>("status", Self::VT_STATUS, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct WsConnectionArgs {
+    pub status: ConnectionStatus,
+}
+impl<'a> Default for WsConnectionArgs {
+  #[inline]
+  fn default() -> Self {
+    WsConnectionArgs {
+      status: ConnectionStatus::Connected,
+    }
+  }
+}
+
+pub struct WsConnectionBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> WsConnectionBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_status(&mut self, status: ConnectionStatus) {
+    self.fbb_.push_slot::<ConnectionStatus>(WsConnection::VT_STATUS, status, ConnectionStatus::Connected);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> WsConnectionBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    WsConnectionBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<WsConnection<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for WsConnection<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("WsConnection");
+      ds.field("status", &self.status());
+      ds.finish()
+  }
+}
+pub enum WsMessageOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct WsMessage<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for WsMessage<'a> {
+  type Inner = WsMessage<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> WsMessage<'a> {
+  pub const VT_MESSAGE_TYPE: ::flatbuffers::VOffsetT = 4;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    WsMessage { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args WsMessageArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<WsMessage<'bldr>> {
+    let mut builder = WsMessageBuilder::new(_fbb);
+    if let Some(x) = args.message_type { builder.add_message_type(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn message_type(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(WsMessage::VT_MESSAGE_TYPE, None)}
+  }
+}
+
+impl ::flatbuffers::Verifiable for WsMessage<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<&str>>("message_type", Self::VT_MESSAGE_TYPE, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct WsMessageArgs<'a> {
+    pub message_type: Option<::flatbuffers::WIPOffset<&'a str>>,
+}
+impl<'a> Default for WsMessageArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    WsMessageArgs {
+      message_type: None,
+    }
+  }
+}
+
+pub struct WsMessageBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> WsMessageBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_message_type(&mut self, message_type: ::flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WsMessage::VT_MESSAGE_TYPE, message_type);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> WsMessageBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    WsMessageBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<WsMessage<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for WsMessage<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("WsMessage");
+      ds.field("message_type", &self.message_type());
+      ds.finish()
+  }
+}
+pub enum IncomingSetBindingOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct IncomingSetBinding<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for IncomingSetBinding<'a> {
+  type Inner = IncomingSetBinding<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> IncomingSetBinding<'a> {
+  pub const VT_BINDING: ::flatbuffers::VOffsetT = 4;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    IncomingSetBinding { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args IncomingSetBindingArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<IncomingSetBinding<'bldr>> {
+    let mut builder = IncomingSetBindingBuilder::new(_fbb);
+    if let Some(x) = args.binding { builder.add_binding(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn binding(&self) -> Option<PttBinding<'a>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<PttBinding>>(IncomingSetBinding::VT_BINDING, None)}
+  }
+}
+
+impl ::flatbuffers::Verifiable for IncomingSetBinding<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<PttBinding>>("binding", Self::VT_BINDING, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct IncomingSetBindingArgs<'a> {
+    pub binding: Option<::flatbuffers::WIPOffset<PttBinding<'a>>>,
+}
+impl<'a> Default for IncomingSetBindingArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    IncomingSetBindingArgs {
+      binding: None,
+    }
+  }
+}
+
+pub struct IncomingSetBindingBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> IncomingSetBindingBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_binding(&mut self, binding: ::flatbuffers::WIPOffset<PttBinding<'b >>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<PttBinding>>(IncomingSetBinding::VT_BINDING, binding);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> IncomingSetBindingBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    IncomingSetBindingBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<IncomingSetBinding<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for IncomingSetBinding<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("IncomingSetBinding");
+      ds.field("binding", &self.binding());
+      ds.finish()
+  }
+}
+pub enum IncomingGetBindingOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct IncomingGetBinding<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for IncomingGetBinding<'a> {
+  type Inner = IncomingGetBinding<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> IncomingGetBinding<'a> {
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    IncomingGetBinding { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    _args: &'args IncomingGetBindingArgs
+  ) -> ::flatbuffers::WIPOffset<IncomingGetBinding<'bldr>> {
+    let mut builder = IncomingGetBindingBuilder::new(_fbb);
+    builder.finish()
+  }
+
+}
+
+impl ::flatbuffers::Verifiable for IncomingGetBinding<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct IncomingGetBindingArgs {
+}
+impl<'a> Default for IncomingGetBindingArgs {
+  #[inline]
+  fn default() -> Self {
+    IncomingGetBindingArgs {
+    }
+  }
+}
+
+pub struct IncomingGetBindingBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> IncomingGetBindingBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> IncomingGetBindingBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    IncomingGetBindingBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<IncomingGetBinding<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for IncomingGetBinding<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("IncomingGetBinding");
+      ds.finish()
+  }
+}
+pub enum IncomingShutdownOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct IncomingShutdown<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for IncomingShutdown<'a> {
+  type Inner = IncomingShutdown<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> IncomingShutdown<'a> {
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    IncomingShutdown { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    _args: &'args IncomingShutdownArgs
+  ) -> ::flatbuffers::WIPOffset<IncomingShutdown<'bldr>> {
+    let mut builder = IncomingShutdownBuilder::new(_fbb);
+    builder.finish()
+  }
+
+}
+
+impl ::flatbuffers::Verifiable for IncomingShutdown<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct IncomingShutdownArgs {
+}
+impl<'a> Default for IncomingShutdownArgs {
+  #[inline]
+  fn default() -> Self {
+    IncomingShutdownArgs {
+    }
+  }
+}
+
+pub struct IncomingShutdownBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> IncomingShutdownBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> IncomingShutdownBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    IncomingShutdownBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<IncomingShutdown<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for IncomingShutdown<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("IncomingShutdown");
+      ds.finish()
+  }
+}
+pub enum WsMessageEventOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct WsMessageEvent<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for WsMessageEvent<'a> {
+  type Inner = WsMessageEvent<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> WsMessageEvent<'a> {
+  pub const VT_MESSAGE_TYPE: ::flatbuffers::VOffsetT = 4;
+  pub const VT_MESSAGE: ::flatbuffers::VOffsetT = 6;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    WsMessageEvent { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args WsMessageEventArgs
+  ) -> ::flatbuffers::WIPOffset<WsMessageEvent<'bldr>> {
+    let mut builder = WsMessageEventBuilder::new(_fbb);
+    if let Some(x) = args.message { builder.add_message(x); }
+    builder.add_message_type(args.message_type);
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn message_type(&self) -> IncomingMessageUnion {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<IncomingMessageUnion>(WsMessageEvent::VT_MESSAGE_TYPE, Some(IncomingMessageUnion::NONE)).unwrap()}
+  }
+  #[inline]
+  pub fn message(&self) -> Option<::flatbuffers::Table<'a>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Table<'a>>>(WsMessageEvent::VT_MESSAGE, None)}
+  }
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn message_as_incoming_set_binding(&self) -> Option<IncomingSetBinding<'a>> {
+    if self.message_type() == IncomingMessageUnion::IncomingSetBinding {
+      self.message().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { IncomingSetBinding::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn message_as_incoming_get_binding(&self) -> Option<IncomingGetBinding<'a>> {
+    if self.message_type() == IncomingMessageUnion::IncomingGetBinding {
+      self.message().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { IncomingGetBinding::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn message_as_incoming_shutdown(&self) -> Option<IncomingShutdown<'a>> {
+    if self.message_type() == IncomingMessageUnion::IncomingShutdown {
+      self.message().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { IncomingShutdown::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+}
+
+impl ::flatbuffers::Verifiable for WsMessageEvent<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_union::<IncomingMessageUnion, _>("message_type", Self::VT_MESSAGE_TYPE, "message", Self::VT_MESSAGE, false, |key, v, pos| {
+        match key {
+          IncomingMessageUnion::IncomingSetBinding => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<IncomingSetBinding>>("IncomingMessageUnion::IncomingSetBinding", pos),
+          IncomingMessageUnion::IncomingGetBinding => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<IncomingGetBinding>>("IncomingMessageUnion::IncomingGetBinding", pos),
+          IncomingMessageUnion::IncomingShutdown => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<IncomingShutdown>>("IncomingMessageUnion::IncomingShutdown", pos),
+          _ => Ok(()),
+        }
+     })?
+     .finish();
+    Ok(())
+  }
+}
+pub struct WsMessageEventArgs {
+    pub message_type: IncomingMessageUnion,
+    pub message: Option<::flatbuffers::WIPOffset<::flatbuffers::UnionWIPOffset>>,
+}
+impl<'a> Default for WsMessageEventArgs {
+  #[inline]
+  fn default() -> Self {
+    WsMessageEventArgs {
+      message_type: IncomingMessageUnion::NONE,
+      message: None,
+    }
+  }
+}
+
+pub struct WsMessageEventBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> WsMessageEventBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_message_type(&mut self, message_type: IncomingMessageUnion) {
+    self.fbb_.push_slot::<IncomingMessageUnion>(WsMessageEvent::VT_MESSAGE_TYPE, message_type, IncomingMessageUnion::NONE);
+  }
+  #[inline]
+  pub fn add_message(&mut self, message: ::flatbuffers::WIPOffset<::flatbuffers::UnionWIPOffset>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(WsMessageEvent::VT_MESSAGE, message);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> WsMessageEventBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    WsMessageEventBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<WsMessageEvent<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for WsMessageEvent<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("WsMessageEvent");
+      ds.field("message_type", &self.message_type());
+      match self.message_type() {
+        IncomingMessageUnion::IncomingSetBinding => {
+          if let Some(x) = self.message_as_incoming_set_binding() {
+            ds.field("message", &x)
+          } else {
+            ds.field("message", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        IncomingMessageUnion::IncomingGetBinding => {
+          if let Some(x) = self.message_as_incoming_get_binding() {
+            ds.field("message", &x)
+          } else {
+            ds.field("message", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        IncomingMessageUnion::IncomingShutdown => {
+          if let Some(x) = self.message_as_incoming_shutdown() {
+            ds.field("message", &x)
+          } else {
+            ds.field("message", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        _ => {
+          let x: Option<()> = None;
+          ds.field("message", &x)
+        },
+      };
+      ds.finish()
+  }
+}
+pub enum PttStateOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct PttState<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for PttState<'a> {
+  type Inner = PttState<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> PttState<'a> {
+  pub const VT_IS_ACTIVE: ::flatbuffers::VOffsetT = 4;
+  pub const VT_CODE: ::flatbuffers::VOffsetT = 6;
+  pub const VT_MODIFIERS: ::flatbuffers::VOffsetT = 8;
+  pub const VT_IS_REPEAT: ::flatbuffers::VOffsetT = 10;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    PttState { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args PttStateArgs<'args>
+  ) -> ::flatbuffers::WIPOffset<PttState<'bldr>> {
+    let mut builder = PttStateBuilder::new(_fbb);
+    if let Some(x) = args.modifiers { builder.add_modifiers(x); }
+    builder.add_code(args.code);
+    builder.add_is_repeat(args.is_repeat);
+    builder.add_is_active(args.is_active);
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn is_active(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(PttState::VT_IS_ACTIVE, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn code(&self) -> u16 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u16>(PttState::VT_CODE, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn modifiers(&self) -> Option<::flatbuffers::Vector<'a, Modifier>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'a, Modifier>>>(PttState::VT_MODIFIERS, None)}
+  }
+  #[inline]
+  pub fn is_repeat(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(PttState::VT_IS_REPEAT, Some(false)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for PttState<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<bool>("is_active", Self::VT_IS_ACTIVE, false)?
+     .visit_field::<u16>("code", Self::VT_CODE, false)?
+     .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, Modifier>>>("modifiers", Self::VT_MODIFIERS, false)?
+     .visit_field::<bool>("is_repeat", Self::VT_IS_REPEAT, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct PttStateArgs<'a> {
+    pub is_active: bool,
+    pub code: u16,
+    pub modifiers: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, Modifier>>>,
+    pub is_repeat: bool,
+}
+impl<'a> Default for PttStateArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    PttStateArgs {
+      is_active: false,
+      code: 0,
+      modifiers: None,
+      is_repeat: false,
+    }
+  }
+}
+
+pub struct PttStateBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> PttStateBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_is_active(&mut self, is_active: bool) {
+    self.fbb_.push_slot::<bool>(PttState::VT_IS_ACTIVE, is_active, false);
+  }
+  #[inline]
+  pub fn add_code(&mut self, code: u16) {
+    self.fbb_.push_slot::<u16>(PttState::VT_CODE, code, 0);
+  }
+  #[inline]
+  pub fn add_modifiers(&mut self, modifiers: ::flatbuffers::WIPOffset<::flatbuffers::Vector<'b , Modifier>>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(PttState::VT_MODIFIERS, modifiers);
+  }
+  #[inline]
+  pub fn add_is_repeat(&mut self, is_repeat: bool) {
+    self.fbb_.push_slot::<bool>(PttState::VT_IS_REPEAT, is_repeat, false);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> PttStateBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    PttStateBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<PttState<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for PttState<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("PttState");
+      ds.field("is_active", &self.is_active());
+      ds.field("code", &self.code());
+      ds.field("modifiers", &self.modifiers());
+      ds.field("is_repeat", &self.is_repeat());
+      ds.finish()
+  }
+}
+pub enum ToFrontendMessageOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct ToFrontendMessage<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for ToFrontendMessage<'a> {
+  type Inner = ToFrontendMessage<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> ToFrontendMessage<'a> {
+  pub const VT_EVENT_TYPE: ::flatbuffers::VOffsetT = 4;
+  pub const VT_EVENT: ::flatbuffers::VOffsetT = 6;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    ToFrontendMessage { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args ToFrontendMessageArgs
+  ) -> ::flatbuffers::WIPOffset<ToFrontendMessage<'bldr>> {
+    let mut builder = ToFrontendMessageBuilder::new(_fbb);
+    if let Some(x) = args.event { builder.add_event(x); }
+    builder.add_event_type(args.event_type);
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn event_type(&self) -> ToFrontend {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<ToFrontend>(ToFrontendMessage::VT_EVENT_TYPE, Some(ToFrontend::NONE)).unwrap()}
+  }
+  #[inline]
+  pub fn event(&self) -> Option<::flatbuffers::Table<'a>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Table<'a>>>(ToFrontendMessage::VT_EVENT, None)}
+  }
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn event_as_backend_error(&self) -> Option<BackendError<'a>> {
+    if self.event_type() == ToFrontend::BackendError {
+      self.event().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { BackendError::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn event_as_ws_connection(&self) -> Option<WsConnection<'a>> {
+    if self.event_type() == ToFrontend::WsConnection {
+      self.event().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { WsConnection::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn event_as_ws_message_event(&self) -> Option<WsMessageEvent<'a>> {
+    if self.event_type() == ToFrontend::WsMessageEvent {
+      self.event().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { WsMessageEvent::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn event_as_ptt_state(&self) -> Option<PttState<'a>> {
+    if self.event_type() == ToFrontend::PttState {
+      self.event().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { PttState::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
+}
+
+impl ::flatbuffers::Verifiable for ToFrontendMessage<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_union::<ToFrontend, _>("event_type", Self::VT_EVENT_TYPE, "event", Self::VT_EVENT, false, |key, v, pos| {
+        match key {
+          ToFrontend::BackendError => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<BackendError>>("ToFrontend::BackendError", pos),
+          ToFrontend::WsConnection => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WsConnection>>("ToFrontend::WsConnection", pos),
+          ToFrontend::WsMessageEvent => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WsMessageEvent>>("ToFrontend::WsMessageEvent", pos),
+          ToFrontend::PttState => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<PttState>>("ToFrontend::PttState", pos),
+          _ => Ok(()),
+        }
+     })?
+     .finish();
+    Ok(())
+  }
+}
+pub struct ToFrontendMessageArgs {
+    pub event_type: ToFrontend,
+    pub event: Option<::flatbuffers::WIPOffset<::flatbuffers::UnionWIPOffset>>,
+}
+impl<'a> Default for ToFrontendMessageArgs {
+  #[inline]
+  fn default() -> Self {
+    ToFrontendMessageArgs {
+      event_type: ToFrontend::NONE,
+      event: None,
+    }
+  }
+}
+
+pub struct ToFrontendMessageBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ToFrontendMessageBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_event_type(&mut self, event_type: ToFrontend) {
+    self.fbb_.push_slot::<ToFrontend>(ToFrontendMessage::VT_EVENT_TYPE, event_type, ToFrontend::NONE);
+  }
+  #[inline]
+  pub fn add_event(&mut self, event: ::flatbuffers::WIPOffset<::flatbuffers::UnionWIPOffset>) {
+    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(ToFrontendMessage::VT_EVENT, event);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> ToFrontendMessageBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    ToFrontendMessageBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<ToFrontendMessage<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for ToFrontendMessage<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("ToFrontendMessage");
+      ds.field("event_type", &self.event_type());
+      match self.event_type() {
+        ToFrontend::BackendError => {
+          if let Some(x) = self.event_as_backend_error() {
+            ds.field("event", &x)
+          } else {
+            ds.field("event", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        ToFrontend::WsConnection => {
+          if let Some(x) = self.event_as_ws_connection() {
+            ds.field("event", &x)
+          } else {
+            ds.field("event", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        ToFrontend::WsMessageEvent => {
+          if let Some(x) = self.event_as_ws_message_event() {
+            ds.field("event", &x)
+          } else {
+            ds.field("event", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        ToFrontend::PttState => {
+          if let Some(x) = self.event_as_ptt_state() {
+            ds.field("event", &x)
+          } else {
+            ds.field("event", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        _ => {
+          let x: Option<()> = None;
+          ds.field("event", &x)
+        },
+      };
+      ds.finish()
+  }
+}
+#[inline]
+/// Verifies that a buffer of bytes contains a `ToFrontendMessage`
+/// and returns it.
+/// Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `root_as_to_frontend_message_unchecked`.
+pub fn root_as_to_frontend_message(buf: &[u8]) -> Result<ToFrontendMessage<'_>, ::flatbuffers::InvalidFlatbuffer> {
+  ::flatbuffers::root::<ToFrontendMessage>(buf)
+}
+#[inline]
+/// Verifies that a buffer of bytes contains a size prefixed
+/// `ToFrontendMessage` and returns it.
+/// Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `size_prefixed_root_as_to_frontend_message_unchecked`.
+pub fn size_prefixed_root_as_to_frontend_message(buf: &[u8]) -> Result<ToFrontendMessage<'_>, ::flatbuffers::InvalidFlatbuffer> {
+  ::flatbuffers::size_prefixed_root::<ToFrontendMessage>(buf)
+}
+#[inline]
+/// Verifies, with the given options, that a buffer of bytes
+/// contains a `ToFrontendMessage` and returns it.
+/// Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `root_as_to_frontend_message_unchecked`.
+pub fn root_as_to_frontend_message_with_opts<'b, 'o>(
+  opts: &'o ::flatbuffers::VerifierOptions,
+  buf: &'b [u8],
+) -> Result<ToFrontendMessage<'b>, ::flatbuffers::InvalidFlatbuffer> {
+  ::flatbuffers::root_with_opts::<ToFrontendMessage<'b>>(opts, buf)
+}
+#[inline]
+/// Verifies, with the given verifier options, that a buffer of
+/// bytes contains a size prefixed `ToFrontendMessage` and returns
+/// it. Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `root_as_to_frontend_message_unchecked`.
+pub fn size_prefixed_root_as_to_frontend_message_with_opts<'b, 'o>(
+  opts: &'o ::flatbuffers::VerifierOptions,
+  buf: &'b [u8],
+) -> Result<ToFrontendMessage<'b>, ::flatbuffers::InvalidFlatbuffer> {
+  ::flatbuffers::size_prefixed_root_with_opts::<ToFrontendMessage<'b>>(opts, buf)
+}
+#[inline]
+/// Assumes, without verification, that a buffer of bytes contains a ToFrontendMessage and returns it.
+/// # Safety
+/// Callers must trust the given bytes do indeed contain a valid `ToFrontendMessage`.
+pub unsafe fn root_as_to_frontend_message_unchecked(buf: &[u8]) -> ToFrontendMessage<'_> {
+  unsafe { ::flatbuffers::root_unchecked::<ToFrontendMessage>(buf) }
+}
+#[inline]
+/// Assumes, without verification, that a buffer of bytes contains a size prefixed ToFrontendMessage and returns it.
+/// # Safety
+/// Callers must trust the given bytes do indeed contain a valid size prefixed `ToFrontendMessage`.
+pub unsafe fn size_prefixed_root_as_to_frontend_message_unchecked(buf: &[u8]) -> ToFrontendMessage<'_> {
+  unsafe { ::flatbuffers::size_prefixed_root_unchecked::<ToFrontendMessage>(buf) }
+}
+#[inline]
+pub fn finish_to_frontend_message_buffer<'a, 'b, A: ::flatbuffers::Allocator + 'a>(
+    fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+    root: ::flatbuffers::WIPOffset<ToFrontendMessage<'a>>) {
+  fbb.finish(root, None);
+}
+
+#[inline]
+pub fn finish_size_prefixed_to_frontend_message_buffer<'a, 'b, A: ::flatbuffers::Allocator + 'a>(fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>, root: ::flatbuffers::WIPOffset<ToFrontendMessage<'a>>) {
+  fbb.finish_size_prefixed(root, None);
 }
 }  // pub mod IpcProtocol
 }  // pub mod Discuss

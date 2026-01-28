@@ -13,12 +13,12 @@ use crate::platform;
 use crate::platform::{check_accessibility_permission, get_binding, set_binding, set_recording};
 use crate::server;
 use crate::state::{KeyBinding, VERSION};
-use tauri::ipc::InvokeBody;
+use tauri::ipc::{Channel, InvokeBody};
 
-/// JUSTIFICATION: for `clippy::needless_pass_by_value`
+/// JUSTIFICATION: for all `clippy::needless_pass_by_value` below
 /// Tauri commands require owned values for dependency injection of the app handle
-/// and for deserialization of arguments.
-/// see uses below
+/// and for deserialization of arguments. This does not matter from the rust side since
+/// these handlers are called from the front-end where ownership is not a relevant concept
 
 #[tauri::command]
 pub fn get_version() -> String {
@@ -148,4 +148,11 @@ pub fn update_ws_port(
         );
         info!("WS server restart initiated, frontend notified.");
     }
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "tauri API")]
+#[allow(clippy::unwrap_used, reason = "mutex poisoning")]
+pub fn establish_channel(state: State<'_, WsState>, channel: Channel) {
+    *state.event_channel.lock().unwrap() = Some(channel);
 }

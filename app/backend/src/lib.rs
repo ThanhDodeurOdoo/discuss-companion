@@ -7,15 +7,19 @@
         reason = "tests are allowed to panic"
     )
 )]
+use crate::state::{encode_backend_error, encode_ptt_state};
+use std::env;
 use std::io::stderr;
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
+use tauri::ipc::InvokeBody;
 
 use tauri::async_runtime;
 use tauri::image::Image;
+use tauri::ipc::Channel;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{Emitter, Manager};
@@ -42,6 +46,7 @@ pub struct WsState {
     pub ws_tx: broadcast::Sender<Vec<u8>>,
     pub server_shutdown_tx: Mutex<broadcast::Sender<()>>,
     pub conn_tx: crossbeam_channel::Sender<bool>,
+    pub event_channel: Mutex<Option<Channel>>,
 }
 
 fn setup_logging() {
@@ -73,7 +78,7 @@ fn handle_ws_server(
 }
 
 struct PttHandler {
-    app_handle: tauri::AppHandle,
+    app_handle: Mutex<Option<tauri::AppHandle>>,
     ws_tx: broadcast::Sender<Vec<u8>>,
     active_online_img: Option<Image<'static>>,
     inactive_online_img: Option<Image<'static>>,
@@ -85,7 +90,7 @@ struct PttHandler {
 impl PttHandler {
     fn new(app_handle: tauri::AppHandle, ws_tx: broadcast::Sender<Vec<u8>>) -> Self {
         Self {
-            app_handle,
+            app_handle: Mutex::new(Some(app_handle)),
             ws_tx,
             active_online_img: Image::from_bytes(ICON_ACTIVE_ONLINE).ok(),
             inactive_online_img: Image::from_bytes(ICON_INACTIVE_ONLINE).ok(),
@@ -95,9 +100,42 @@ impl PttHandler {
         }
     }
 
-    fn handle_ptt(&mut self, msg: &state::OutgoingMessage) {
+    #[allow(
+        clippy::unwrap_used,
+        reason = "Legacy code, mutex poisoning not handled"
+    )]
+    fn handle_ptt(&self, event: &state::OutgoingMessage) {
+        if let Some(app_handle) = self.app_handle.lock().unwrap().as_ref() {
+            let (is_active, key, is_repeat) = match event {
+                state::OutgoingMessage::PttDown { key, is_repeat, .. } => (true, key, *is_repeat),
+                state::OutgoingMessage::PttUp { key, .. } => (false, key, false),
+                _ => return, // Only PttDown/PttUp are relevant for active state
+            };
+            if let Some(state) = app_handle.try_state::<WsState>()
+                && let Ok(guard) = state.event_channel.lock()
+                && let Some(channel) = guard.as_ref()
+            {
+                let _ = channel.send(
+                    InvokeBody::Raw(encode_ptt_state(
+                        is_active,
+                        key.code,
+                        &key.modifiers,
+                        is_repeat,
+                    ))
+                    .into(),
+                );
+            }
+        }
+    }
+    #[allow(
+        clippy::unwrap_used,
+        reason = "Legacy code, mutex poisoning not handled"
+    )]
+    fn handle_ptt_old(&mut self, msg: &state::OutgoingMessage) {
         debug!("PttHandler handling event: {:?}", msg);
-        let _ = self.app_handle.emit("ptt-event", msg);
+        if let Some(handler) = self.app_handle.lock().unwrap().as_ref() {
+            let _ = handler.emit("ptt-event", msg);
+        }
 
         match msg {
             state::OutgoingMessage::PttDown { is_repeat, .. } => {
@@ -122,8 +160,16 @@ impl PttHandler {
         self.update_tray();
     }
 
+    #[allow(
+        clippy::unwrap_used,
+        reason = "Legacy code, mutex poisoning not handled"
+    )]
     fn update_tray(&self) {
-        let Some(tray) = self.app_handle.tray_by_id(TRAY_ID) else {
+        let guard = self.app_handle.lock().unwrap();
+        let Some(app_handle) = guard.as_ref() else {
+            return;
+        };
+        let Some(tray) = app_handle.tray_by_id(TRAY_ID) else {
             return;
         };
 
@@ -154,6 +200,7 @@ fn handle_ptt_events(
                 recv(event_rx) -> msg => {
                     if let Ok(msg) = msg {
                         handler.handle_ptt(&msg);
+                        handler.handle_ptt_old(&msg); // Keep old logic for now
                     } else {
                         break;
                     }
@@ -169,6 +216,7 @@ fn handle_ptt_events(
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[allow(clippy::too_many_lines, reason = "Main run loop, hard to split")]
 pub fn run() {
     setup_logging();
     debug!("debug enabled");
@@ -207,6 +255,7 @@ pub fn run() {
                 ws_tx: ws_tx_clone.clone(),
                 server_shutdown_tx: Mutex::new(ws_shutdown_tx_clone),
                 conn_tx: conn_tx.clone(),
+                event_channel: Mutex::new(None),
             });
 
             handle_ws_server(
@@ -224,7 +273,18 @@ pub fn run() {
             thread::spawn(move || {
                 if let Err(e) = platform::start_engine(event_tx, &shutdown_clone) {
                     error!("Platform engine error: {}", e);
-                    let _ = handle_tap.emit("error", format!("Platform engine error: {e}"));
+                    if let Some(state) = handle_tap.try_state::<WsState>()
+                        && let Ok(guard) = state.event_channel.lock()
+                        && let Some(channel) = guard.as_ref()
+                    {
+                        let _ = channel.send(
+                            InvokeBody::Raw(encode_backend_error(&format!(
+                                "Global shortcut error: {e:?}"
+                            )))
+                            .into(),
+                        );
+                    }
+                    // app.emit("error", format!("Global shortcut error: {:?}", error));
                 }
             });
 
@@ -267,6 +327,7 @@ pub fn run() {
             commands::force_ptt_up,
             commands::get_ws_port,
             commands::update_ws_port,
+            commands::establish_channel,
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {

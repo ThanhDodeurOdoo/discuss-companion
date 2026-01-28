@@ -2,7 +2,19 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
+export { BackendError } from './ipc-protocol/backend-error.js';
+export { ConnectionStatus } from './ipc-protocol/connection-status.js';
+export { IncomingGetBinding } from './ipc-protocol/incoming-get-binding.js';
+export { IncomingMessageUnion } from './ipc-protocol/incoming-message-union.js';
+export { IncomingSetBinding } from './ipc-protocol/incoming-set-binding.js';
+export { IncomingShutdown } from './ipc-protocol/incoming-shutdown.js';
 export { Modifier } from './ipc-protocol/modifier.js';
 export { PttBinding } from './ipc-protocol/ptt-binding.js';
+export { PttState } from './ipc-protocol/ptt-state.js';
 export { SetRecordingMode } from './ipc-protocol/set-recording-mode.js';
 export { SetWsPort } from './ipc-protocol/set-ws-port.js';
+export { ToFrontend } from './ipc-protocol/to-frontend.js';
+export { ToFrontendMessage } from './ipc-protocol/to-frontend-message.js';
+export { WsConnection } from './ipc-protocol/ws-connection.js';
+export { WsMessage } from './ipc-protocol/ws-message.js';
+export { WsMessageEvent } from './ipc-protocol/ws-message-event.js';
