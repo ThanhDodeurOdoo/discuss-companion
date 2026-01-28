@@ -10,12 +10,21 @@ jest.unstable_mockModule("@tauri-apps/api/event", () => ({
     listen: jest.fn()
 }));
 
+jest.unstable_mockModule("../ipc.ts", () => ({
+    __esModule: true,
+    setRecordingMode: jest.fn(),
+    updateBinding: jest.fn(),
+    updateWsPort: jest.fn()
+}));
+
 const { invoke } = await import("@tauri-apps/api/core");
 const { listen } = await import("@tauri-apps/api/event");
 const { AppPlugin } = await import("../app_plugin.ts");
+const { setRecordingMode } = await import("../ipc.ts");
 
 const mockedInvoke = invoke as jest.MockedFunction<typeof invoke>;
 const mockedListen = listen as jest.MockedFunction<typeof listen>;
+const mockedSetRecordingMode = setRecordingMode as jest.MockedFunction<typeof setRecordingMode>;
 
 describe("AppPlugin", () => {
     let plugin: InstanceType<typeof AppPlugin>;
@@ -42,14 +51,15 @@ describe("AppPlugin", () => {
 
     test("toggleRecording", async () => {
         mockedInvoke.mockResolvedValue(undefined as never);
+        mockedSetRecordingMode.mockResolvedValue(undefined as never);
 
         await plugin.toggleRecording();
         expect(plugin.isRecording()).toBe(true);
-        expect(mockedInvoke).toHaveBeenCalledWith("set_recording_mode", { recording: true });
+        expect(mockedSetRecordingMode).toHaveBeenCalledWith(true);
 
         await plugin.toggleRecording();
         expect(plugin.isRecording()).toBe(false);
-        expect(mockedInvoke).toHaveBeenCalledWith("set_recording_mode", { recording: false });
+        expect(mockedSetRecordingMode).toHaveBeenCalledWith(false);
     });
 
     test("setupListeners sets up event listeners", async () => {

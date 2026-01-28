@@ -1,6 +1,5 @@
 dist
 node_modules
-extension/src/discuss/ws-protocol
-extension/src/discuss/ws-protocol/**/*
-extension/src/discuss/ws-protocol.ts
+extension/src/discuss
+app/frontend/flatbuffers
 src-tauri/target

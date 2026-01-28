@@ -4,6 +4,9 @@ import { App as OwlApp } from "@odoo/owl";
 // Mock Tauri APIs
 const invokeMock = jest.fn();
 const listenMock = jest.fn(() => Promise.resolve(() => {}));
+const setRecordingModeMock = jest.fn();
+const updateBindingMock = jest.fn();
+const updateWsPortMock = jest.fn();
 
 jest.unstable_mockModule("@tauri-apps/api/core", () => ({
     invoke: invokeMock
@@ -11,6 +14,12 @@ jest.unstable_mockModule("@tauri-apps/api/core", () => ({
 
 jest.unstable_mockModule("@tauri-apps/api/event", () => ({
     listen: listenMock
+}));
+
+jest.unstable_mockModule("../ipc", () => ({
+    setRecordingMode: setRecordingModeMock,
+    updateBinding: updateBindingMock,
+    updateWsPort: updateWsPortMock
 }));
 
 const { Root } = await import("../root");
@@ -24,6 +33,9 @@ describe("Companion Component Interactions", () => {
         document.body.appendChild(target);
         invokeMock.mockClear();
         listenMock.mockClear();
+        setRecordingModeMock.mockClear();
+        updateBindingMock.mockClear();
+        updateWsPortMock.mockClear();
 
         // Default mock implementations
         invokeMock.mockImplementation((cmd) => {
@@ -67,11 +79,11 @@ describe("Companion Component Interactions", () => {
 
         // Click to start recording
         await pttBtn.click();
-        expect(invokeMock).toHaveBeenCalledWith("set_recording_mode", { recording: true });
+        expect(setRecordingModeMock).toHaveBeenCalledWith(true);
 
         // Let's verify the subsequent call
         await pttBtn.click();
-        expect(invokeMock).toHaveBeenCalledWith("set_recording_mode", { recording: false });
+        expect(setRecordingModeMock).toHaveBeenCalledWith(false);
     });
 
     test("Force Release button triggers force_ptt_up", async () => {
@@ -105,6 +117,6 @@ describe("Companion Component Interactions", () => {
         portInput.dispatchEvent(new Event("input"));
 
         await reloadBtn.click();
-        expect(invokeMock).toHaveBeenCalledWith("update_ws_port", { port: 55555 });
+        expect(updateWsPortMock).toHaveBeenCalledWith(55555);
     });
 });

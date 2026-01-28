@@ -2,6 +2,7 @@ import { Plugin, signal, onWillDestroy } from "@odoo/owl";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { KEY_MAP, KEY_SYMBOL_MAP, MODIFIER_SYMBOLS, MODIFIER_NAMES } from "./utils";
+import { setRecordingMode, updateBinding, updateWsPort } from "./ipc";
 
 const DEFAULT_PORT = 49152;
 
@@ -75,13 +76,8 @@ export class AppPlugin extends Plugin {
 
             if (this.isRecording()) {
                 this.isRecording.set(false);
-                await invoke("set_recording_mode", { recording: false });
-                await invoke("update_binding", {
-                    binding: {
-                        code: payload.key.code,
-                        modifiers: payload.key.modifiers
-                    }
-                });
+                await setRecordingMode(false);
+                await updateBinding(payload.key.code, payload.key.modifiers);
                 this.currentBinding.set({
                     code: payload.key.code,
                     modifiers: payload.key.modifiers
@@ -196,7 +192,7 @@ export class AppPlugin extends Plugin {
 
             this.addLog("SYSTEM", `Initiating WS server reload to port: ${port}`);
             this.isWsReloading.set(true);
-            await invoke("update_ws_port", { port });
+            await updateWsPort(port);
             this.addLog("SYSTEM", "Reload command sent to backend");
         } catch (e) {
             this.addLog("ERROR", `Failed to reload WS server: ${e}`);
@@ -207,11 +203,11 @@ export class AppPlugin extends Plugin {
     async toggleRecording() {
         if (this.isRecording()) {
             this.isRecording.set(false);
-            await invoke("set_recording_mode", { recording: false });
+            await setRecordingMode(false);
             await this.fetchCurrentBinding();
         } else {
             this.isRecording.set(true);
-            await invoke("set_recording_mode", { recording: true });
+            await setRecordingMode(true);
         }
     }
 
