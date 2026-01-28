@@ -10,6 +10,72 @@ export enum StatusCode {
     InvalidPort = 3
 }
 
+type CallState = {
+    isMute: boolean;
+    isDeaf: boolean;
+    isCameraOn: boolean;
+    isScreenOn: boolean;
+};
+
+function readCallStateInTab(): CallState | undefined {
+    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+    const selfSession = store?.rtc?.selfSession;
+    if (!selfSession) {
+        return undefined;
+    }
+    return {
+        isMute: selfSession.isMute,
+        isDeaf: selfSession.is_deaf,
+        isCameraOn: selfSession.is_camera_on,
+        isScreenOn: selfSession.is_screen_sharing_on
+    };
+}
+
+async function toggleMicrophoneInTab() {
+    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+    if (!store?.rtc?.selfSession) {
+        return false;
+    }
+    await store.rtc.toggleMicrophone();
+    return true;
+}
+
+async function toggleDeafenInTab() {
+    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+    if (!store?.rtc?.selfSession) {
+        return false;
+    }
+    await store.rtc.toggleDeafen();
+    return true;
+}
+
+async function toggleCameraInTab() {
+    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+    if (!store?.rtc?.selfSession) {
+        return false;
+    }
+    await store.rtc.toggleVideo("camera");
+    return true;
+}
+
+async function toggleScreenInTab() {
+    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+    if (!store?.rtc?.selfSession) {
+        return false;
+    }
+    await store.rtc.toggleVideo("screen");
+    return true;
+}
+
+async function leaveCallInTab() {
+    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+    if (!store?.rtc?.leaveCall) {
+        return false;
+    }
+    await store.rtc.leaveCall();
+    return true;
+}
+
 export class PopupPlugin extends Plugin {
     port = signal(49152);
     statusCode = signal(StatusCode.Default);
@@ -19,6 +85,9 @@ export class PopupPlugin extends Plugin {
     isLoggingEnabled = signal(false);
     hasCallTab = signal(false);
     isMute = signal(false);
+    isDeaf = signal(false);
+    isCameraOn = signal(false);
+    isScreenOn = signal(false);
     isStatusDefault = computed(
         () => this.statusCode() === StatusCode.Default || this.statusCode() === StatusCode.Saving
     );
@@ -53,6 +122,11 @@ export class PopupPlugin extends Plugin {
         }
     }
 
+    async onClickGoToCall() {
+        await this.goToCall();
+        window.close();
+    }
+
     async collectCurrentTabData() {
         const result = await executeInCurrentTab(() => {
             const isOdoo = Boolean(window.owl && window.odoo);
@@ -83,24 +157,69 @@ export class PopupPlugin extends Plugin {
         const hasCall = Object.keys(isTalkingByTabId).length > 0;
         this.hasCallTab.set(hasCall);
         if (hasCall) {
-            const result = await executeInCallTab(() => {
-                const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-                return store?.rtc?.selfSession?.isMute ?? false;
-            });
-            this.isMute.set(Boolean(result));
+            await this.refreshCallState();
+        } else {
+            this.applyCallState();
         }
     }
 
     async toggleMicrophone() {
-        const result = await executeInCallTab(async () => {
-            const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-            if (store?.rtc?.selfSession) {
-                await store.rtc.toggleMicrophone();
-                return store.rtc.selfSession.isMute;
-            }
-            return false;
-        });
-        this.isMute.set(Boolean(result));
+        await this.runCallAction(toggleMicrophoneInTab);
+    }
+
+    async toggleDeafen() {
+        await this.runCallAction(toggleDeafenInTab);
+    }
+
+    async toggleCamera() {
+        await this.runCallAction(toggleCameraInTab);
+    }
+
+    // Screen share needs the call tab focused to avoid being blocked.
+    async toggleScreen() {
+        await this.runCallAction(toggleScreenInTab, { focusCallTab: true });
+    }
+
+    async leaveCall() {
+        const didLeave = await this.runCallAction(leaveCallInTab);
+        if (didLeave) {
+            await this.collectCallTabData();
+        }
+    }
+
+    applyCallState(state?: {
+        isMute?: boolean;
+        isDeaf?: boolean;
+        isCameraOn?: boolean;
+        isScreenOn?: boolean;
+    }) {
+        this.isMute.set(Boolean(state?.isMute));
+        this.isDeaf.set(Boolean(state?.isDeaf));
+        this.isCameraOn.set(Boolean(state?.isCameraOn));
+        this.isScreenOn.set(Boolean(state?.isScreenOn));
+    }
+
+    async refreshCallState() {
+        const result = await executeInCallTab(readCallStateInTab);
+        this.hasCallTab.set(Boolean(result));
+        this.applyCallState(result);
+        return result;
+    }
+
+    async runCallAction(
+        action: () => Promise<boolean> | boolean,
+        { focusCallTab = false }: { focusCallTab?: boolean } = {}
+    ) {
+        if (focusCallTab) {
+            this.goToCall();
+        }
+        const didRun = await executeInCallTab(action);
+        if (didRun) {
+            await this.refreshCallState();
+        } else {
+            this.applyCallState();
+        }
+        return didRun;
     }
 
     async goToCall() {
@@ -118,7 +237,6 @@ export class PopupPlugin extends Plugin {
                     await chrome.tabs.update(tabId, { active: true });
                     await chrome.windows.update(tab.windowId, { focused: true });
                     // could even execute on that tab a: "odoo.__WOWL_DEBUG__.root.env.services["mail.store"].rtc?.channel?.open()"
-                    window.close();
                 }
             } catch (e) {
                 console.error("Failed to focus tab", e);

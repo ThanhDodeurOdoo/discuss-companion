@@ -90,17 +90,57 @@ button:active {
     box-shadow: rgba(0, 0, 0, 0.15) 0px 1px 0px 0px inset;
 }
 
-.call-actions {
+.call-group {
     display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.call-actions {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
     justify-content: center;
+    align-items: center;
+    gap: 8px;
     padding: 5px;
     margin: 5px;
+    background-color: rgba(0, 46, 79, 0.189);
+    border-radius: 8px;
+    border: 1px solid rgb(0, 46, 79);
+}
+
+.pulsing-icon {
+    color: rgb(139, 0, 0);
+    animation: pulse 2s infinite;
+    border-radius: 50%;
+    border-color: red;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 46, 79, 0.5);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(0, 46, 79, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 46, 79, 0);
+    }
 }
 
 .call-actions button {
-    width: 100%;
-    padding: 10px;
-    font-size: 16px;
+    padding: 8px 12px;
+    min-width: 40px;
+    height: 40px;
+    font-size: 20px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #3b3f45;
+    border-color: rgba(27, 31, 36, 0.45);
 }
 
 .call-actions button.off {
@@ -109,6 +149,25 @@ button:active {
 
 .call-actions button.off:hover {
     background-color: #a40e26;
+}
+
+.call-actions button.on {
+    background-color: #2da44e;
+}
+
+.call-actions button.on:hover {
+    background-color: #2c974b;
+}
+
+.call-actions button:hover:not(.off):not(.on) {
+    background-color: #31353a;
+}
+
+.call-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }
 
 .status {
