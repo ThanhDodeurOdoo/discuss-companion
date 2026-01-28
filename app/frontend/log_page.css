@@ -20,28 +20,6 @@
     font-weight: 600;
 }
 
-.clear-btn {
-    padding: 6px 12px;
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.75rem;
-    transition: all 0.2s ease;
-}
-
-.clear-btn:hover {
-    color: var(--accent-color);
-    border-color: rgba(47, 129, 247, 0.5);
-    background: rgba(47, 129, 247, 0.1);
-}
-
-.clear-btn:active {
-    transform: scale(0.96);
-    filter: brightness(0.98);
-}
-
 .logs-container {
   flex: 1;
   font-family: 'JetBrains Mono', monospace;

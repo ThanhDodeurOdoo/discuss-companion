@@ -15,7 +15,7 @@
             </div>
         </div>
         <div class="view-controls">
-             <button class="settings-btn" t-att-class="{ 'active': this.app.showSettings() }" t-on-click="() => this.app.toggleSettings()">
+             <button class="std-btn settings-btn" t-att-class="{ 'active': this.app.showSettings() }" t-on-click="() => this.app.toggleSettings()">
                 ⚙︎
             </button>
         </div>

@@ -72,23 +72,3 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
-
-.reload-btn {
-    padding: 6px 12px;
-    border-radius: 4px;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-
-.reload-btn:hover:not(:disabled) {
-    color: var(--accent-color);
-    border-color: var(--accent-color);
-}
-
-.reload-btn:disabled {
-    opacity: 0.5;
-    cursor: wait;
-}
