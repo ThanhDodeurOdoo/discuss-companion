@@ -1,7 +1,7 @@
 <div class="logs-section">
-    <div class="logs-header">
+    <div class="logs-header prevent-select">
         <h2>Event Logs</h2>
-        <button class="clear-btn prevent-select" t-on-click="() => this.app.clearLogs()">Clear</button>
+        <button class="std-btn" t-on-click="() => this.app.clearLogs()">Clear</button>
     </div>
     <div class="logs-container">
         <t t-foreach="this.app.logs()" t-as="log" t-key="log.id">

@@ -38,12 +38,9 @@ The frontend uses Owl v3 and is in `app/frontend`. The extension is in the `exte
     ```
 2.  **Generate Code**:
     ```bash
-    flatc --rust -o app/backend/src/flatbuffers protocol.fbs
-    flatc --ts -o extension/src protocol.fbs
-    ```
-    or
-    ```bash
     npm run build:flatbuffers:ws
+    npm run build:flatbuffers:ipc
+    npm run build:flatbuffers # does both of the above
     ```
 
 ### If you modify the extension

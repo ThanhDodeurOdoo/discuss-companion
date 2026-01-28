@@ -22,7 +22,7 @@
                 max="65535"
                 class="port-input"
             />
-            <button class="text-btn reload-btn prevent-select" 
+            <button class="text-btn std-btn reload-btn prevent-select" 
                 t-on-click="() => this.app.reloadWsServer()" 
                 t-att-disabled="this.app.isWsReloading()"
                 title="Reload WebSocket Server">
