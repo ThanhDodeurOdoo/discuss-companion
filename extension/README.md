@@ -7,6 +7,15 @@ The extension is derived from Odoo's own extension for Push-to-Talk.
 [associated Odoo license](LICENSE)
 
 ## Features
+
+### When running standalone:
+
+- Extension shortcut push-to-talk (not system wide on macOS)
+- Mute/Unmute (and more planned)
+- Quick access to the call tab
+
+### When running alonside the app:
+
 - System-wide Push-to-Talk via Tauri Desktop Agent
 - WebSocket communication (no Native Messaging hurdles)
 - Automatic discovery for Odoo instances

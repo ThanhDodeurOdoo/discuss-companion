@@ -86,7 +86,29 @@ button:hover {
 
 button:active {
     background-color: #298e46;
+    transform: scale(0.98);
     box-shadow: rgba(0, 0, 0, 0.15) 0px 1px 0px 0px inset;
+}
+
+.call-actions {
+    display: flex;
+    justify-content: center;
+    padding: 5px;
+    margin: 5px;
+}
+
+.call-actions button {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+}
+
+.call-actions button.off {
+    background-color: #cf222e;
+}
+
+.call-actions button.off:hover {
+    background-color: #a40e26;
 }
 
 .status {
@@ -96,13 +118,35 @@ button:active {
 }
 
 .big-emoji {
-    font-size: 46px;
+    font-size: 20px;
+    padding: 2px 8px;
 }
 
 .button-group {
     display: flex;
     justify-content: space-between;
-    gap: 10px;
+    align-items: center;
+    margin-top: 20px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.button-group:hover {
+    opacity: 1;
+}
+
+.button-group button {
+    background-color: #f6f8fa;
+    color: #57606a;
+    border: 1px solid #d0d7de;
+    font-size: 12px;
+    padding: 3px 10px;
+    font-weight: 400;
+}
+
+.button-group button:hover {
+    background-color: #ebeff2;
+    color: #24292f;
 }
 
 .status-default {
