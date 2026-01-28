@@ -4,7 +4,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { Modifier } from '../../discuss/flatbuffers/modifier.js';
+import { Modifier } from '../../discuss/ws-protocol/modifier.js';
 
 
 export class KeyBinding {

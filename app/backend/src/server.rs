@@ -8,7 +8,7 @@ use tokio::sync::broadcast;
 use tokio_tungstenite::tungstenite::{Message, handshake};
 use tracing::{error, info};
 
-use crate::flatbuffers::protocol_generated::discuss::flatbuffers as protocol;
+use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
 use crate::state::{IncomingMessage, KeyBinding, Modifier, OutgoingMessage, current_timestamp};
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -108,17 +108,17 @@ async fn handle_connection<R: tauri::Runtime>(
             msg = ws_receiver.next() => {
                 match msg {
                     Some(Ok(Message::Binary(bin))) => {
-                        match protocol::root_as_message(&bin) {
+                        match ws_protocol::root_as_message(&bin) {
                             Ok(message) => {
                                 match message.body_type() {
-                                    protocol::MessageBody::Ping => {
+                                    ws_protocol::MessageBody::Ping => {
                                         let pong = OutgoingMessage::Pong { ts: current_timestamp() };
                                         let bin = pong.to_flatbuffer();
                                         if let Err(e) = ws_sender.send(Message::Binary(bin.into())).await {
                                             error!("Error sending pong to {}: {}", addr, e);
                                         }
                                     }
-                                    protocol::MessageBody::SetBinding => {
+                                    ws_protocol::MessageBody::SetBinding => {
                                         if let Some(binding_table) = message.body_as_set_binding()
                                             && let Some(key) = binding_table.binding()
                                         {
@@ -131,11 +131,11 @@ async fn handle_connection<R: tauri::Runtime>(
                                             let _ = app_handle.emit("ws-message", &incoming);
                                         }
                                     }
-                                    protocol::MessageBody::GetBinding => {
+                                    ws_protocol::MessageBody::GetBinding => {
                                          let incoming = IncomingMessage::GetBinding;
                                          let _ = app_handle.emit("ws-message", &incoming);
                                     }
-                                    protocol::MessageBody::Shutdown => {
+                                    ws_protocol::MessageBody::Shutdown => {
                                          let incoming = IncomingMessage::Shutdown;
                                          let _ = app_handle.emit("ws-message", &incoming);
                                     }
@@ -167,12 +167,12 @@ async fn handle_connection<R: tauri::Runtime>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{Modifier, root_as_message};
     use flatbuffers::FlatBufferBuilder;
     use std::time::Duration;
     use tauri::test::{mock_builder, mock_context, noop_assets};
     use tokio::time::sleep;
     use tokio_tungstenite::tungstenite::Message::Binary;
+    use ws_protocol::{Modifier, root_as_message};
 
     #[tokio::test]
     async fn test_is_connected_initial() {
@@ -277,12 +277,11 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_set_binding_message_handling() {
-        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
-            KeyBindingArgs, Message as FBMessage, MessageArgs, MessageBody, SetBinding,
-            SetBindingArgs,
-        };
         use std::sync::{Arc, Mutex};
         use tauri::Listener;
+        use ws_protocol::{
+            Message as FBMessage, MessageArgs, MessageBody, SetBinding, SetBindingArgs,
+        };
 
         CONNECTION_COUNT.store(0, Ordering::SeqCst);
         let (tx, _) = broadcast::channel(10);
@@ -316,14 +315,13 @@ mod tests {
         let mut builder = FlatBufferBuilder::new();
         let mods = vec![Modifier::Shift];
         let mods_vec = builder.create_vector(&mods);
-        let key_binding =
-            crate::flatbuffers::protocol_generated::discuss::flatbuffers::KeyBinding::create(
-                &mut builder,
-                &KeyBindingArgs {
-                    code: 42,
-                    modifiers: Some(mods_vec),
-                },
-            );
+        let key_binding = ws_protocol::KeyBinding::create(
+            &mut builder,
+            &ws_protocol::KeyBindingArgs {
+                code: 42,
+                modifiers: Some(mods_vec),
+            },
+        );
         let set_binding = SetBinding::create(
             &mut builder,
             &SetBindingArgs {
@@ -360,11 +358,9 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_shutdown_message_handling() {
-        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
-            Message as FBMessage, MessageArgs, MessageBody, Shutdown, ShutdownArgs,
-        };
         use std::sync::{Arc, Mutex};
         use tauri::Listener;
+        use ws_protocol::{Message as FBMessage, MessageArgs, MessageBody, Shutdown, ShutdownArgs};
 
         CONNECTION_COUNT.store(0, Ordering::SeqCst);
         let (tx, _) = broadcast::channel(10);
@@ -427,9 +423,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_handshake_and_ping_pong() {
-        use crate::flatbuffers::protocol_generated::discuss::flatbuffers::{
-            Message as FBMessage, MessageArgs, MessageBody, Ping, PingArgs,
-        };
+        use ws_protocol::{Message as FBMessage, MessageArgs, MessageBody, Ping, PingArgs};
 
         CONNECTION_COUNT.store(0, Ordering::SeqCst);
         let (tx, _) = broadcast::channel(10);

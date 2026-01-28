@@ -4,7 +4,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { MessageBody, unionToMessageBody, unionListToMessageBody } from '../../discuss/flatbuffers/message-body.js';
+import { MessageBody, unionToMessageBody, unionListToMessageBody } from '../../discuss/ws-protocol/message-body.js';
 
 
 export class Message {

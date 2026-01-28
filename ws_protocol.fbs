@@ -1,4 +1,4 @@
-namespace Discuss.Flatbuffers;
+namespace Discuss.WsProtocol;
 
 enum Modifier : ubyte { Shift, Control, Alt, Meta }
 

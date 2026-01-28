@@ -1,7 +1,7 @@
 import * as flatbuffers from "flatbuffers";
-import { Message } from "./discuss/flatbuffers/message";
-import { MessageBody } from "./discuss/flatbuffers/message-body";
-import { Ping } from "./discuss/flatbuffers/ping";
+import { Message } from "./discuss/ws-protocol/message";
+import { MessageBody } from "./discuss/ws-protocol/message-body";
+import { Ping } from "./discuss/ws-protocol/ping";
 import { throttle } from "./utils";
 
 const ACTIVE_ONLINE_ICON = "/assets/icons/active_online_icon.png";

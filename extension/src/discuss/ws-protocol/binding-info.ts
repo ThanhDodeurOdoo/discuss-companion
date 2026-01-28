@@ -4,25 +4,25 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { KeyBinding } from '../../discuss/flatbuffers/key-binding.js';
+import { KeyBinding } from '../../discuss/ws-protocol/key-binding.js';
 
 
-export class PttUp {
+export class BindingInfo {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i:number, bb:flatbuffers.ByteBuffer):PttUp {
+  __init(i:number, bb:flatbuffers.ByteBuffer):BindingInfo {
   this.bb_pos = i;
   this.bb = bb;
   return this;
 }
 
-static getRootAsPttUp(bb:flatbuffers.ByteBuffer, obj?:PttUp):PttUp {
-  return (obj || new PttUp()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+static getRootAsBindingInfo(bb:flatbuffers.ByteBuffer, obj?:BindingInfo):BindingInfo {
+  return (obj || new BindingInfo()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
-static getSizePrefixedRootAsPttUp(bb:flatbuffers.ByteBuffer, obj?:PttUp):PttUp {
+static getSizePrefixedRootAsBindingInfo(bb:flatbuffers.ByteBuffer, obj?:BindingInfo):BindingInfo {
   bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-  return (obj || new PttUp()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+  return (obj || new BindingInfo()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
 ts():bigint {
@@ -30,12 +30,12 @@ ts():bigint {
   return offset ? this.bb!.readUint64(this.bb_pos + offset) : BigInt('0');
 }
 
-key(obj?:KeyBinding):KeyBinding|null {
+binding(obj?:KeyBinding):KeyBinding|null {
   const offset = this.bb!.__offset(this.bb_pos, 6);
   return offset ? (obj || new KeyBinding()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
-static startPttUp(builder:flatbuffers.Builder) {
+static startBindingInfo(builder:flatbuffers.Builder) {
   builder.startObject(2);
 }
 
@@ -43,11 +43,11 @@ static addTs(builder:flatbuffers.Builder, ts:bigint) {
   builder.addFieldInt64(0, ts, BigInt('0'));
 }
 
-static addKey(builder:flatbuffers.Builder, keyOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(1, keyOffset, 0);
+static addBinding(builder:flatbuffers.Builder, bindingOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(1, bindingOffset, 0);
 }
 
-static endPttUp(builder:flatbuffers.Builder):flatbuffers.Offset {
+static endBindingInfo(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }

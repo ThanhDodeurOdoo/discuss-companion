@@ -4,7 +4,7 @@ use flatbuffers::FlatBufferBuilder;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::flatbuffers::protocol_generated::discuss::flatbuffers as protocol;
+use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
@@ -44,7 +44,7 @@ impl<'de> Deserialize<'de> for Modifier {
     }
 }
 
-impl From<Modifier> for protocol::Modifier {
+impl From<Modifier> for ws_protocol::Modifier {
     fn from(m: Modifier) -> Self {
         match m {
             Modifier::Shift => Self::Shift,
@@ -55,14 +55,14 @@ impl From<Modifier> for protocol::Modifier {
     }
 }
 
-impl From<protocol::Modifier> for Modifier {
+impl From<ws_protocol::Modifier> for Modifier {
     #[allow(clippy::match_same_arms, reason = "shift is a valid default")]
-    fn from(m: protocol::Modifier) -> Self {
+    fn from(m: ws_protocol::Modifier) -> Self {
         match m {
-            protocol::Modifier::Shift => Self::Shift,
-            protocol::Modifier::Control => Self::Control,
-            protocol::Modifier::Alt => Self::Alt,
-            protocol::Modifier::Meta => Self::Meta,
+            ws_protocol::Modifier::Shift => Self::Shift,
+            ws_protocol::Modifier::Control => Self::Control,
+            ws_protocol::Modifier::Alt => Self::Alt,
+            ws_protocol::Modifier::Meta => Self::Meta,
             _ => Self::Shift,
         }
     }
@@ -138,54 +138,54 @@ impl OutgoingMessage {
         let mut builder = FlatBufferBuilder::new();
         let message_offset = match self {
             OutgoingMessage::PttDown { ts, key, is_repeat } => {
-                let modifiers: Vec<protocol::Modifier> =
+                let modifiers: Vec<ws_protocol::Modifier> =
                     key.modifiers.iter().map(|&m| m.into()).collect();
                 let modifiers_offset = builder.create_vector(&modifiers);
-                let key_offset = protocol::KeyBinding::create(
+                let key_offset = ws_protocol::KeyBinding::create(
                     &mut builder,
-                    &protocol::KeyBindingArgs {
+                    &ws_protocol::KeyBindingArgs {
                         code: key.code,
                         modifiers: Some(modifiers_offset),
                     },
                 );
-                let body_offset = protocol::PttDown::create(
+                let body_offset = ws_protocol::PttDown::create(
                     &mut builder,
-                    &protocol::PttDownArgs {
+                    &ws_protocol::PttDownArgs {
                         ts: *ts,
                         key: Some(key_offset),
                         is_repeat: *is_repeat,
                     },
                 );
-                protocol::Message::create(
+                ws_protocol::Message::create(
                     &mut builder,
-                    &protocol::MessageArgs {
-                        body_type: protocol::MessageBody::PttDown,
+                    &ws_protocol::MessageArgs {
+                        body_type: ws_protocol::MessageBody::PttDown,
                         body: Some(body_offset.as_union_value()),
                     },
                 )
             }
             OutgoingMessage::PttUp { ts, key } => {
-                let modifiers: Vec<protocol::Modifier> =
+                let modifiers: Vec<ws_protocol::Modifier> =
                     key.modifiers.iter().map(|&m| m.into()).collect();
                 let modifiers_offset = builder.create_vector(&modifiers);
-                let key_offset = protocol::KeyBinding::create(
+                let key_offset = ws_protocol::KeyBinding::create(
                     &mut builder,
-                    &protocol::KeyBindingArgs {
+                    &ws_protocol::KeyBindingArgs {
                         code: key.code,
                         modifiers: Some(modifiers_offset),
                     },
                 );
-                let body_offset = protocol::PttUp::create(
+                let body_offset = ws_protocol::PttUp::create(
                     &mut builder,
-                    &protocol::PttUpArgs {
+                    &ws_protocol::PttUpArgs {
                         ts: *ts,
                         key: Some(key_offset),
                     },
                 );
-                protocol::Message::create(
+                ws_protocol::Message::create(
                     &mut builder,
-                    &protocol::MessageArgs {
-                        body_type: protocol::MessageBody::PttUp,
+                    &ws_protocol::MessageArgs {
+                        body_type: ws_protocol::MessageBody::PttUp,
                         body: Some(body_offset.as_union_value()),
                     },
                 )
@@ -193,72 +193,72 @@ impl OutgoingMessage {
             OutgoingMessage::Status { ts, state, version } => {
                 let state_offset = builder.create_string(state);
                 let version_offset = builder.create_string(version);
-                let body_offset = protocol::Status::create(
+                let body_offset = ws_protocol::Status::create(
                     &mut builder,
-                    &protocol::StatusArgs {
+                    &ws_protocol::StatusArgs {
                         ts: *ts,
                         state: Some(state_offset),
                         version: Some(version_offset),
                     },
                 );
-                protocol::Message::create(
+                ws_protocol::Message::create(
                     &mut builder,
-                    &protocol::MessageArgs {
-                        body_type: protocol::MessageBody::Status,
+                    &ws_protocol::MessageArgs {
+                        body_type: ws_protocol::MessageBody::Status,
                         body: Some(body_offset.as_union_value()),
                     },
                 )
             }
             OutgoingMessage::Error { ts, message } => {
                 let message_offset = builder.create_string(message);
-                let body_offset = protocol::Error::create(
+                let body_offset = ws_protocol::Error::create(
                     &mut builder,
-                    &protocol::ErrorArgs {
+                    &ws_protocol::ErrorArgs {
                         ts: *ts,
                         message: Some(message_offset),
                     },
                 );
-                protocol::Message::create(
+                ws_protocol::Message::create(
                     &mut builder,
-                    &protocol::MessageArgs {
-                        body_type: protocol::MessageBody::Error,
+                    &ws_protocol::MessageArgs {
+                        body_type: ws_protocol::MessageBody::Error,
                         body: Some(body_offset.as_union_value()),
                     },
                 )
             }
             OutgoingMessage::BindingInfo { ts, binding } => {
-                let modifiers: Vec<protocol::Modifier> =
+                let modifiers: Vec<ws_protocol::Modifier> =
                     binding.modifiers.iter().map(|&m| m.into()).collect();
                 let modifiers_offset = builder.create_vector(&modifiers);
-                let key_offset = protocol::KeyBinding::create(
+                let key_offset = ws_protocol::KeyBinding::create(
                     &mut builder,
-                    &protocol::KeyBindingArgs {
+                    &ws_protocol::KeyBindingArgs {
                         code: binding.code,
                         modifiers: Some(modifiers_offset),
                     },
                 );
-                let body_offset = protocol::BindingInfo::create(
+                let body_offset = ws_protocol::BindingInfo::create(
                     &mut builder,
-                    &protocol::BindingInfoArgs {
+                    &ws_protocol::BindingInfoArgs {
                         ts: *ts,
                         binding: Some(key_offset),
                     },
                 );
-                protocol::Message::create(
+                ws_protocol::Message::create(
                     &mut builder,
-                    &protocol::MessageArgs {
-                        body_type: protocol::MessageBody::BindingInfo,
+                    &ws_protocol::MessageArgs {
+                        body_type: ws_protocol::MessageBody::BindingInfo,
                         body: Some(body_offset.as_union_value()),
                     },
                 )
             }
             OutgoingMessage::Pong { ts } => {
                 let body_offset =
-                    protocol::Pong::create(&mut builder, &protocol::PongArgs { ts: *ts });
-                protocol::Message::create(
+                    ws_protocol::Pong::create(&mut builder, &ws_protocol::PongArgs { ts: *ts });
+                ws_protocol::Message::create(
                     &mut builder,
-                    &protocol::MessageArgs {
-                        body_type: protocol::MessageBody::Pong,
+                    &ws_protocol::MessageArgs {
+                        body_type: ws_protocol::MessageBody::Pong,
                         body: Some(body_offset.as_union_value()),
                     },
                 )
@@ -312,8 +312,8 @@ mod tests {
             is_repeat: true,
         };
         let bin = msg.to_flatbuffer();
-        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
-        assert_eq!(decoded.body_type(), protocol::MessageBody::PttDown);
+        let decoded = ws_protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), ws_protocol::MessageBody::PttDown);
         let body = decoded.body_as_ptt_down().expect("Body is PttDown");
         assert_eq!(body.ts(), 123_456_789);
         assert!(body.is_repeat());
@@ -321,7 +321,7 @@ mod tests {
         assert_eq!(key.code(), 1);
         let mods = key.modifiers().expect("Modifiers present");
         assert_eq!(mods.len(), 1);
-        assert_eq!(mods.get(0), protocol::Modifier::Shift);
+        assert_eq!(mods.get(0), ws_protocol::Modifier::Shift);
     }
 
     #[test]
@@ -331,8 +331,8 @@ mod tests {
             key: KeyBinding::default(),
         };
         let bin = msg.to_flatbuffer();
-        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
-        assert_eq!(decoded.body_type(), protocol::MessageBody::PttUp);
+        let decoded = ws_protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), ws_protocol::MessageBody::PttUp);
         let body = decoded.body_as_ptt_up().expect("Body is PttUp");
         assert_eq!(body.ts(), 987_654_321);
     }
@@ -345,8 +345,8 @@ mod tests {
             version: "1.2.3".to_string(),
         };
         let bin = msg.to_flatbuffer();
-        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
-        assert_eq!(decoded.body_type(), protocol::MessageBody::Status);
+        let decoded = ws_protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), ws_protocol::MessageBody::Status);
         let body = decoded.body_as_status().expect("Body is Status");
         assert_eq!(body.ts(), 111);
         assert_eq!(body.state(), Some("active"));
@@ -363,8 +363,8 @@ mod tests {
             },
         };
         let bin = msg.to_flatbuffer();
-        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
-        assert_eq!(decoded.body_type(), protocol::MessageBody::BindingInfo);
+        let decoded = ws_protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), ws_protocol::MessageBody::BindingInfo);
         let body = decoded.body_as_binding_info().expect("Body is BindingInfo");
         assert_eq!(body.ts(), 222);
         let key = body.binding().expect("Binding present");
@@ -377,8 +377,8 @@ mod tests {
     fn test_pong_flatbuffer() {
         let msg = OutgoingMessage::Pong { ts: 333 };
         let bin = msg.to_flatbuffer();
-        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
-        assert_eq!(decoded.body_type(), protocol::MessageBody::Pong);
+        let decoded = ws_protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), ws_protocol::MessageBody::Pong);
         let body = decoded.body_as_pong().expect("Body is Pong");
         assert_eq!(body.ts(), 333);
     }
@@ -390,8 +390,8 @@ mod tests {
             message: "Something went wrong".to_string(),
         };
         let bin = msg.to_flatbuffer();
-        let decoded = protocol::root_as_message(&bin).expect("Valid flatbuffer");
-        assert_eq!(decoded.body_type(), protocol::MessageBody::Error);
+        let decoded = ws_protocol::root_as_message(&bin).expect("Valid flatbuffer");
+        assert_eq!(decoded.body_type(), ws_protocol::MessageBody::Error);
         let body = decoded.body_as_error().expect("Body is Error");
         assert_eq!(body.ts(), 444);
         assert_eq!(body.message(), Some("Something went wrong"));

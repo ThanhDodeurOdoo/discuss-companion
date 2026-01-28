@@ -11,4 +11,4 @@
     clippy::absolute_paths,
     reason = "flatbuffers generated code"
 )]
-pub mod protocol_generated;
+pub mod ws_protocol_generated;

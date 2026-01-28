@@ -16,10 +16,10 @@ const capturedOnRemoved = chrome.tabs.onRemoved.addListener.mock.calls[0][0];
 const capturedOnAlarm = chrome.alarms.onAlarm.addListener.mock.calls[0][0];
 const capturedOnClicked = chrome.action.onClicked.addListener.mock.calls[0][0];
 
-const { Message } = await import("../src/discuss/flatbuffers/message");
-const { MessageBody } = await import("../src/discuss/flatbuffers/message-body");
-const { PttDown } = await import("../src/discuss/flatbuffers/ptt-down");
-const { PttUp } = await import("../src/discuss/flatbuffers/ptt-up");
+const { Message } = await import("../src/discuss/ws-protocol/message");
+const { MessageBody } = await import("../src/discuss/ws-protocol/message-body");
+const { PttDown } = await import("../src/discuss/ws-protocol/ptt-down");
+const { PttUp } = await import("../src/discuss/ws-protocol/ptt-up");
 const flatbuffers = await import("flatbuffers");
 
 describe("Extension Background Script", () => {

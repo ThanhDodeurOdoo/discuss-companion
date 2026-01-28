@@ -23,7 +23,7 @@ The repository contains 2 parts:
 
 *: not yet
 
-The communication between the App and the Extension uses [FlatBuffers](https://google.github.io/flatbuffers/), The schema is defined in `protocol.fbs`. These messages are sent through websocket.
+The communication between the App and the Extension uses [FlatBuffers](https://google.github.io/flatbuffers/), The schema is defined in `ws_protocol.fbs`. These messages are sent through websocket.
 
 
 

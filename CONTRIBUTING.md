@@ -43,7 +43,7 @@ The frontend uses Owl v3 and is in `app/frontend`. The extension is in the `exte
     ```
     or
     ```bash
-    npm run build:flatbuffers
+    npm run build:flatbuffers:ws
     ```
 
 ### If you modify the extension
