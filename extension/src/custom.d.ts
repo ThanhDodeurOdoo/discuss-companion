@@ -7,31 +7,41 @@ declare module "*/compile_templates.mjs" {
     export function compileTemplates(paths: string[]): Promise<string>;
 }
 
-interface Window {
-    odoo?: {
-        info?: {
-            server_version?: string;
+export type Store = {
+    rtc: {
+        selfSession?: {
+            isMute: boolean;
+            is_deaf: boolean;
+            is_camera_on: boolean;
+            is_screen_sharing_on: boolean;
         };
-        __WOWL_DEBUG__?: {
-            root: {
-                env: {
-                    services: {
-                        "mail.store": {
-                            rtc: {
-                                selfSession?: {
-                                    isMute: boolean;
-                                };
-                                toggleMicrophone(): Promise<void>;
-                            };
-                        };
-                    } & Record<string, unknown>;
+        toggleDeafen(): Promise<void>;
+        toggleMicrophone(): Promise<void>;
+        toggleVideo(type: "camera" | "screen"): Promise<void>;
+        leaveCall(): Promise<void>;
+    };
+};
+
+declare global {
+    interface Window {
+        odoo?: {
+            info?: {
+                server_version?: string;
+            };
+            __WOWL_DEBUG__?: {
+                root: {
+                    env: {
+                        services: {
+                            "mail.store": Store;
+                        } & Record<string, unknown>;
+                    };
                 };
             };
         };
-    };
-    owl?: {
-        __info__?: {
-            version?: string;
+        owl?: {
+            __info__?: {
+                version?: string;
+            };
         };
-    };
+    }
 }
