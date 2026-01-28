@@ -14,9 +14,9 @@ await import("../src/background.ts");
 
 const capturedHandleMessage = chrome.runtime.onMessageExternal.addListener.mock.calls[0][0];
 
-const { Message } = await import("../src/discuss/flatbuffers/message");
-const { MessageBody } = await import("../src/discuss/flatbuffers/message-body");
-const { PttDown } = await import("../src/discuss/flatbuffers/ptt-down");
+const { Message } = await import("../src/discuss/ws-protocol/message");
+const { MessageBody } = await import("../src/discuss/ws-protocol/message-body");
+const { PttDown } = await import("../src/discuss/ws-protocol/ptt-down");
 const flatbuffers = await import("flatbuffers");
 
 describe("PTT Service Compatibility", () => {

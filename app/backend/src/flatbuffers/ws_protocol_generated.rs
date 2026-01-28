@@ -7,7 +7,7 @@ extern crate alloc;
 pub mod discuss {
 
 #[allow(unused_imports, dead_code)]
-pub mod flatbuffers {
+pub mod ws_protocol {
 
 
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
@@ -1784,6 +1784,6 @@ pub fn finish_message_buffer<'a, 'b, A: ::flatbuffers::Allocator + 'a>(
 pub fn finish_size_prefixed_message_buffer<'a, 'b, A: ::flatbuffers::Allocator + 'a>(fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>, root: ::flatbuffers::WIPOffset<Message<'a>>) {
   fbb.finish_size_prefixed(root, None);
 }
-}  // pub mod Flatbuffers
+}  // pub mod WsProtocol
 }  // pub mod Discuss
 

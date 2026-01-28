@@ -2,16 +2,16 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import { BindingInfo } from '../../discuss/flatbuffers/binding-info.js';
-import { Error } from '../../discuss/flatbuffers/error.js';
-import { GetBinding } from '../../discuss/flatbuffers/get-binding.js';
-import { Ping } from '../../discuss/flatbuffers/ping.js';
-import { Pong } from '../../discuss/flatbuffers/pong.js';
-import { PttDown } from '../../discuss/flatbuffers/ptt-down.js';
-import { PttUp } from '../../discuss/flatbuffers/ptt-up.js';
-import { SetBinding } from '../../discuss/flatbuffers/set-binding.js';
-import { Shutdown } from '../../discuss/flatbuffers/shutdown.js';
-import { Status } from '../../discuss/flatbuffers/status.js';
+import { BindingInfo } from '../../discuss/ws-protocol/binding-info.js';
+import { Error } from '../../discuss/ws-protocol/error.js';
+import { GetBinding } from '../../discuss/ws-protocol/get-binding.js';
+import { Ping } from '../../discuss/ws-protocol/ping.js';
+import { Pong } from '../../discuss/ws-protocol/pong.js';
+import { PttDown } from '../../discuss/ws-protocol/ptt-down.js';
+import { PttUp } from '../../discuss/ws-protocol/ptt-up.js';
+import { SetBinding } from '../../discuss/ws-protocol/set-binding.js';
+import { Shutdown } from '../../discuss/ws-protocol/shutdown.js';
+import { Status } from '../../discuss/ws-protocol/status.js';
 
 
 export enum MessageBody {
