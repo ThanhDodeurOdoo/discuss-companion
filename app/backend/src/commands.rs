@@ -21,6 +21,7 @@ use tauri::ipc::{Channel, InvokeBody};
 /// these handlers are called from the front-end where ownership is not a relevant concept
 
 #[tauri::command]
+#[must_use]
 pub fn get_version() -> String {
     VERSION.to_string()
 }
@@ -58,16 +59,19 @@ pub fn set_recording_mode(request: tauri::ipc::Request) {
 }
 
 #[tauri::command]
+#[must_use]
 pub fn get_current_binding() -> KeyBinding {
     get_binding()
 }
 
 #[tauri::command]
+#[must_use]
 pub fn is_accessibility_granted() -> bool {
     check_accessibility_permission()
 }
 
 #[tauri::command]
+#[must_use]
 pub fn is_extension_connected() -> bool {
     server::is_connected()
 }
@@ -79,6 +83,7 @@ pub fn force_ptt_up() {
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
+#[must_use]
 pub fn get_ws_port(state: State<'_, WsState>) -> u16 {
     state.port.load(Ordering::SeqCst)
 }
@@ -86,6 +91,7 @@ pub fn get_ws_port(state: State<'_, WsState>) -> u16 {
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 #[allow(clippy::collapsible_if, reason = "nested if let")]
+#[allow(clippy::missing_panics_doc, reason = "tauri API")]
 pub fn update_ws_port(
     app_handle: tauri::AppHandle,
     state: State<'_, WsState>,
@@ -153,6 +159,7 @@ pub fn update_ws_port(
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 #[allow(clippy::unwrap_used, reason = "mutex poisoning")]
+#[allow(clippy::missing_panics_doc, reason = "tauri API")]
 pub fn establish_channel(state: State<'_, WsState>, channel: Channel) {
     *state.event_channel.lock().unwrap() = Some(channel);
 }

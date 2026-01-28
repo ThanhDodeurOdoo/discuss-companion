@@ -47,6 +47,7 @@ pub trait PttEngine: Send + Sync {
 }
 
 /// Returns a reference to the global `PttEngine` implementation for the current platform.
+#[must_use]
 pub fn get_engine() -> &'static dyn PttEngine {
     #[cfg(target_os = "macos")]
     return macos::get_engine();
@@ -65,6 +66,7 @@ pub fn set_recording(recording: bool) {
     get_engine().set_recording(recording);
 }
 
+#[must_use]
 pub fn get_binding() -> KeyBinding {
     get_engine().get_binding()
 }
@@ -73,10 +75,13 @@ pub fn force_ptt_up() {
     get_engine().force_ptt_up();
 }
 
+#[must_use]
 pub fn check_accessibility_permission() -> bool {
     get_engine().check_accessibility_permission()
 }
 
+/// # Errors
+/// Returns an error if the engine fails to initialize.
 pub fn start_engine(sender: Sender<OutgoingMessage>, shutdown: &Arc<AtomicBool>) -> Result<()> {
     get_engine().start_engine(sender, shutdown)
 }

@@ -1,0 +1,43 @@
+name: API Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  api-tests:
+    name: API Tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.92.0
+          targets: x86_64-apple-darwin
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/backend/target
+          key: ${{ runner.os }}-cargo-api-tests-${{ hashFiles('app/backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-api-tests-
+
+      - name: Run IPC API Tests
+        run: cargo test --test ipc_api_tests
+        working-directory: app/backend
+
+      - name: Run WebSocket API Tests
+        run: cargo test --test ws_api_tests
+        working-directory: app/backend
