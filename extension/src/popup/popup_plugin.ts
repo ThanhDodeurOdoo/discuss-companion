@@ -31,6 +31,15 @@ function readCallStateInTab(): CallState | undefined {
     };
 }
 
+function openChannelInTab() {
+    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+    if (!store?.rtc?.channel) {
+        return false;
+    }
+    store.rtc.channel.open();
+    return true;
+}
+
 async function toggleMicrophoneInTab() {
     const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
     if (!store?.rtc?.selfSession) {
@@ -240,9 +249,9 @@ export class PopupPlugin extends Plugin {
             try {
                 const tab = await chrome.tabs.get(tabId);
                 if (tab) {
+                    executeInCallTab(openChannelInTab);
                     await chrome.tabs.update(tabId, { active: true });
                     await chrome.windows.update(tab.windowId, { focused: true });
-                    // could even execute on that tab a: "odoo.__WOWL_DEBUG__.root.env.services["mail.store"].rtc?.channel?.open()"
                 }
             } catch (e) {
                 console.error("Failed to focus tab", e);
