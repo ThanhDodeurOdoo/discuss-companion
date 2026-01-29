@@ -38,12 +38,27 @@ export function mockChrome(storageInitial = {}) {
             },
             local: {
                 get: jest.fn().mockImplementation((defaults, callback) => {
-                    if (callback) {
-                        callback(defaults);
+                    let result = {};
+                    if (!defaults) {
+                        result = { ...mockStorage };
+                    } else if (Array.isArray(defaults)) {
+                        for (const key of defaults) {
+                            result[key] = mockStorage[key];
+                        }
+                    } else if (typeof defaults === "string") {
+                        result[defaults] = mockStorage[defaults];
+                    } else {
+                        result = { ...defaults, ...mockStorage };
                     }
-                    return Promise.resolve(defaults);
+                    if (callback) {
+                        callback(result);
+                    }
+                    return Promise.resolve(result);
                 }),
-                set: jest.fn()
+                set: jest.fn().mockImplementation((val) => {
+                    Object.assign(mockStorage, val);
+                    return Promise.resolve();
+                })
             },
             onChanged: {
                 addListener: jest.fn()
