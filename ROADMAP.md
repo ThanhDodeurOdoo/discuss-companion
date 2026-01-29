@@ -29,10 +29,6 @@ the extension could also collect information on tabs (like which ones are odoo t
 point of view it's not clear which tab is relevant since it blindly sends
 ptt commands to everything.
 
-### Support the toggle ptt API
-[@Issue#2](https://github.com/ThanhDodeurOdoo/discuss-companion/issues/2)
-
-
 ### Add github build script to auto generate file?
 
 Would be nice to have a github action that automatically generates the app
@@ -55,28 +51,6 @@ could be done with extension execution (see [extension utils](extension/src/util
 
 # Nice-to-have
 
-### Use flatbuffers for tauri IPC
-
-frontend:
-```typescript
-const bytes = builder.asUint8Array();
-await invoke("update_binding_binary", bytes);
-```
-backend:
-```rust
-#[tauri::command]
-pub fn update_binding_binary(request: tauri::ipc::Request) {
-    if let tauri::ipc::InvokeBody::Raw(data) = request.body() {
-        let binding = PttBinding::from_bytes(&data);
-        update_binding(binding);
-    }
-}
-```
-
-note: the directory organization should be well thought out to avoid
-confusion between the flatbuffers used for IPC and the flatbuffers used for
-the websocket messages between the extension and the backend.
-
 ### Show partial key press
 
 purely cosmetic,
@@ -84,11 +58,6 @@ For example when shortcut is CMD+SHIFT+K, when the user presses CMD,
 it would highlight CMD, then when the user presses SHIFT, it would highlight SHIFT,
 and finally when the user presses K, it would highlight K ( and do the usual
 press down animation)
-
-### A pause button?
-
-When paused, the app would not listen for any key press
-(send keyup on pause to make sure not to pause in down pos)
 
 
 # Probably too fancy
