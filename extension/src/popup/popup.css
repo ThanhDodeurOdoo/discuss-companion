@@ -216,6 +216,16 @@ body {
     filter: brightness(0.95);
 }
 
+.btn--success {
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: #ffffff;
+}
+
+.btn--success:hover {
+    filter: brightness(0.95);
+}
+
 .icon {
     font-family: "Material Symbols Rounded";
     font-weight: 400;
@@ -349,4 +359,11 @@ body {
     font-size: 13px;
     font-weight: 700;
     color: var(--color-text);
+}
+
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }

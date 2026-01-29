@@ -99,6 +99,7 @@ export class PopupPlugin extends Plugin {
     isCameraOn = signal(false);
     isScreenOn = signal(false);
     isSettingsOpen = signal(false);
+    lastJoinedCall = signal<{ url: string; name: string } | null>(null);
     isStatusDefault = computed(
         () => this.statusCode() === StatusCode.Default || this.statusCode() === StatusCode.Saving
     );
@@ -136,6 +137,14 @@ export class PopupPlugin extends Plugin {
     async onClickGoToCall() {
         await this.goToCall();
         window.close();
+    }
+
+    async rejoinLastCall() {
+        const call = this.lastJoinedCall();
+        if (call?.url) {
+            await chrome.tabs.create({ url: call.url });
+            window.close();
+        }
     }
 
     toggleSettings() {
@@ -263,11 +272,18 @@ export class PopupPlugin extends Plugin {
         const items = (await chrome.storage.local.get({
             wsPort: 49152,
             isLoggingEnabled: this.isLoggingEnabled(),
-            isCompanionEnabled: this.isCompanionEnabled()
-        })) as { wsPort: number; isLoggingEnabled: boolean; isCompanionEnabled: boolean };
+            isCompanionEnabled: this.isCompanionEnabled(),
+            lastJoinedCall: null
+        })) as {
+            wsPort: number;
+            isLoggingEnabled: boolean;
+            isCompanionEnabled: boolean;
+            lastJoinedCall: { url: string; name: string } | null;
+        };
         this.port.set(items.wsPort);
         this.isLoggingEnabled.set(items.isLoggingEnabled);
         this.isCompanionEnabled.set(items.isCompanionEnabled);
+        this.lastJoinedCall.set(items.lastJoinedCall);
     }
 
     async save() {
