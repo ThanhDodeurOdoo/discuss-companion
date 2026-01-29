@@ -10,7 +10,6 @@ const INACTIVE_OFFLINE_ICON = "/assets/icons/inactive_offline_icon.png";
 
 let socket: WebSocket | null = null;
 let wsPort = 49152; // Default port
-let echoTimeout: ReturnType<typeof setTimeout> | number;
 const RECONNECT_ALARM_NAME = "reconnect_alarm";
 let isCompanionEnabled = false;
 
@@ -115,6 +114,53 @@ async function updateAppIcon() {
     chrome.action.setIcon({ path: isTalking ? ACTIVE_ONLINE_ICON : INACTIVE_ONLINE_ICON });
 }
 
+/**
+ * FIXME: The function is delayed because the subscription occurs at the start of rtc.joinCall(),
+ * which means the RPC is made and before `rtc.selfSession` and `rtc.channel` are set.
+ * This is technically incorrect as the tab will be subscribed even if the join fails,
+ * it should ideally be subscribed at the end of the joinCall function, if it is successful,
+ * and after selfSession and channel are set.
+ */
+function delayedSubscribe(safeTabId: number) {
+    setTimeout(() => {
+        chrome.scripting
+            .executeScript({
+                target: { tabId: safeTabId },
+                world: "MAIN",
+                func: () => {
+                    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+                    const channel = store?.rtc?.channel as { id: number; name: string } | undefined;
+                    return {
+                        channelId: channel?.id,
+                        channelName: channel?.name,
+                        origin: window.location.origin
+                    };
+                }
+            })
+            .then((results) => {
+                const result = results[0]?.result as
+                    | { channelId?: number; channelName?: string; origin?: string }
+                    | undefined;
+                if (result?.channelId && result?.origin) {
+                    const { channelId, channelName, origin } = result;
+                    const url = new URL("/odoo/action-mail.action_discuss", origin);
+                    url.searchParams.set("active_id", `discuss.channel_${channelId}`);
+                    url.searchParams.set("call", "accept");
+                    const lastJoinedCall = {
+                        url: url.toString(),
+                        name: channelName || "last call"
+                    };
+                    chrome.storage.local.set({ lastJoinedCall });
+                    log("[BG] Captured call info", lastJoinedCall);
+                }
+                log("[BG] Captured call info", result);
+            })
+            .catch((e) => {
+                log("Failed to capture call info", e);
+            });
+    }, 3000);
+}
+
 const throttledCommand = throttle(onCommand, 150);
 
 async function handleMessage(
@@ -138,6 +184,7 @@ async function handleMessage(
                 const isTalkingByTabId = await getIsTalkingByTabId();
                 isTalkingByTabId[safeTabId] = false;
                 await chrome.storage.session.set({ isTalkingByTabId });
+                delayedSubscribe(safeTabId);
                 sendResponse?.({ status: "ok" });
             }
             break;
@@ -262,12 +309,8 @@ function connectToApp() {
             switch (message.bodyType()) {
                 case MessageBody.PttDown:
                     throttledCommand(Command.PTT_PRESSED);
-                    echoTimeout = setTimeout(async () => {
-                        throttledCommand(Command.PTT_PRESSED);
-                    }, 500);
                     break;
                 case MessageBody.PttUp:
-                    clearTimeout(echoTimeout);
                     onCommand(Command.PTT_RELEASED);
                     break;
                 case MessageBody.Pong:

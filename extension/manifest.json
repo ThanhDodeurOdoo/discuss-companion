@@ -7,9 +7,7 @@
         "storage",
         "alarms",
         "scripting",
-        "activeTab",
-        "http://*/*",
-        "https://*/*"
+        "activeTab"
     ],
     "action": {
         "default_popup": "options.html"
@@ -39,7 +37,9 @@
         ]
     },
     "host_permissions": [
-        "ws://127.0.0.1/*"
+        "ws://127.0.0.1/*",
+        "http://*/*",
+        "https://*/*"
     ],
     "commands": {
         "ptt-pressed": {
