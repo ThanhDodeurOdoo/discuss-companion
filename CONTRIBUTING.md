@@ -12,10 +12,24 @@ The backend is located in `app/backend`. We follow standard Rust idioms and enfo
 - **Formatting**: Always run `cargo fmt` before committing.
 - **Linting**: We use Clippy with warnings denied (`cargo clippy -- -D warnings`).
 - **Unsafe Code**: Use of `unsafe` is discouraged. If absolutely necessary, it must be locally scoped and justified.
-  ```rust
-  // SAFETY: This is required because [reasoning]. We ensure [guarantee].
+  ```rs
+  #[allow(
+      unsafe_code,
+      reason = "
+      SAFETY: Interacting with macOS ApplicationServices to check accessibility permissions.
+      We create valid CFString and CFBoolean objects using safe wrappers (core_foundation crate).
+      The CFDictionary is constructed from these valid safe types.
+      The raw pointer passed to `AXIsProcessTrustedWithOptions` comes from `as_concrete_TypeRef()`,
+      which is guaranteed to be a valid CFDictionaryRef by the type system."
+  )]
   unsafe {
-      // ...
+      // The actual key string for kAXTrustedCheckOptionPrompt
+      let key = CFString::from_static_string("AXTrustedCheckOptionPrompt");
+      let value = CFBoolean::true_value();
+      let options = CFDictionary::from_CFType_pairs(&[(key.as_CFType(), value.as_CFType())]);
+      let trusted = AXIsProcessTrustedWithOptions(options.as_concrete_TypeRef()) != 0;
+      debug!("Accessibility permission check: {}", trusted);
+      trusted
   }
   ```
 - **Tests**: Every new feature must include corresponding tests.
