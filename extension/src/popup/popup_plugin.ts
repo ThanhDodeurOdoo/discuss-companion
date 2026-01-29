@@ -88,6 +88,7 @@ export class PopupPlugin extends Plugin {
     isDeaf = signal(false);
     isCameraOn = signal(false);
     isScreenOn = signal(false);
+    isSettingsOpen = signal(false);
     isStatusDefault = computed(
         () => this.statusCode() === StatusCode.Default || this.statusCode() === StatusCode.Saving
     );
@@ -125,6 +126,10 @@ export class PopupPlugin extends Plugin {
     async onClickGoToCall() {
         await this.goToCall();
         window.close();
+    }
+
+    toggleSettings() {
+        this.isSettingsOpen.set(!this.isSettingsOpen());
     }
 
     async collectCurrentTabData() {
