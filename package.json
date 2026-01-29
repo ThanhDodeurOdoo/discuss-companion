@@ -28,7 +28,8 @@
     "test:api:ipc": "cd app/backend && cargo test --test ipc_api_tests",
     "test:api:ws": "cd app/backend && cargo test --test ws_api_tests",
     "pre:dev": "vite",
-    "pre:build": "tsc && vite build"
+    "pre:build": "tsc && vite build",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@odoo/owl": "file:vendor/owl",

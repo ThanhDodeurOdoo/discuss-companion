@@ -7,7 +7,7 @@ declare module "*/compile_templates.mjs" {
     export function compileTemplates(paths: string[]): Promise<string>;
 }
 
-export type Store = {
+type Store = {
     rtc: {
         selfSession?: {
             isMute: boolean;
@@ -22,26 +22,24 @@ export type Store = {
     };
 };
 
-declare global {
-    interface Window {
-        odoo?: {
-            info?: {
-                server_version?: string;
-            };
-            __WOWL_DEBUG__?: {
-                root: {
-                    env: {
-                        services: {
-                            "mail.store": Store;
-                        } & Record<string, unknown>;
-                    };
+interface Window {
+    odoo?: {
+        info?: {
+            server_version?: string;
+        };
+        __WOWL_DEBUG__?: {
+            root: {
+                env: {
+                    services: {
+                        "mail.store": Store;
+                    } & Record<string, unknown>;
                 };
             };
         };
-        owl?: {
-            __info__?: {
-                version?: string;
-            };
+    };
+    owl?: {
+        __info__?: {
+            version?: string;
         };
-    }
+    };
 }
