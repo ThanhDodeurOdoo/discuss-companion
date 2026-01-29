@@ -15,6 +15,9 @@ type Store = {
             is_camera_on: boolean;
             is_screen_sharing_on: boolean;
         };
+        channel?: {
+            open: () => void;
+        };
         toggleDeafen(): Promise<void>;
         toggleMicrophone(): Promise<void>;
         toggleVideo(type: "camera" | "screen"): Promise<void>;
