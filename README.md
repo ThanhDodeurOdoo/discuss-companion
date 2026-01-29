@@ -24,8 +24,7 @@ The repository contains 2 parts:
 
 *: not yet
 
-The communication between the App and the Extension uses [FlatBuffers](https://google.github.io/flatbuffers/), The schema is defined in `ws_protocol.fbs`. These messages are sent through websocket.
-
+The communication between the App and the Extension (WS), and between the backend and the frontend of the app (IPC) uses [FlatBuffers](https://google.github.io/flatbuffers/), The schema is defined in `ws_protocol.fbs` and `ipc_protocol.fbs`. 
 
 
 ## Development
