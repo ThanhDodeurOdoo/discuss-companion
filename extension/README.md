@@ -1,5 +1,7 @@
 # Discuss PTT Agent Extension
 
+![Extension Example](../assets/extension.gif)
+
 Standalone Browser Extension for Odoo Discuss Push-to-Talk.
 
 The extension is derived from Odoo's own extension for Push-to-Talk.

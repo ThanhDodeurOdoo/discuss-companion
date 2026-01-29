@@ -59,7 +59,9 @@ The communication between the App and the Extension uses [FlatBuffers](https://g
     -   Restart the app after granting permission.
 
 
-## Extension Setup
+## Extension
+
+see [Extension's Readme](./extension/README.md)
 
 > [!WARNING]  
 > The extension is not compatible with the Odoo Discuss extension
