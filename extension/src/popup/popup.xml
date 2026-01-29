@@ -1,50 +1,55 @@
 <templates>
-    <div t-name="Popup" class="container">
-        <div class="form-group">
-            <label for="port">WebSocket Port</label>
-            <div class="input-row">
-                <input type="number" id="port"
+    <div t-name="Popup" class="popup">
+        <div class="field">
+            <label class="field__label" for="port">WebSocket Port</label>
+            <div class="field__row">
+                <input class="input" type="number" id="port"
                     t-model="this.popup.port"
                     min="1" max="65535" />
-                <button id="save" t-on-click="() => this.popup.save()">Save</button>
+                <button class="btn btn--primary" id="save" t-on-click="() => this.popup.save()">Save</button>
             </div>
         </div>
-        <div class="form-group checkbox-group">
-            <label for="logging">Logging Enabled</label>
-            <input type="checkbox" id="logging"
+        <div class="toggle">
+            <label class="toggle__label" for="logging">Logging Enabled</label>
+            <input class="toggle__input" type="checkbox" id="logging"
                 t-model="this.popup.isLoggingEnabled"
                 t-on-change="() => this.popup.updateLogging()" />
         </div>
-        <div id="status" class="status" t-att-class="{ 'status-default': this.popup.isStatusDefault(), 'status-error': this.popup.isStatusError(), 'status-success': this.popup.isStatusSuccess() }">
+        <div id="status" class="status" t-att-class="{ 'status--default': this.popup.isStatusDefault(), 'status--error': this.popup.isStatusError(), 'status--success': this.popup.isStatusSuccess() }">
             <t t-out="this.popup.statusText()"/>
         </div>
-        <div class="call-group" t-if="this.popup.hasCallTab()">
-            <div class="pulsing-icon">⬤</div>
-            <div class="call-actions">
-                <button t-att-class="{ 'off': this.popup.isMute() }" t-att-title="this.popup.isMute() ? 'Unmute' : 'Mute'" t-on-click="() => this.popup.toggleMicrophone()">
-                    <span class="call-icon">🎙️</span>
+        <div class="call" t-if="this.popup.hasCallTab()">
+            <div class="call__pulse" aria-hidden="true"></div>
+            <div class="call__actions">
+                <button class="btn btn--icon call__btn" t-att-class="{ 'is-off': this.popup.isMute() }" t-att-title="this.popup.isMute() ? 'Unmute' : 'Mute'" t-on-click="() => this.popup.toggleMicrophone()">
+                    <span class="icon" t-if="this.popup.isMute()" aria-hidden="true">mic_off</span>
+                    <span class="icon" t-else="" aria-hidden="true">mic</span>
                 </button>
-                <button t-att-class="{ 'off': this.popup.isDeaf() }" t-att-title="this.popup.isDeaf() ? 'Undeafen' : 'Deafen'" t-on-click="() => this.popup.toggleDeafen()">
-                    <span class="call-icon">🔇</span>
+                <button class="btn btn--icon call__btn" t-att-class="{ 'is-off': this.popup.isDeaf() }" t-att-title="this.popup.isDeaf() ? 'Undeafen' : 'Deafen'" t-on-click="() => this.popup.toggleDeafen()">
+                    <span class="icon" t-if="this.popup.isDeaf()" aria-hidden="true">volume_off</span>
+                    <span class="icon" t-else="" aria-hidden="true">volume_up</span>
                 </button>
-                <button t-att-class="{ 'on': this.popup.isCameraOn() }" t-att-title="this.popup.isCameraOn() ? 'Turn camera off' : 'Turn camera on'" t-on-click="() => this.popup.toggleCamera()">
-                    <span class="call-icon">📷</span>
+                <button class="btn btn--icon call__btn" t-att-class="{ 'is-on': this.popup.isCameraOn() }" t-att-title="this.popup.isCameraOn() ? 'Turn camera off' : 'Turn camera on'" t-on-click="() => this.popup.toggleCamera()">
+                    <span class="icon" t-if="this.popup.isCameraOn()" aria-hidden="true">videocam</span>
+                    <span class="icon" t-else="" aria-hidden="true">videocam_off</span>
                 </button>
-                <button t-att-class="{ 'on': this.popup.isScreenOn() }" t-att-title="this.popup.isScreenOn() ? 'Stop sharing screen' : 'Share screen'" t-on-click="() => this.popup.toggleScreen()">
-                    <span class="call-icon">🖥️</span>
+                <button class="btn btn--icon call__btn" t-att-class="{ 'is-on': this.popup.isScreenOn() }" t-att-title="this.popup.isScreenOn() ? 'Stop sharing screen' : 'Share screen'" t-on-click="() => this.popup.toggleScreen()">
+                    <span class="icon" t-if="this.popup.isScreenOn()" aria-hidden="true">stop_screen_share</span>
+                    <span class="icon" t-else="" aria-hidden="true">screen_share</span>
                 </button>
-                <button class="leave-call" t-att-title="'Leave call'" t-on-click="() => this.popup.leaveCall()">
-                    <span class="call-icon">❌</span>
+                <button class="btn btn--icon btn--danger call__btn" t-att-title="'Leave call'" t-on-click="() => this.popup.leaveCall()">
+                    <span class="icon" aria-hidden="true">call_end</span>
                 </button>
             </div>
         </div>
-        <div class="button-group">
-            <button t-if="this.popup.hasCallTab()" t-on-click="() => this.popup.onClickGoToCall()">Go to Call</button>
-            <button class="big-emoji" t-on-click="() => this.popup.openShortcuts()">⌨</button>
+        <div class="actions">
+            <button class="btn btn--ghost actions__primary" t-if="this.popup.hasCallTab()" t-on-click="() => this.popup.onClickGoToCall()">Go to Call</button>
+            <button class="btn btn--icon btn--ghost" t-on-click="() => this.popup.openShortcuts()" t-att-title="'Open shortcuts'">
+                <span class="icon" aria-hidden="true">keyboard</span>
+            </button>
         </div>
-        <div class="odoo-info" t-if="this.popup.isOdoo()">
-             <hr/>
-             <div><strong>Odoo detected</strong></div>
+        <div class="info" t-if="this.popup.isOdoo()">
+             <div class="info__title">Odoo detected</div>
              <div>Server Version: <t t-out="this.popup.serverVersion()"/></div>
              <div>Owl Version: <t t-out="this.popup.owlVersion()"/></div>
         </div>
