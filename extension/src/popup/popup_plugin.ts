@@ -83,6 +83,7 @@ export class PopupPlugin extends Plugin {
     serverVersion = signal("");
     owlVersion = signal("");
     isLoggingEnabled = signal(false);
+    isCompanionEnabled = signal(false);
     hasCallTab = signal(false);
     isMute = signal(false);
     isDeaf = signal(false);
@@ -252,10 +253,12 @@ export class PopupPlugin extends Plugin {
     async restoreOptions() {
         const items = (await chrome.storage.local.get({
             wsPort: 49152,
-            isLoggingEnabled: this.isLoggingEnabled()
-        })) as { wsPort: number; isLoggingEnabled: boolean };
+            isLoggingEnabled: this.isLoggingEnabled(),
+            isCompanionEnabled: this.isCompanionEnabled()
+        })) as { wsPort: number; isLoggingEnabled: boolean; isCompanionEnabled: boolean };
         this.port.set(items.wsPort);
         this.isLoggingEnabled.set(items.isLoggingEnabled);
+        this.isCompanionEnabled.set(items.isCompanionEnabled);
     }
 
     async save() {
@@ -280,6 +283,12 @@ export class PopupPlugin extends Plugin {
     async updateLogging() {
         await chrome.storage.local.set({
             isLoggingEnabled: this.isLoggingEnabled()
+        });
+    }
+
+    async updateCompanionEnabled() {
+        await chrome.storage.local.set({
+            isCompanionEnabled: this.isCompanionEnabled()
         });
     }
 }

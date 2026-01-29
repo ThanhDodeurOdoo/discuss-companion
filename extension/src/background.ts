@@ -12,6 +12,7 @@ let socket: WebSocket | null = null;
 let wsPort = 49152; // Default port
 let echoTimeout: ReturnType<typeof setTimeout> | number;
 const RECONNECT_ALARM_NAME = "reconnect_alarm";
+let isCompanionEnabled = false;
 
 interface IsTalkingMap {
     [tabId: number]: boolean;
@@ -31,13 +32,21 @@ enum Command {
 const mutedLog = (...args: unknown[]) => {};
 let log = mutedLog;
 
-chrome.storage.local.get({ wsPort: 49152, isLoggingEnabled: false }, (items) => {
-    wsPort = items.wsPort as number;
-    if (items.isLoggingEnabled) {
-        log = console.log;
+chrome.storage.local.get(
+    { wsPort: 49152, isLoggingEnabled: false, isCompanionEnabled: false },
+    (items) => {
+        wsPort = items.wsPort as number;
+        if (items.isLoggingEnabled) {
+            log = console.log;
+        }
+        isCompanionEnabled = Boolean(items.isCompanionEnabled);
+        if (isCompanionEnabled) {
+            connectToApp();
+        } else {
+            updateAppIcon();
+        }
     }
-    connectToApp();
-});
+);
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === "local") {
@@ -55,6 +64,19 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
                 log = console.log;
             } else {
                 log = mutedLog;
+            }
+        }
+        if (changes.isCompanionEnabled) {
+            isCompanionEnabled = Boolean(changes.isCompanionEnabled.newValue);
+            if (!isCompanionEnabled) {
+                chrome.alarms.clear(RECONNECT_ALARM_NAME);
+                if (socket) {
+                    socket.close();
+                } else {
+                    updateAppIcon();
+                }
+            } else {
+                connectToApp();
             }
         }
     }
@@ -193,6 +215,9 @@ async function onCommand(command: Command) {
 }
 
 function connectToApp() {
+    if (!isCompanionEnabled) {
+        return;
+    }
     if (
         socket &&
         (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)
@@ -262,7 +287,11 @@ function connectToApp() {
         }
         socket = null;
         updateAppIcon();
-        chrome.alarms.create(RECONNECT_ALARM_NAME, { delayInMinutes: 0.1 });
+        if (isCompanionEnabled) {
+            chrome.alarms.create(RECONNECT_ALARM_NAME, { delayInMinutes: 0.1 });
+        } else {
+            chrome.alarms.clear(RECONNECT_ALARM_NAME);
+        }
     };
 
     socket.onerror = (error) => {

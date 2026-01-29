@@ -3,7 +3,8 @@ import { mockChrome, mockWebSocket, flushPromises } from "./utils.js";
 import { MockPttExtensionService } from "./extension_service.mock.js";
 
 const mockStorage = mockChrome({
-    isTalkingByTabId: {}
+    isTalkingByTabId: {},
+    isCompanionEnabled: true
 });
 mockWebSocket();
 

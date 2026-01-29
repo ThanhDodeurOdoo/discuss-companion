@@ -39,7 +39,13 @@
                     <span class="icon" aria-hidden="true">close</span>
                 </button>
             </div>
-            <div class="field">
+            <div class="toggle">
+                <label class="toggle__label" for="companion-enabled">Use companion app</label>
+                <input class="toggle__input" type="checkbox" id="companion-enabled"
+                    t-model="this.popup.isCompanionEnabled"
+                    t-on-change="() => this.popup.updateCompanionEnabled()" />
+            </div>
+            <div class="field" t-if="this.popup.isCompanionEnabled()">
                 <label class="field__label" for="port">WebSocket Port</label>
                 <div class="field__row">
                     <input class="input" type="number" id="port"

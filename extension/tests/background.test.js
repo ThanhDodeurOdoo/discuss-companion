@@ -5,7 +5,8 @@ import { jest, describe, test, expect, beforeEach } from "@jest/globals";
 import { mockChrome, mockWebSocket } from "./utils.js";
 
 const mockStorage = mockChrome({
-    isTalkingByTabId: {}
+    isTalkingByTabId: {},
+    isCompanionEnabled: true
 });
 mockWebSocket();
 
@@ -15,6 +16,7 @@ const capturedHandleMessage = chrome.runtime.onMessage.addListener.mock.calls[0]
 const capturedOnRemoved = chrome.tabs.onRemoved.addListener.mock.calls[0][0];
 const capturedOnAlarm = chrome.alarms.onAlarm.addListener.mock.calls[0][0];
 const capturedOnClicked = chrome.action.onClicked.addListener.mock.calls[0][0];
+const capturedOnChanged = chrome.storage.onChanged.addListener.mock.calls[0][0];
 
 const { Message } = await import("../src/discuss/ws-protocol/message");
 const { MessageBody } = await import("../src/discuss/ws-protocol/message-body");
@@ -26,6 +28,7 @@ describe("Extension Background Script", () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockStorage.isTalkingByTabId = {};
+        mockStorage.isCompanionEnabled = true;
     });
 
     test("should initialize and connect to WebSocket", () => {
@@ -147,6 +150,25 @@ describe("Extension Background Script", () => {
             global.mockSockets[global.mockSockets.length - 1].close();
         }
         await capturedOnAlarm({ name: "reconnect_alarm" });
+        expect(global.mockSockets.length).toBeGreaterThan(initialCount);
+    });
+
+    test("disables companion app and stops WebSocket", async () => {
+        capturedOnChanged({ isCompanionEnabled: { newValue: true } }, "local");
+        const socket = global.mockSockets[global.mockSockets.length - 1];
+
+        capturedOnChanged({ isCompanionEnabled: { newValue: false } }, "local");
+
+        expect(socket.close).toHaveBeenCalled();
+        expect(chrome.alarms.clear).toHaveBeenCalledWith("reconnect_alarm");
+    });
+
+    test("enables companion app and starts WebSocket", async () => {
+        capturedOnChanged({ isCompanionEnabled: { newValue: false } }, "local");
+        const initialCount = global.mockSockets.length;
+
+        capturedOnChanged({ isCompanionEnabled: { newValue: true } }, "local");
+
         expect(global.mockSockets.length).toBeGreaterThan(initialCount);
     });
 
