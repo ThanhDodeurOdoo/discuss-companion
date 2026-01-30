@@ -154,6 +154,7 @@ mod tests {
             server_shutdown_tx: Mutex::new(server_shutdown_tx),
             conn_tx: conn_tx_state,
             event_channel: Mutex::new(Some(channel)),
+            call_state: Mutex::new(None),
         });
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -251,6 +252,7 @@ mod tests {
             server_shutdown_tx: Mutex::new(server_shutdown_tx),
             conn_tx: conn_tx_state,
             event_channel: Mutex::new(Some(channel)),
+            call_state: Mutex::new(None),
         });
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -299,6 +301,99 @@ mod tests {
             message.event_type(),
             ipc_protocol::ToFrontend::WsMessageEvent
         );
+
+        let _ = shutdown_tx.send(());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_call_state_message_handling() {
+        use std::sync::{Arc, Mutex};
+
+        use ws_protocol::{
+            CallState, CallStateArgs, Message as FBMessage, MessageArgs, MessageBody,
+        };
+
+        server::reset_connection_count();
+        let (tx, _) = broadcast::channel(10);
+        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let app_handle = app.handle().clone();
+
+        let received_event = Arc::new(Mutex::new(None));
+        let handler_received = Arc::clone(&received_event);
+        let (server_shutdown_tx, _) = broadcast::channel(1);
+        let (conn_tx_state, _) = crossbeam_channel::unbounded();
+
+        let channel = Channel::new(move |msg| {
+            if let InvokeResponseBody::Raw(data) = msg {
+                *handler_received.lock().unwrap() = Some(data);
+            }
+            Ok(())
+        });
+
+        app.manage(WsState {
+            port: AtomicU16::new(0),
+            ws_tx: tx.clone(),
+            server_shutdown_tx: Mutex::new(server_shutdown_tx),
+            conn_tx: conn_tx_state,
+            event_channel: Mutex::new(Some(channel)),
+            call_state: Mutex::new(None),
+        });
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let port = addr.port();
+        drop(listener);
+
+        let (conn_tx, _) = crossbeam_channel::unbounded();
+        tokio::spawn(async move {
+            start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
+        });
+
+        sleep(Duration::from_millis(100)).await;
+        let stream = TcpStream::connect(addr).await.unwrap();
+        let (mut ws, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream)
+            .await
+            .unwrap();
+
+        let mut builder = FlatBufferBuilder::new();
+        let call_state = CallState::create(
+            &mut builder,
+            &CallStateArgs {
+                ts: 42,
+                has_call: true,
+                has_state: true,
+                is_mute: true,
+                is_deaf: false,
+                is_camera_on: true,
+                is_screen_on: false,
+            },
+        );
+        let msg_offset = FBMessage::create(
+            &mut builder,
+            &MessageArgs {
+                body_type: MessageBody::CallState,
+                body: Some(call_state.as_union_value()),
+            },
+        );
+        builder.finish(msg_offset, None);
+        let bin = builder.finished_data().to_vec();
+
+        ws.send(Binary(bin.into())).await.unwrap();
+        sleep(Duration::from_millis(200)).await;
+
+        let event_payload = received_event.lock().unwrap();
+        assert!(event_payload.is_some(), "Expected call state event");
+        let payload_bytes = event_payload.as_ref().unwrap();
+
+        let message = ipc_protocol::root_as_to_frontend_message(payload_bytes).unwrap();
+        assert_eq!(message.event_type(), ipc_protocol::ToFrontend::CallState);
+        let state = message.event_as_call_state().expect("call state payload");
+        assert!(state.has_call());
+        assert!(state.has_state());
+        assert!(state.is_mute());
+        assert!(state.is_camera_on());
 
         let _ = shutdown_tx.send(());
     }

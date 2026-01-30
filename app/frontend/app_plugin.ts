@@ -2,7 +2,16 @@ import { Plugin, signal, onWillDestroy } from "@odoo/owl";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { KEY_MAP, KEY_SYMBOL_MAP, MODIFIER_SYMBOLS, MODIFIER_NAMES } from "./utils";
-import { setRecordingMode, updateBinding, updateWsPort, setupChannel, ChannelEvent } from "./ipc";
+import {
+    setRecordingMode,
+    updateBinding,
+    updateWsPort,
+    setupChannel,
+    sendCallCommand,
+    type ChannelEvent,
+    type CallStatePayload
+} from "./ipc";
+import { CallCommand } from "./call_commands";
 
 const DEFAULT_PORT = 49152;
 
@@ -33,6 +42,12 @@ export class AppPlugin extends Plugin {
     isForcingRelease = false;
     logs = signal.Array<LogEntry>([]);
     showSettings = signal(false);
+    hasCallTab = signal(false);
+    callStateKnown = signal(false);
+    isMute = signal(false);
+    isDeaf = signal(false);
+    isCameraOn = signal(false);
+    isScreenOn = signal(false);
 
     // WS Port Management
     wsPort = signal(DEFAULT_PORT);
@@ -121,7 +136,12 @@ export class AppPlugin extends Plugin {
                 }
                 case "ws-disconnection": {
                     this.extensionConnected.set(false);
+                    this.clearCallState();
                     this.addLog("WS", "websocket disconnected");
+                    break;
+                }
+                case "call-state": {
+                    this.applyCallState(event.payload as CallStatePayload);
                     break;
                 }
                 case "ws-message": {
@@ -208,6 +228,130 @@ export class AppPlugin extends Plugin {
         this.isForcingRelease = true;
         this.isPressed.set(false);
         await invoke("force_ptt_up");
+    }
+
+    hasActiveCall(): boolean {
+        return this.extensionConnected() && this.hasCallTab();
+    }
+
+    canUseCallToggles(): boolean {
+        return this.hasActiveCall() && this.callStateKnown();
+    }
+
+    callStatusText(): string {
+        if (!this.extensionConnected()) {
+            return "Extension offline";
+        }
+        if (!this.hasCallTab()) {
+            return "No active call";
+        }
+        if (!this.callStateKnown()) {
+            return "Syncing call state...";
+        }
+        return "Call active";
+    }
+
+    callStatusClass(): string {
+        if (!this.extensionConnected()) {
+            return "offline";
+        }
+        if (!this.hasCallTab()) {
+            return "inactive";
+        }
+        if (!this.callStateKnown()) {
+            return "syncing";
+        }
+        return "active";
+    }
+
+    applyCallState(state: CallStatePayload) {
+        this.hasCallTab.set(state.hasCall);
+        this.callStateKnown.set(state.hasState);
+        if (state.hasState) {
+            this.isMute.set(state.isMute);
+            this.isDeaf.set(state.isDeaf);
+            this.isCameraOn.set(state.isCameraOn);
+            this.isScreenOn.set(state.isScreenOn);
+            return;
+        }
+        this.isMute.set(false);
+        this.isDeaf.set(false);
+        this.isCameraOn.set(false);
+        this.isScreenOn.set(false);
+    }
+
+    clearCallState() {
+        this.applyCallState({
+            hasCall: false,
+            hasState: false,
+            isMute: false,
+            isDeaf: false,
+            isCameraOn: false,
+            isScreenOn: false
+        });
+    }
+
+    async runCallCommand(command: CallCommand, value?: boolean, label?: string) {
+        const didSend = await sendCallCommand(command, value);
+        if (!didSend) {
+            this.addLog("CALL", "Failed to reach extension");
+            return false;
+        }
+        if (value === undefined) {
+            this.addLog("CALL", label ? `Sent ${label}` : `Sent ${command}`);
+        } else {
+            this.addLog("CALL", label ? `Sent ${label}: ${value}` : `Sent ${command}: ${value}`);
+        }
+        return true;
+    }
+
+    async toggleMute() {
+        if (!this.canUseCallToggles()) {
+            return;
+        }
+        await this.runCallCommand(CallCommand.SetMute, !this.isMute(), "Mute");
+    }
+
+    async toggleDeafen() {
+        if (!this.canUseCallToggles()) {
+            return;
+        }
+        await this.runCallCommand(CallCommand.SetDeaf, !this.isDeaf(), "Deafen");
+    }
+
+    async toggleCamera() {
+        if (!this.canUseCallToggles()) {
+            return;
+        }
+        await this.runCallCommand(CallCommand.SetCamera, !this.isCameraOn(), "Camera");
+    }
+
+    async toggleScreen() {
+        if (!this.canUseCallToggles()) {
+            return;
+        }
+        await this.runCallCommand(CallCommand.SetScreen, !this.isScreenOn(), "Screen");
+    }
+
+    async openPip() {
+        if (!this.hasActiveCall()) {
+            return;
+        }
+        await this.runCallCommand(CallCommand.OpenPip, undefined, "Open PiP");
+    }
+
+    async leaveCall() {
+        if (!this.hasActiveCall()) {
+            return;
+        }
+        await this.runCallCommand(CallCommand.LeaveCall, undefined, "Leave call");
+    }
+
+    async goToCall() {
+        if (!this.hasActiveCall()) {
+            return;
+        }
+        await this.runCallCommand(CallCommand.FocusCallTab, undefined, "Go to call");
     }
 
     addLog(type: string, message: string) {

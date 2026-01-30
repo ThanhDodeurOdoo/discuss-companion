@@ -6,17 +6,28 @@ import {
     isCallAction,
     type CallActionOptions
 } from "./call_actions";
-import { getCallTabId, setCallTabId, setStoredCallState } from "./call_state";
+import {
+    getCallTabId,
+    getStoredCallState,
+    setCallTabId,
+    setStoredCallState,
+    type CallState
+} from "./call_state";
 import {
     parseAppCommand,
     resolveAppCommandAction,
     type ParsedAppCommand
 } from "./service_worker_app_commands";
 import { throttle } from "./utils";
+import * as flatbuffers from "flatbuffers";
+import { Message } from "./discuss/ws-protocol/message";
+import { MessageBody } from "./discuss/ws-protocol/message-body";
+import { CallState as WsCallState } from "./discuss/ws-protocol/call-state";
 
 const ACTIVE_ONLINE_ICON = "/assets/icons/active_online_icon.png";
 const INACTIVE_ONLINE_ICON = "/assets/icons/inactive_online_icon.png";
 const INACTIVE_OFFLINE_ICON = "/assets/icons/inactive_offline_icon.png";
+const CALL_STATE_REFRESH_DELAY = 2000;
 
 interface IsTalkingMap {
     [tabId: number]: boolean;
@@ -27,9 +38,19 @@ interface ExtensionMessage {
     value?: unknown;
 }
 
+type CallStateSnapshot = {
+    hasCall: boolean;
+    hasState: boolean;
+    isMute: boolean;
+    isDeaf: boolean;
+    isCameraOn: boolean;
+    isScreenOn: boolean;
+};
+
 type MessageHandlerDeps = {
     log: (...args: unknown[]) => void;
     isConnected: () => boolean;
+    sendToApp: (data: Uint8Array) => boolean;
 };
 
 type Command = "ptt-pressed" | "ptt-released" | "toggle-voice";
@@ -41,6 +62,7 @@ export type MessageHandlers = {
         sendResponse: (response?: unknown) => void
     ) => void;
     handleStatusState: (rawState?: string | null) => void;
+    handleConnectionStateChange: (isConnected: boolean) => void;
     handleCommand: (command: string) => void;
     handleCommandImmediate: (command: string) => void;
     handleTabRemoved: (tabId: number) => void;
@@ -48,7 +70,11 @@ export type MessageHandlers = {
     updateAppIcon: () => Promise<void>;
 };
 
-export function createMessageHandlers({ log, isConnected }: MessageHandlerDeps): MessageHandlers {
+export function createMessageHandlers({
+    log,
+    isConnected,
+    sendToApp
+}: MessageHandlerDeps): MessageHandlers {
     function pickFirstTabId(isTalkingByTabId: IsTalkingMap): number | null {
         const tabIds = Object.keys(isTalkingByTabId);
         if (tabIds.length === 0) {
@@ -90,6 +116,66 @@ export function createMessageHandlers({ log, isConnected }: MessageHandlerDeps):
         const isTalkingByTabId = await getIsTalkingByTabId();
         const isTalking = Object.values(isTalkingByTabId).some(Boolean);
         chrome.action.setIcon({ path: isTalking ? ACTIVE_ONLINE_ICON : INACTIVE_ONLINE_ICON });
+    }
+
+    function buildCallStateSnapshot(
+        state: CallState | null | undefined,
+        hasCall: boolean
+    ): CallStateSnapshot {
+        return {
+            hasCall,
+            hasState: Boolean(state),
+            isMute: Boolean(state?.isMute),
+            isDeaf: Boolean(state?.isDeaf),
+            isCameraOn: Boolean(state?.isCameraOn),
+            isScreenOn: Boolean(state?.isScreenOn)
+        };
+    }
+
+    function buildCallStateMessage(snapshot: CallStateSnapshot): Uint8Array {
+        const builder = new flatbuffers.Builder(64);
+        const offset = WsCallState.createCallState(
+            builder,
+            BigInt(Date.now()),
+            snapshot.hasCall,
+            snapshot.hasState,
+            snapshot.isMute,
+            snapshot.isDeaf,
+            snapshot.isCameraOn,
+            snapshot.isScreenOn
+        );
+        Message.startMessage(builder);
+        Message.addBodyType(builder, MessageBody.CallState);
+        Message.addBody(builder, offset);
+        const messageOffset = Message.endMessage(builder);
+        builder.finish(messageOffset);
+        return builder.asUint8Array();
+    }
+
+    async function sendCallStateToApp(state?: CallState | null): Promise<void> {
+        if (!isConnected()) {
+            return;
+        }
+        const callTabId = await getCallTabId();
+        const hasCall = callTabId !== null;
+        const storedState = state ?? (await getStoredCallState());
+        const snapshot = buildCallStateSnapshot(storedState, hasCall);
+        const payload = buildCallStateMessage(snapshot);
+        const didSend = sendToApp(payload);
+        if (!didSend) {
+            log("[BG] Failed to send call state to app");
+        }
+    }
+
+    async function refreshAndSendCallState(): Promise<void> {
+        const state = await refreshCallState();
+        await sendCallStateToApp(state ?? null);
+    }
+
+    function scheduleCallStateRefresh(): void {
+        setTimeout(() => {
+            void refreshAndSendCallState();
+        }, CALL_STATE_REFRESH_DELAY);
     }
 
     /**
@@ -146,14 +232,25 @@ export function createMessageHandlers({ log, isConnected }: MessageHandlerDeps):
         if (!action) {
             return;
         }
-        await executeCallAction(action);
+        const { state } = await executeCallAction(action);
+        await sendCallStateToApp(state ?? null);
     }
 
     async function handleStatusState(rawState?: string | null): Promise<void> {
         const command = parseAppCommand(rawState);
-        if (command) {
-            await handleAppCommand(command);
+        if (!command) {
+            return;
         }
+        if (command.name === "focus-call-tab" || command.name === "go-to-call") {
+            await focusCallTab();
+            await sendCallStateToApp();
+            return;
+        }
+        if (command.name === "refresh-call-state") {
+            await refreshAndSendCallState();
+            return;
+        }
+        await handleAppCommand(command);
     }
 
     async function handleMessage(
@@ -185,6 +282,8 @@ export function createMessageHandlers({ log, isConnected }: MessageHandlerDeps):
                     await chrome.storage.session.set({ isTalkingByTabId });
                     await setActiveCallTab(safeTabId);
                     delayedSubscribe(safeTabId);
+                    await sendCallStateToApp();
+                    scheduleCallStateRefresh();
                     sendResponse?.({ status: "ok" });
                 }
                 break;
@@ -195,6 +294,7 @@ export function createMessageHandlers({ log, isConnected }: MessageHandlerDeps):
                     await chrome.storage.session.set({ isTalkingByTabId });
                     await syncCallTabIdFromMap(isTalkingByTabId);
                     await updateAppIcon();
+                    await sendCallStateToApp();
                     sendResponse?.({ status: "ok" });
                 }
                 break;
@@ -233,18 +333,21 @@ export function createMessageHandlers({ log, isConnected }: MessageHandlerDeps):
                     }
                     const focusCallTab = Boolean(payload?.options?.focusCallTab);
                     const { didRun, state } = await executeCallAction(action, { focusCallTab });
+                    await sendCallStateToApp(state ?? null);
                     sendResponse?.({ status: "ok", didRun, state });
                 }
                 break;
             case "refresh-call-state":
                 {
                     const state = await refreshCallState();
+                    await sendCallStateToApp(state ?? null);
                     sendResponse?.({ status: "ok", state });
                 }
                 break;
             case "focus-call-tab":
                 {
                     const didFocus = await focusCallTab();
+                    await sendCallStateToApp();
                     sendResponse?.({ status: "ok", didFocus });
                 }
                 break;
@@ -252,6 +355,7 @@ export function createMessageHandlers({ log, isConnected }: MessageHandlerDeps):
                 const action = resolveAppCommandAction(type, value, log);
                 if (action) {
                     const { didRun, state } = await executeCallAction(action);
+                    await sendCallStateToApp(state ?? null);
                     sendResponse?.({ status: "ok", didRun, state });
                     break;
                 }
@@ -297,6 +401,7 @@ export function createMessageHandlers({ log, isConnected }: MessageHandlerDeps):
         await chrome.storage.session.set({ isTalkingByTabId });
         await syncCallTabIdFromMap(isTalkingByTabId);
         await updateAppIcon();
+        await sendCallStateToApp();
     }
 
     function handleActionClicked() {
@@ -308,9 +413,18 @@ export function createMessageHandlers({ log, isConnected }: MessageHandlerDeps):
         chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
     }
 
+    async function handleConnectionStateChange(connected: boolean) {
+        await updateAppIcon();
+        if (connected) {
+            await sendCallStateToApp();
+            scheduleCallStateRefresh();
+        }
+    }
+
     return {
         handleMessage,
         handleStatusState,
+        handleConnectionStateChange,
         handleCommand: throttledCommand,
         handleCommandImmediate: onCommand,
         handleTabRemoved,

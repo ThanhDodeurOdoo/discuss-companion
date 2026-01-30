@@ -7,6 +7,7 @@ import {
     ToFrontendMessage,
     ToFrontend,
     PttState,
+    CallState,
     WsConnection,
     BackendError,
     WsMessageEvent,
@@ -16,6 +17,7 @@ import {
     // IncomingGetBinding,
     // IncomingShutdown
 } from "./flatbuffers/discuss/ipc-protocol";
+import type { CallCommand } from "./call_commands";
 
 export async function updateBinding(code: number, modifiers: number[]) {
     const builder = new Builder(1024);
@@ -63,13 +65,27 @@ export async function updateWsPort(port: number) {
     await invoke("update_ws_port", bytes);
 }
 
+export async function sendCallCommand(command: CallCommand, value?: boolean): Promise<boolean> {
+    return invoke<boolean>("send_call_command", { command, value });
+}
+
+export type CallStatePayload = {
+    hasCall: boolean;
+    hasState: boolean;
+    isMute: boolean;
+    isDeaf: boolean;
+    isCameraOn: boolean;
+    isScreenOn: boolean;
+};
+
 // Define types closer to what app_plugin expects
 export type ChannelEvent =
     | { type: "ptt-event"; payload: unknown }
     | { type: "ws-connection" }
     | { type: "ws-disconnection" }
     | { type: "error"; payload: string }
-    | { type: "ws-message"; payload: unknown };
+    | { type: "ws-message"; payload: unknown }
+    | { type: "call-state"; payload: CallStatePayload };
 
 export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
     const channel = new Channel<ArrayBuffer | number[]>();
@@ -118,6 +134,21 @@ export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
             case ToFrontend.BackendError: {
                 const err = msg.event(new BackendError()) as BackendError;
                 onEvent({ type: "error", payload: err.message() || "Unknown backend error" });
+                break;
+            }
+            case ToFrontend.CallState: {
+                const state = msg.event(new CallState()) as CallState;
+                onEvent({
+                    type: "call-state",
+                    payload: {
+                        hasCall: state.hasCall(),
+                        hasState: state.hasState(),
+                        isMute: state.isMute(),
+                        isDeaf: state.isDeaf(),
+                        isCameraOn: state.isCameraOn(),
+                        isScreenOn: state.isScreenOn()
+                    }
+                });
                 break;
             }
             case ToFrontend.WsMessageEvent: {

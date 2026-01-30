@@ -283,15 +283,16 @@ pub struct IncomingMessageUnionUnionTableOffset {}
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 pub const ENUM_MIN_TO_FRONTEND: u8 = 0;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MAX_TO_FRONTEND: u8 = 4;
+pub const ENUM_MAX_TO_FRONTEND: u8 = 5;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 #[allow(non_camel_case_types)]
-pub const ENUM_VALUES_TO_FRONTEND: [ToFrontend; 5] = [
+pub const ENUM_VALUES_TO_FRONTEND: [ToFrontend; 6] = [
   ToFrontend::NONE,
   ToFrontend::BackendError,
   ToFrontend::WsConnection,
   ToFrontend::WsMessageEvent,
   ToFrontend::PttState,
+  ToFrontend::CallState,
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -304,15 +305,17 @@ impl ToFrontend {
   pub const WsConnection: Self = Self(2);
   pub const WsMessageEvent: Self = Self(3);
   pub const PttState: Self = Self(4);
+  pub const CallState: Self = Self(5);
 
   pub const ENUM_MIN: u8 = 0;
-  pub const ENUM_MAX: u8 = 4;
+  pub const ENUM_MAX: u8 = 5;
   pub const ENUM_VALUES: &'static [Self] = &[
     Self::NONE,
     Self::BackendError,
     Self::WsConnection,
     Self::WsMessageEvent,
     Self::PttState,
+    Self::CallState,
   ];
   /// Returns the variant's name or "" if unknown.
   pub fn variant_name(self) -> Option<&'static str> {
@@ -322,6 +325,7 @@ impl ToFrontend {
       Self::WsConnection => Some("WsConnection"),
       Self::WsMessageEvent => Some("WsMessageEvent"),
       Self::PttState => Some("PttState"),
+      Self::CallState => Some("CallState"),
       _ => None,
     }
   }
@@ -1560,6 +1564,187 @@ impl ::core::fmt::Debug for PttState<'_> {
       ds.finish()
   }
 }
+pub enum CallStateOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct CallState<'a> {
+  pub _tab: ::flatbuffers::Table<'a>,
+}
+
+impl<'a> ::flatbuffers::Follow<'a> for CallState<'a> {
+  type Inner = CallState<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
+  }
+}
+
+impl<'a> CallState<'a> {
+  pub const VT_HAS_CALL: ::flatbuffers::VOffsetT = 4;
+  pub const VT_HAS_STATE: ::flatbuffers::VOffsetT = 6;
+  pub const VT_IS_MUTE: ::flatbuffers::VOffsetT = 8;
+  pub const VT_IS_DEAF: ::flatbuffers::VOffsetT = 10;
+  pub const VT_IS_CAMERA_ON: ::flatbuffers::VOffsetT = 12;
+  pub const VT_IS_SCREEN_ON: ::flatbuffers::VOffsetT = 14;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+    CallState { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
+    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+    args: &'args CallStateArgs
+  ) -> ::flatbuffers::WIPOffset<CallState<'bldr>> {
+    let mut builder = CallStateBuilder::new(_fbb);
+    builder.add_is_screen_on(args.is_screen_on);
+    builder.add_is_camera_on(args.is_camera_on);
+    builder.add_is_deaf(args.is_deaf);
+    builder.add_is_mute(args.is_mute);
+    builder.add_has_state(args.has_state);
+    builder.add_has_call(args.has_call);
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn has_call(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(CallState::VT_HAS_CALL, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn has_state(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(CallState::VT_HAS_STATE, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn is_mute(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(CallState::VT_IS_MUTE, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn is_deaf(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(CallState::VT_IS_DEAF, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn is_camera_on(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(CallState::VT_IS_CAMERA_ON, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn is_screen_on(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(CallState::VT_IS_SCREEN_ON, Some(false)).unwrap()}
+  }
+}
+
+impl ::flatbuffers::Verifiable for CallState<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut ::flatbuffers::Verifier, pos: usize
+  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+    v.visit_table(pos)?
+     .visit_field::<bool>("has_call", Self::VT_HAS_CALL, false)?
+     .visit_field::<bool>("has_state", Self::VT_HAS_STATE, false)?
+     .visit_field::<bool>("is_mute", Self::VT_IS_MUTE, false)?
+     .visit_field::<bool>("is_deaf", Self::VT_IS_DEAF, false)?
+     .visit_field::<bool>("is_camera_on", Self::VT_IS_CAMERA_ON, false)?
+     .visit_field::<bool>("is_screen_on", Self::VT_IS_SCREEN_ON, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct CallStateArgs {
+    pub has_call: bool,
+    pub has_state: bool,
+    pub is_mute: bool,
+    pub is_deaf: bool,
+    pub is_camera_on: bool,
+    pub is_screen_on: bool,
+}
+impl<'a> Default for CallStateArgs {
+  #[inline]
+  fn default() -> Self {
+    CallStateArgs {
+      has_call: false,
+      has_state: false,
+      is_mute: false,
+      is_deaf: false,
+      is_camera_on: false,
+      is_screen_on: false,
+    }
+  }
+}
+
+pub struct CallStateBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> CallStateBuilder<'a, 'b, A> {
+  #[inline]
+  pub fn add_has_call(&mut self, has_call: bool) {
+    self.fbb_.push_slot::<bool>(CallState::VT_HAS_CALL, has_call, false);
+  }
+  #[inline]
+  pub fn add_has_state(&mut self, has_state: bool) {
+    self.fbb_.push_slot::<bool>(CallState::VT_HAS_STATE, has_state, false);
+  }
+  #[inline]
+  pub fn add_is_mute(&mut self, is_mute: bool) {
+    self.fbb_.push_slot::<bool>(CallState::VT_IS_MUTE, is_mute, false);
+  }
+  #[inline]
+  pub fn add_is_deaf(&mut self, is_deaf: bool) {
+    self.fbb_.push_slot::<bool>(CallState::VT_IS_DEAF, is_deaf, false);
+  }
+  #[inline]
+  pub fn add_is_camera_on(&mut self, is_camera_on: bool) {
+    self.fbb_.push_slot::<bool>(CallState::VT_IS_CAMERA_ON, is_camera_on, false);
+  }
+  #[inline]
+  pub fn add_is_screen_on(&mut self, is_screen_on: bool) {
+    self.fbb_.push_slot::<bool>(CallState::VT_IS_SCREEN_ON, is_screen_on, false);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> CallStateBuilder<'a, 'b, A> {
+    let start = _fbb.start_table();
+    CallStateBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> ::flatbuffers::WIPOffset<CallState<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    ::flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl ::core::fmt::Debug for CallState<'_> {
+  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+    let mut ds = f.debug_struct("CallState");
+      ds.field("has_call", &self.has_call());
+      ds.field("has_state", &self.has_state());
+      ds.field("is_mute", &self.is_mute());
+      ds.field("is_deaf", &self.is_deaf());
+      ds.field("is_camera_on", &self.is_camera_on());
+      ds.field("is_screen_on", &self.is_screen_on());
+      ds.finish()
+  }
+}
 pub enum ToFrontendMessageOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -1669,6 +1854,21 @@ impl<'a> ToFrontendMessage<'a> {
     }
   }
 
+  #[inline]
+  #[allow(non_snake_case)]
+  pub fn event_as_call_state(&self) -> Option<CallState<'a>> {
+    if self.event_type() == ToFrontend::CallState {
+      self.event().map(|t| {
+       // Safety:
+       // Created from a valid Table for this object
+       // Which contains a valid union in this slot
+       unsafe { CallState::init_from_table(t) }
+     })
+    } else {
+      None
+    }
+  }
+
 }
 
 impl ::flatbuffers::Verifiable for ToFrontendMessage<'_> {
@@ -1683,6 +1883,7 @@ impl ::flatbuffers::Verifiable for ToFrontendMessage<'_> {
           ToFrontend::WsConnection => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WsConnection>>("ToFrontend::WsConnection", pos),
           ToFrontend::WsMessageEvent => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<WsMessageEvent>>("ToFrontend::WsMessageEvent", pos),
           ToFrontend::PttState => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<PttState>>("ToFrontend::PttState", pos),
+          ToFrontend::CallState => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<CallState>>("ToFrontend::CallState", pos),
           _ => Ok(()),
         }
      })?
@@ -1760,6 +1961,13 @@ impl ::core::fmt::Debug for ToFrontendMessage<'_> {
         },
         ToFrontend::PttState => {
           if let Some(x) = self.event_as_ptt_state() {
+            ds.field("event", &x)
+          } else {
+            ds.field("event", &"InvalidFlatbuffer: Union discriminant does not match value.")
+          }
+        },
+        ToFrontend::CallState => {
+          if let Some(x) = self.event_as_call_state() {
             ds.field("event", &x)
           } else {
             ds.field("event", &"InvalidFlatbuffer: Union discriminant does not match value.")

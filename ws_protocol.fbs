@@ -29,6 +29,16 @@ table Status {
   version: string;
 }
 
+table CallState {
+  ts: ulong;
+  has_call: bool;
+  has_state: bool;
+  is_mute: bool;
+  is_deaf: bool;
+  is_camera_on: bool;
+  is_screen_on: bool;
+}
+
 table Error {
   ts: ulong;
   message: string;
@@ -53,6 +63,7 @@ union MessageBody {
   PttDown,
   PttUp,
   Status,
+  CallState,
   Error,
   BindingInfo,
   SetBinding,

@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
 export { BackendError } from './ipc-protocol/backend-error.js';
+export { CallState } from './ipc-protocol/call-state.js';
 export { ConnectionStatus } from './ipc-protocol/connection-status.js';
 export { IncomingGetBinding } from './ipc-protocol/incoming-get-binding.js';
 export { IncomingMessageUnion } from './ipc-protocol/incoming-message-union.js';

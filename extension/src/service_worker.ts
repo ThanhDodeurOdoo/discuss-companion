@@ -14,8 +14,8 @@ const connection = createConnectionManager({
     onStatusState: (state) => {
         void messageHandlers.handleStatusState(state);
     },
-    onConnectionStateChange: () => {
-        void messageHandlers.updateAppIcon();
+    onConnectionStateChange: (isConnected) => {
+        void messageHandlers.handleConnectionStateChange(isConnected);
     },
     onLoggingChange: (isEnabled) => {
         logTarget = isEnabled ? console.log : mutedLog;
@@ -24,7 +24,8 @@ const connection = createConnectionManager({
 
 messageHandlers = createMessageHandlers({
     log,
-    isConnected: connection.isConnected
+    isConnected: connection.isConnected,
+    sendToApp: connection.sendMessage
 });
 
 connection.init();

@@ -47,6 +47,7 @@ pub struct WsState {
     pub server_shutdown_tx: Mutex<broadcast::Sender<()>>,
     pub conn_tx: crossbeam_channel::Sender<bool>,
     pub event_channel: Mutex<Option<Channel>>,
+    pub call_state: Mutex<Option<state::CallState>>,
 }
 
 fn setup_logging() {
@@ -256,6 +257,7 @@ pub fn run() {
                 server_shutdown_tx: Mutex::new(ws_shutdown_tx_clone),
                 conn_tx: conn_tx.clone(),
                 event_channel: Mutex::new(None),
+                call_state: Mutex::new(None),
             });
 
             handle_ws_server(
@@ -328,6 +330,7 @@ pub fn run() {
             commands::get_ws_port,
             commands::update_ws_port,
             commands::establish_channel,
+            commands::send_call_command,
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {

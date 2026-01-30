@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
 import { BindingInfo } from '../../discuss/ws-protocol/binding-info.js';
+import { CallState } from '../../discuss/ws-protocol/call-state.js';
 import { Error } from '../../discuss/ws-protocol/error.js';
 import { GetBinding } from '../../discuss/ws-protocol/get-binding.js';
 import { Ping } from '../../discuss/ws-protocol/ping.js';
@@ -21,17 +22,18 @@ export enum MessageBody {
   PttDown = 3,
   PttUp = 4,
   Status = 5,
-  Error = 6,
-  BindingInfo = 7,
-  SetBinding = 8,
-  GetBinding = 9,
-  Shutdown = 10
+  CallState = 6,
+  Error = 7,
+  BindingInfo = 8,
+  SetBinding = 9,
+  GetBinding = 10,
+  Shutdown = 11
 }
 
 export function unionToMessageBody(
   type: MessageBody,
-  accessor: (obj:BindingInfo|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status) => BindingInfo|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null
-): BindingInfo|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null {
+  accessor: (obj:BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status) => BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null
+): BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null {
   switch(MessageBody[type]) {
     case 'NONE': return null; 
     case 'Ping': return accessor(new Ping())! as Ping;
@@ -39,6 +41,7 @@ export function unionToMessageBody(
     case 'PttDown': return accessor(new PttDown())! as PttDown;
     case 'PttUp': return accessor(new PttUp())! as PttUp;
     case 'Status': return accessor(new Status())! as Status;
+    case 'CallState': return accessor(new CallState())! as CallState;
     case 'Error': return accessor(new Error())! as Error;
     case 'BindingInfo': return accessor(new BindingInfo())! as BindingInfo;
     case 'SetBinding': return accessor(new SetBinding())! as SetBinding;
@@ -50,9 +53,9 @@ export function unionToMessageBody(
 
 export function unionListToMessageBody(
   type: MessageBody, 
-  accessor: (index: number, obj:BindingInfo|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status) => BindingInfo|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null, 
+  accessor: (index: number, obj:BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status) => BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null, 
   index: number
-): BindingInfo|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null {
+): BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null {
   switch(MessageBody[type]) {
     case 'NONE': return null; 
     case 'Ping': return accessor(index, new Ping())! as Ping;
@@ -60,6 +63,7 @@ export function unionListToMessageBody(
     case 'PttDown': return accessor(index, new PttDown())! as PttDown;
     case 'PttUp': return accessor(index, new PttUp())! as PttUp;
     case 'Status': return accessor(index, new Status())! as Status;
+    case 'CallState': return accessor(index, new CallState())! as CallState;
     case 'Error': return accessor(index, new Error())! as Error;
     case 'BindingInfo': return accessor(index, new BindingInfo())! as BindingInfo;
     case 'SetBinding': return accessor(index, new SetBinding())! as SetBinding;

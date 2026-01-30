@@ -50,12 +50,22 @@ table PttState {
     is_repeat: bool;
 }
 
+table CallState {
+    has_call: bool;
+    has_state: bool;
+    is_mute: bool;
+    is_deaf: bool;
+    is_camera_on: bool;
+    is_screen_on: bool;
+}
+
 // Union for all messages sent to frontend
 union ToFrontend { 
     BackendError, 
     WsConnection, 
     WsMessageEvent, 
-    PttState 
+    PttState,
+    CallState
 }
 
 table ToFrontendMessage {
