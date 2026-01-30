@@ -9,7 +9,7 @@
 mod tests {
     use std::{
         path::PathBuf,
-        sync::{Mutex, atomic::AtomicU16},
+        sync::{Mutex, RwLock, atomic::AtomicU16},
     };
 
     use discuss_companion_lib::commands;
@@ -94,8 +94,8 @@ mod tests {
             ws_tx: broadcast::channel(1).0,
             server_shutdown_tx: Mutex::new(broadcast::channel(1).0),
             conn_tx: crossbeam_channel::unbounded().0,
-            event_channel: Mutex::new(None),
-            call_state: Mutex::new(None),
+            event_channel: RwLock::new(None),
+            call_state: RwLock::new(None),
         });
 
         let window = tauri::webview::WebviewWindowBuilder::new(

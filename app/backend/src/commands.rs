@@ -162,14 +162,15 @@ pub fn update_ws_port(
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
-#[allow(clippy::unwrap_used, reason = "mutex poisoning")]
 #[allow(clippy::missing_panics_doc, reason = "tauri API")]
 pub fn establish_channel(state: State<'_, WsState>, channel: Channel) {
-    let call_state = state.call_state.lock().ok().and_then(|guard| *guard);
+    let call_state = state.call_state.read().ok().and_then(|guard| *guard);
     if let Some(call_state) = call_state {
         let _ = channel.send(InvokeBody::Raw(encode_call_state(&call_state)).into());
     }
-    *state.event_channel.lock().unwrap() = Some(channel);
+    if let Ok(mut guard) = state.event_channel.write() {
+        *guard = Some(channel);
+    }
 }
 
 fn build_call_command_payload(command: &str, value: Option<bool>) -> String {
@@ -198,7 +199,7 @@ pub fn send_call_command(state: State<'_, WsState>, command: String, value: Opti
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Mutex, atomic::AtomicU16};
+    use std::sync::{Mutex, RwLock, atomic::AtomicU16};
 
     use tokio::sync::broadcast;
 
@@ -235,8 +236,8 @@ mod tests {
             ws_tx,
             server_shutdown_tx: Mutex::new(shutdown_tx),
             conn_tx,
-            event_channel: Mutex::new(None),
-            call_state: Mutex::new(None),
+            event_channel: RwLock::new(None),
+            call_state: RwLock::new(None),
         };
 
         let did_send = dispatch_call_command(&state, "set-mute", Some(true));

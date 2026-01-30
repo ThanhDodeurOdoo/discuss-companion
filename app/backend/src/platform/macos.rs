@@ -2,8 +2,8 @@ use std::{
     ffi::c_void,
     ptr,
     sync::{
-        Arc, OnceLock, RwLock,
-        atomic::{AtomicBool, AtomicPtr, AtomicU16, Ordering},
+        Arc, OnceLock,
+        atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
     },
     time::Duration,
 };
@@ -79,31 +79,39 @@ const K_CG_EVENT_KEY_UP: u32 = 11;
 const K_CG_KEYBOARD_EVENT_KEYCODE: u32 = 9;
 const K_CG_KEYBOARD_EVENT_AUTOREPEAT: u32 = 8;
 
+const DEFAULT_KEYCODE: u16 = 49;
+
 const K_CG_EVENT_FLAG_MASK_SHIFT: u64 = 0x0002_0000;
 const K_CG_EVENT_FLAG_MASK_CONTROL: u64 = 0x0004_0000;
 const K_CG_EVENT_FLAG_MASK_ALTERNATE: u64 = 0x0008_0000; // Option/Alt
 const K_CG_EVENT_FLAG_MASK_COMMAND: u64 = 0x0010_0000;
 
+const MOD_MASK_SHIFT: u8 = 1 << 0;
+const MOD_MASK_CONTROL: u8 = 1 << 1;
+const MOD_MASK_ALT: u8 = 1 << 2;
+const MOD_MASK_META: u8 = 1 << 3;
+
 const K_CG_EVENT_TAP_DISABLED_BY_TIMEOUT: u32 = 0xFFFF_FFFE;
 const K_CG_EVENT_TAP_DISABLED_BY_USER_INTEREST: u32 = 0xFFFF_FFFF;
 
+#[allow(
+    clippy::as_conversions,
+    reason = "const packed binding needs a safe widening cast"
+)]
+const DEFAULT_BINDING_PACKED: u32 = (DEFAULT_KEYCODE as u32) << 8;
+
 static HELD: AtomicBool = AtomicBool::new(false);
-static TARGET_KEYCODE: AtomicU16 = AtomicU16::new(49); // Default: Space
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
 static GLOBAL_TAP: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
+static BINDING_PACKED: AtomicU32 = AtomicU32::new(DEFAULT_BINDING_PACKED);
 
 static EVENT_SENDER: OnceLock<Sender<OutgoingMessage>> = OnceLock::new();
-static CURRENT_BINDING: OnceLock<RwLock<KeyBinding>> = OnceLock::new();
 
 pub struct MacosEngine;
 
 impl PttEngine for MacosEngine {
     fn set_binding(&self, binding: KeyBinding) {
-        TARGET_KEYCODE.store(binding.code, Ordering::SeqCst);
-        let lock = CURRENT_BINDING.get_or_init(|| RwLock::new(KeyBinding::default()));
-        if let Ok(mut guard) = lock.write() {
-            *guard = binding;
-        }
+        BINDING_PACKED.store(pack_binding(&binding), Ordering::SeqCst);
     }
 
     fn set_recording(&self, recording: bool) {
@@ -111,11 +119,7 @@ impl PttEngine for MacosEngine {
     }
 
     fn get_binding(&self) -> KeyBinding {
-        CURRENT_BINDING
-            .get_or_init(|| RwLock::new(KeyBinding::default()))
-            .read()
-            .map(|g| g.clone())
-            .unwrap_or_default()
+        binding_from_packed(BINDING_PACKED.load(Ordering::SeqCst))
     }
 
     fn force_ptt_up(&self) {
@@ -340,20 +344,24 @@ extern "C" fn event_callback(
         - `event`: Checked to be non-null at the start of the function."
     )]
     let flags = unsafe { CGEventGetFlags(event) };
-    let modifiers = get_modifiers_from_flags(flags);
+    let modifiers_mask = modifiers_mask_from_flags(flags);
 
-    debug!(
-        "CGEvent: type={} keycode={} flags={:?} mods={:?}",
-        event_type, keycode, flags, modifiers
-    );
+    if tracing::enabled!(tracing::Level::DEBUG) {
+        let modifiers = modifiers_from_mask(modifiers_mask);
+        debug!(
+            "CGEvent: type={} keycode={} flags={:?} mods={:?}",
+            event_type, keycode, flags, modifiers
+        );
+    }
 
-    let target_code = TARGET_KEYCODE.load(Ordering::SeqCst);
+    let packed_binding = BINDING_PACKED.load(Ordering::SeqCst);
+    let (binding_code, binding_mask) = unpack_binding(packed_binding);
     let recording = IS_RECORDING.load(Ordering::SeqCst);
     let mut is_repeat = false;
 
     // Track primary key state
     if event_type == K_CG_EVENT_KEY_DOWN {
-        if keycode == target_code {
+        if keycode == binding_code {
             PRIMARY_KEY_HELD.store(true, Ordering::SeqCst);
         }
         #[allow(
@@ -366,24 +374,22 @@ extern "C" fn event_callback(
         unsafe {
             is_repeat = CGEventGetIntegerValueField(event, K_CG_KEYBOARD_EVENT_AUTOREPEAT) != 0;
         }
-    } else if event_type == K_CG_EVENT_KEY_UP && keycode == target_code {
+    } else if event_type == K_CG_EVENT_KEY_UP && keycode == binding_code {
         PRIMARY_KEY_HELD.store(false, Ordering::SeqCst);
     }
 
     let primary_held = PRIMARY_KEY_HELD.load(Ordering::SeqCst);
     let current_ptt_state = get_ptt_state();
-    let engine = get_engine();
-    let binding = engine.get_binding();
-
     debug!(
         "State: primary_held={} target={} recording={}",
-        primary_held, target_code, recording
+        primary_held, binding_code, recording
     );
     let ts = current_timestamp();
 
     if recording {
         // Simple recording logic: just capture whatever keydown happens
         if event_type == K_CG_EVENT_KEY_DOWN {
+            let modifiers = modifiers_from_mask(modifiers_mask);
             info!(
                 "PTT down matched (recording): keycode={} modifiers={:?}",
                 keycode, modifiers
@@ -400,13 +406,7 @@ extern "C" fn event_callback(
         return event;
     }
 
-    // Check if we should be active based on current state
-    let mut binding_mods = binding.modifiers.clone();
-    let mut current_mods = modifiers.clone();
-    binding_mods.sort();
-    current_mods.sort();
-
-    let modifiers_match = binding_mods == current_mods;
+    let modifiers_match = modifiers_mask == binding_mask;
     let should_be_active = primary_held && modifiers_match;
 
     debug!(
@@ -419,9 +419,11 @@ extern "C" fn event_callback(
             if should_be_active {
                 info!(
                     "PTT ACTIVATED: keycode={} modifiers={:?}",
-                    keycode, modifiers
+                    keycode,
+                    modifiers_from_mask(modifiers_mask)
                 );
                 set_ptt_held(true);
+                let binding = binding_from_packed(packed_binding);
                 send_event(OutgoingMessage::PttDown {
                     ts,
                     key: binding,
@@ -433,12 +435,15 @@ extern "C" fn event_callback(
             if !should_be_active {
                 info!(
                     "PTT DEACTIVATED: keycode={} modifiers={:?}",
-                    keycode, modifiers
+                    keycode,
+                    modifiers_from_mask(modifiers_mask)
                 );
                 set_ptt_held(false);
+                let binding = binding_from_packed(packed_binding);
                 send_event(OutgoingMessage::PttUp { ts, key: binding });
             } else if is_repeat && event_type == K_CG_EVENT_KEY_DOWN {
                 // Keepalive for Odoo (it un-mutes on every PTT event)
+                let binding = binding_from_packed(packed_binding);
                 send_event(OutgoingMessage::PttDown {
                     ts,
                     key: binding,
@@ -451,23 +456,74 @@ extern "C" fn event_callback(
     event
 }
 
-fn get_modifiers_from_flags(flags: u64) -> Vec<Modifier> {
-    let mut mods = Vec::new();
+fn modifiers_mask_from_flags(flags: u64) -> u8 {
+    let mut mask = 0;
 
     if (flags & K_CG_EVENT_FLAG_MASK_SHIFT) != 0 {
-        mods.push(Modifier::Shift);
+        mask |= MOD_MASK_SHIFT;
     }
     if (flags & K_CG_EVENT_FLAG_MASK_CONTROL) != 0 {
-        mods.push(Modifier::Control);
+        mask |= MOD_MASK_CONTROL;
     }
     if (flags & K_CG_EVENT_FLAG_MASK_ALTERNATE) != 0 {
-        mods.push(Modifier::Alt);
+        mask |= MOD_MASK_ALT;
     }
     if (flags & K_CG_EVENT_FLAG_MASK_COMMAND) != 0 {
+        mask |= MOD_MASK_META;
+    }
+
+    mask
+}
+
+fn modifiers_from_mask(mask: u8) -> Vec<Modifier> {
+    let mut mods = Vec::new();
+
+    if (mask & MOD_MASK_SHIFT) != 0 {
+        mods.push(Modifier::Shift);
+    }
+    if (mask & MOD_MASK_CONTROL) != 0 {
+        mods.push(Modifier::Control);
+    }
+    if (mask & MOD_MASK_ALT) != 0 {
+        mods.push(Modifier::Alt);
+    }
+    if (mask & MOD_MASK_META) != 0 {
         mods.push(Modifier::Meta);
     }
 
     mods
+}
+
+fn modifiers_to_mask(modifiers: &[Modifier]) -> u8 {
+    let mut mask = 0;
+    for modifier in modifiers {
+        match modifier {
+            Modifier::Shift => mask |= MOD_MASK_SHIFT,
+            Modifier::Control => mask |= MOD_MASK_CONTROL,
+            Modifier::Alt => mask |= MOD_MASK_ALT,
+            Modifier::Meta => mask |= MOD_MASK_META,
+        }
+    }
+    mask
+}
+
+fn pack_binding(binding: &KeyBinding) -> u32 {
+    let mask = modifiers_to_mask(&binding.modifiers);
+    (u32::from(binding.code) << 8) | u32::from(mask)
+}
+
+fn unpack_binding(packed: u32) -> (u16, u8) {
+    let code = u16::try_from(packed >> 8).unwrap_or(DEFAULT_KEYCODE);
+    let mask = u8::try_from(packed & 0xFF).unwrap_or(0);
+    (code, mask)
+}
+
+fn binding_from_packed(packed: u32) -> KeyBinding {
+    let (code, mask) = unpack_binding(packed);
+    KeyBinding {
+        code,
+        modifiers: modifiers_from_mask(mask),
+    }
 }
 
 #[cfg(test)]
@@ -499,13 +555,13 @@ mod tests {
     #[test]
     fn test_get_modifiers_from_flags() {
         let flags = K_CG_EVENT_FLAG_MASK_SHIFT | K_CG_EVENT_FLAG_MASK_COMMAND;
-        let mods = get_modifiers_from_flags(flags);
+        let mods = modifiers_from_mask(modifiers_mask_from_flags(flags));
         assert_eq!(mods.len(), 2);
         assert!(mods.contains(&Modifier::Shift));
         assert!(mods.contains(&Modifier::Meta));
 
         let flags = K_CG_EVENT_FLAG_MASK_CONTROL | K_CG_EVENT_FLAG_MASK_ALTERNATE;
-        let mods = get_modifiers_from_flags(flags);
+        let mods = modifiers_from_mask(modifiers_mask_from_flags(flags));
         assert_eq!(mods.len(), 2);
         assert!(mods.contains(&Modifier::Control));
         assert!(mods.contains(&Modifier::Alt));
