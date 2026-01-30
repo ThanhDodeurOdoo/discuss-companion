@@ -197,6 +197,38 @@ describe("Extension Service_worker Script", () => {
         });
     });
 
+    test("handles call-state-observer-update message", async () => {
+        mockStorage.callTabId = null;
+        const sendResponse = jest.fn();
+
+        capturedHandleMessage(
+            {
+                type: "call-state-observer-update",
+                value: {
+                    hasState: true,
+                    state: {
+                        isMute: false,
+                        isDeaf: true,
+                        isCameraOn: false,
+                        isScreenOn: true
+                    }
+                }
+            },
+            { tab: { id: 456 } },
+            sendResponse
+        );
+        await flushPromises();
+
+        expect(mockStorage.callTabId).toBe(456);
+        expect(mockStorage.callState).toEqual({
+            isMute: false,
+            isDeaf: true,
+            isCameraOn: false,
+            isScreenOn: true
+        });
+        expect(sendResponse).toHaveBeenCalledWith({ status: "ok" });
+    });
+
     test("handles focus-call-tab message", async () => {
         mockStorage.callTabId = 123;
         chrome.scripting.executeScript.mockResolvedValueOnce([{ result: true }]);
