@@ -141,7 +141,9 @@ export class AppPlugin extends Plugin {
                     break;
                 }
                 case "call-state": {
-                    this.applyCallState(event.payload as CallStatePayload);
+                    const payload = event.payload as CallStatePayload;
+                    this.addLog("CALL-STATE", this.formatCallStateLog(payload));
+                    this.applyCallState(payload);
                     break;
                 }
                 case "ws-message": {
@@ -278,6 +280,22 @@ export class AppPlugin extends Plugin {
         this.isDeaf.set(false);
         this.isCameraOn.set(false);
         this.isScreenOn.set(false);
+    }
+
+    formatCallStateLog(state: CallStatePayload): string {
+        if (!state.hasCall) {
+            return "No active call";
+        }
+        if (!state.hasState) {
+            return "Call state syncing";
+        }
+        const flags = [
+            `mute:${state.isMute}`,
+            `deaf:${state.isDeaf}`,
+            `camera:${state.isCameraOn}`,
+            `screen:${state.isScreenOn}`
+        ];
+        return `Call state updated (${flags.join(", ")})`;
     }
 
     clearCallState() {
