@@ -245,7 +245,7 @@ impl PttEngine for MacosEngine {
     }
 }
 
-pub fn get_engine() -> &'static dyn PttEngine {
+pub fn get_engine() -> &'static MacosEngine {
     static ENGINE: MacosEngine = MacosEngine;
     &ENGINE
 }

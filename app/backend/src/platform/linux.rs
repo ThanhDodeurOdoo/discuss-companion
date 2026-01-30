@@ -44,7 +44,7 @@ impl PttEngine for LinuxEngine {
     }
 }
 
-pub fn get_engine() -> &'static dyn PttEngine {
+pub fn get_engine() -> &'static LinuxEngine {
     static ENGINE: LinuxEngine = LinuxEngine;
     &ENGINE
 }

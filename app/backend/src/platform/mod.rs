@@ -46,9 +46,15 @@ pub trait PttEngine: Send + Sync {
     ) -> Result<()>;
 }
 
+#[cfg(target_os = "macos")]
+pub type Engine = macos::MacosEngine;
+
+#[cfg(target_os = "linux")]
+pub type Engine = linux::LinuxEngine;
+
 /// Returns a reference to the global `PttEngine` implementation for the current platform.
 #[must_use]
-pub fn get_engine() -> &'static dyn PttEngine {
+pub fn get_engine() -> &'static Engine {
     #[cfg(target_os = "macos")]
     return macos::get_engine();
 
