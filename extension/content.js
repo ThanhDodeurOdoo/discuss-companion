@@ -1,11 +1,11 @@
-// From Background to Page
+// From service worker to Page
 chrome.runtime.onMessage.addListener(function (request, sender) {
     if (location.origin !== "null" && sender.id === chrome.runtime.id) {
         window.postMessage(request, location.origin);
     }
 });
 
-// From Page to Background
+// From Page to service worker
 window.addEventListener("message", (event) => {
     if (event.source !== window || event.origin !== location.origin) {
         return;
@@ -16,7 +16,7 @@ window.addEventListener("message", (event) => {
         chrome.runtime.sendMessage({ type, value }, (response) => {
             if (chrome.runtime.lastError) {
                 console.warn(
-                    "[PTT-Bridge] Error sending to background:",
+                    "[PTT-Bridge] Error sending to service worker:",
                     chrome.runtime.lastError.message
                 );
                 return;

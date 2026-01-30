@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
             emptyOutDir: true,
             rollupOptions: {
                 input: {
-                    background: resolve(__dirname, "src/background.ts"),
+                    service_worker: resolve(__dirname, "src/service_worker.ts"),
                     main: resolve(__dirname, "src/popup/main.ts")
                 },
                 output: {

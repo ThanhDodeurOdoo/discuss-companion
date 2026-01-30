@@ -22,7 +22,7 @@ describe("Extension Content Script", () => {
         expect(capturedCallback).toBeDefined();
     });
 
-    test("forwards message from background to page", () => {
+    test("forwards message from service_worker to page", () => {
         const postMessageSpy = jest.spyOn(window, "postMessage");
         const request = { type: "test-type", value: "test-value" };
         const sender = { id: "test-extension-id" };
@@ -33,7 +33,7 @@ describe("Extension Content Script", () => {
         postMessageSpy.mockRestore();
     });
 
-    test("sends message from page to background", () => {
+    test("sends message from page to service_worker", () => {
         const event = new MessageEvent("message", {
             data: { from: "discuss", type: "is-talking", value: true },
             origin: "https://odoo.com",
@@ -48,7 +48,7 @@ describe("Extension Content Script", () => {
         );
     });
 
-    test("relays version response from background to page", () => {
+    test("relays version response from service_worker to page", () => {
         const postMessageSpy = jest.spyOn(window, "postMessage");
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
             if (message.type === "ask-version") {
@@ -94,7 +94,7 @@ describe("Extension Content Script", () => {
         expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
     });
 
-    test("logs warning on runtime error when sending message to background", () => {
+    test("logs warning on runtime error when sending message to service_worker", () => {
         const consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
         chrome.runtime.lastError = { message: "test error" };
         chrome.runtime.sendMessage.mockImplementation((message, callback) => {
@@ -109,7 +109,7 @@ describe("Extension Content Script", () => {
         window.dispatchEvent(event);
 
         expect(consoleSpy).toHaveBeenCalledWith(
-            "[PTT-Bridge] Error sending to background:",
+            "[PTT-Bridge] Error sending to service worker:",
             "test error"
         );
         chrome.runtime.lastError = null;

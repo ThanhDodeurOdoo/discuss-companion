@@ -10,21 +10,21 @@ const mockStorage = mockChrome({
 });
 mockWebSocket();
 
-// Import background script
-await import("../src/background.ts");
+// Import service_worker script
+await import("../src/service_worker.ts");
 const capturedHandleMessage = chrome.runtime.onMessage.addListener.mock.calls[0][0];
 const capturedOnRemoved = chrome.tabs.onRemoved.addListener.mock.calls[0][0];
 const capturedOnAlarm = chrome.alarms.onAlarm.addListener.mock.calls[0][0];
 const capturedOnClicked = chrome.action.onClicked.addListener.mock.calls[0][0];
 const capturedOnChanged = chrome.storage.onChanged.addListener.mock.calls[0][0];
 
-const { Message } = await import("../src/discuss/ws-protocol/message");
-const { MessageBody } = await import("../src/discuss/ws-protocol/message-body");
-const { PttDown } = await import("../src/discuss/ws-protocol/ptt-down");
-const { PttUp } = await import("../src/discuss/ws-protocol/ptt-up");
+const { Message } = await import("../src/discuss/ws-protocol/message.ts");
+const { MessageBody } = await import("../src/discuss/ws-protocol/message-body.ts");
+const { PttDown } = await import("../src/discuss/ws-protocol/ptt-down.ts");
+const { PttUp } = await import("../src/discuss/ws-protocol/ptt-up.ts");
 const flatbuffers = await import("flatbuffers");
 
-describe("Extension Background Script", () => {
+describe("Extension Service_worker Script", () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockStorage.isTalkingByTabId = {};
