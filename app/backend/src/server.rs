@@ -13,7 +13,8 @@ use crate::WsState;
 use crate::flatbuffers::ipc_protocol_generated::discuss::ipc_protocol;
 use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
 use crate::state::{
-    IncomingMessage, KeyBinding, Modifier, OutgoingMessage, current_timestamp, encode_ws_connection,
+    CallState, IncomingMessage, KeyBinding, Modifier, OutgoingMessage, current_timestamp,
+    encode_call_state, encode_ws_connection,
 };
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -85,6 +86,10 @@ fn send_to_frontend<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, bin: Ve
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "WebSocket loop handles multiple message types and connection states."
+)]
 async fn handle_connection<R: tauri::Runtime>(
     stream: TcpStream,
     addr: SocketAddr,
@@ -164,6 +169,17 @@ async fn handle_connection<R: tauri::Runtime>(
                                     ws_protocol::MessageBody::Shutdown => {
                                          let incoming = IncomingMessage::Shutdown;
                                          send_to_frontend(&app_handle, incoming.to_ipc_flatbuffer());
+                                    }
+                                    ws_protocol::MessageBody::CallState => {
+                                        if let Some(call_state) = message.body_as_call_state() {
+                                            let state = CallState::from(call_state);
+                                            if let Some(ws_state) = app_handle.try_state::<WsState>()
+                                                && let Ok(mut guard) = ws_state.call_state.lock()
+                                            {
+                                                *guard = Some(state);
+                                            }
+                                            send_to_frontend(&app_handle, encode_call_state(&state));
+                                        }
                                     }
                                     _ => {
                                         // Ignore other messages from client or unhandled types

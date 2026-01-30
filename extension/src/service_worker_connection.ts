@@ -11,7 +11,7 @@ type ConnectionHandlers = {
     onPttPressed: () => void;
     onPttReleased: () => void;
     onStatusState: (state?: string | null) => void;
-    onConnectionStateChange: () => void;
+    onConnectionStateChange: (isConnected: boolean) => void;
     onLoggingChange: (isEnabled: boolean) => void;
 };
 
@@ -19,6 +19,7 @@ export type ConnectionManager = {
     init: () => void;
     handleAlarm: (alarm: chrome.alarms.Alarm) => void;
     isConnected: () => boolean;
+    sendMessage: (data: Uint8Array) => boolean;
 };
 
 export function createConnectionManager(handlers: ConnectionHandlers): ConnectionManager {
@@ -27,6 +28,21 @@ export function createConnectionManager(handlers: ConnectionHandlers): Connectio
     let isCompanionEnabled = false;
 
     const isConnected = () => socket?.readyState === WebSocket.OPEN;
+
+    function sendMessage(data: Uint8Array): boolean {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            handlers.onConnectionStateChange(false);
+            return false;
+        }
+        try {
+            socket.send(data);
+            return true;
+        } catch (error) {
+            handlers.log("[BG] WS send failed", error);
+            handlers.onConnectionStateChange(false);
+            return false;
+        }
+    }
 
     function connectToApp() {
         if (!isCompanionEnabled) {
@@ -54,7 +70,7 @@ export function createConnectionManager(handlers: ConnectionHandlers): Connectio
         socket.onopen = () => {
             handlers.log("[BG] WS Open");
             chrome.alarms.clear(RECONNECT_ALARM_NAME);
-            handlers.onConnectionStateChange();
+            handlers.onConnectionStateChange(true);
 
             sendPing();
 
@@ -101,7 +117,7 @@ export function createConnectionManager(handlers: ConnectionHandlers): Connectio
                 clearInterval(pingInterval);
             }
             socket = null;
-            handlers.onConnectionStateChange();
+            handlers.onConnectionStateChange(false);
             if (isCompanionEnabled) {
                 chrome.alarms.create(RECONNECT_ALARM_NAME, { delayInMinutes: 0.1 });
             } else {
@@ -111,13 +127,13 @@ export function createConnectionManager(handlers: ConnectionHandlers): Connectio
 
         socket.onerror = (error) => {
             console.error("[BG] WS Error", error);
-            handlers.onConnectionStateChange();
+            handlers.onConnectionStateChange(false);
         };
     }
 
     function sendPing() {
         if (!socket || socket.readyState !== WebSocket.OPEN) {
-            handlers.onConnectionStateChange();
+            handlers.onConnectionStateChange(false);
             return;
         }
 
@@ -131,7 +147,7 @@ export function createConnectionManager(handlers: ConnectionHandlers): Connectio
         const messageOffset = Message.endMessage(builder);
         builder.finish(messageOffset);
 
-        socket.send(builder.asUint8Array());
+        sendMessage(builder.asUint8Array());
     }
 
     function init() {
@@ -144,7 +160,7 @@ export function createConnectionManager(handlers: ConnectionHandlers): Connectio
                 if (isCompanionEnabled) {
                     connectToApp();
                 } else {
-                    handlers.onConnectionStateChange();
+                    handlers.onConnectionStateChange(false);
                 }
             }
         );
@@ -170,7 +186,7 @@ export function createConnectionManager(handlers: ConnectionHandlers): Connectio
                         if (socket) {
                             socket.close();
                         } else {
-                            handlers.onConnectionStateChange();
+                            handlers.onConnectionStateChange(false);
                         }
                     } else {
                         connectToApp();
@@ -189,6 +205,7 @@ export function createConnectionManager(handlers: ConnectionHandlers): Connectio
     return {
         init,
         handleAlarm,
-        isConnected
+        isConnected,
+        sendMessage
     };
 }

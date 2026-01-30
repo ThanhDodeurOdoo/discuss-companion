@@ -91,6 +91,7 @@ mod tests {
             server_shutdown_tx: Mutex::new(broadcast::channel(1).0),
             conn_tx: crossbeam_channel::unbounded().0,
             event_channel: Mutex::new(None),
+            call_state: Mutex::new(None),
         });
 
         let window = tauri::webview::WebviewWindowBuilder::new(

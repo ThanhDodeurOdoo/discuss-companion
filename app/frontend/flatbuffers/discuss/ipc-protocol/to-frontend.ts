@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
 import { BackendError } from '../../discuss/ipc-protocol/backend-error.js';
+import { CallState } from '../../discuss/ipc-protocol/call-state.js';
 import { PttState } from '../../discuss/ipc-protocol/ptt-state.js';
 import { WsConnection } from '../../discuss/ipc-protocol/ws-connection.js';
 import { WsMessageEvent } from '../../discuss/ipc-protocol/ws-message-event.js';
@@ -13,34 +14,37 @@ export enum ToFrontend {
   BackendError = 1,
   WsConnection = 2,
   WsMessageEvent = 3,
-  PttState = 4
+  PttState = 4,
+  CallState = 5
 }
 
 export function unionToToFrontend(
   type: ToFrontend,
-  accessor: (obj:BackendError|PttState|WsConnection|WsMessageEvent) => BackendError|PttState|WsConnection|WsMessageEvent|null
-): BackendError|PttState|WsConnection|WsMessageEvent|null {
+  accessor: (obj:BackendError|CallState|PttState|WsConnection|WsMessageEvent) => BackendError|CallState|PttState|WsConnection|WsMessageEvent|null
+): BackendError|CallState|PttState|WsConnection|WsMessageEvent|null {
   switch(ToFrontend[type]) {
     case 'NONE': return null; 
     case 'BackendError': return accessor(new BackendError())! as BackendError;
     case 'WsConnection': return accessor(new WsConnection())! as WsConnection;
     case 'WsMessageEvent': return accessor(new WsMessageEvent())! as WsMessageEvent;
     case 'PttState': return accessor(new PttState())! as PttState;
+    case 'CallState': return accessor(new CallState())! as CallState;
     default: return null;
   }
 }
 
 export function unionListToToFrontend(
   type: ToFrontend, 
-  accessor: (index: number, obj:BackendError|PttState|WsConnection|WsMessageEvent) => BackendError|PttState|WsConnection|WsMessageEvent|null, 
+  accessor: (index: number, obj:BackendError|CallState|PttState|WsConnection|WsMessageEvent) => BackendError|CallState|PttState|WsConnection|WsMessageEvent|null, 
   index: number
-): BackendError|PttState|WsConnection|WsMessageEvent|null {
+): BackendError|CallState|PttState|WsConnection|WsMessageEvent|null {
   switch(ToFrontend[type]) {
     case 'NONE': return null; 
     case 'BackendError': return accessor(index, new BackendError())! as BackendError;
     case 'WsConnection': return accessor(index, new WsConnection())! as WsConnection;
     case 'WsMessageEvent': return accessor(index, new WsMessageEvent())! as WsMessageEvent;
     case 'PttState': return accessor(index, new PttState())! as PttState;
+    case 'CallState': return accessor(index, new CallState())! as CallState;
     default: return null;
   }
 }

@@ -127,6 +127,33 @@ pub enum PttState {
     Held,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Call state mirrors the WS/IPC schema for cross-process sync."
+)]
+pub struct CallState {
+    pub has_call: bool,
+    pub has_state: bool,
+    pub is_mute: bool,
+    pub is_deaf: bool,
+    pub is_camera_on: bool,
+    pub is_screen_on: bool,
+}
+
+impl From<ws_protocol::CallState<'_>> for CallState {
+    fn from(state: ws_protocol::CallState<'_>) -> Self {
+        Self {
+            has_call: state.has_call(),
+            has_state: state.has_state(),
+            is_mute: state.is_mute(),
+            is_deaf: state.is_deaf(),
+            is_camera_on: state.is_camera_on(),
+            is_screen_on: state.is_screen_on(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum OutgoingMessage {
@@ -396,6 +423,34 @@ pub fn encode_ws_connection(status: ipc_protocol::ConnectionStatus) -> Vec<u8> {
         &ipc_protocol::ToFrontendMessageArgs {
             event_type: ipc_protocol::ToFrontend::WsConnection,
             event: Some(connection_offset.as_union_value()),
+        },
+    );
+
+    builder.finish(event_offset, None);
+    builder.finished_data().to_vec()
+}
+
+#[must_use]
+pub fn encode_call_state(state: &CallState) -> Vec<u8> {
+    let mut builder = FlatBufferBuilder::new();
+
+    let call_state_offset = ipc_protocol::CallState::create(
+        &mut builder,
+        &ipc_protocol::CallStateArgs {
+            has_call: state.has_call,
+            has_state: state.has_state,
+            is_mute: state.is_mute,
+            is_deaf: state.is_deaf,
+            is_camera_on: state.is_camera_on,
+            is_screen_on: state.is_screen_on,
+        },
+    );
+
+    let event_offset = ipc_protocol::ToFrontendMessage::create(
+        &mut builder,
+        &ipc_protocol::ToFrontendMessageArgs {
+            event_type: ipc_protocol::ToFrontend::CallState,
+            event: Some(call_state_offset.as_union_value()),
         },
     );
 

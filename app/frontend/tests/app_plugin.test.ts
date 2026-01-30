@@ -16,18 +16,21 @@ jest.unstable_mockModule("../ipc.ts", () => ({
     setRecordingMode: jest.fn(),
     updateBinding: jest.fn(),
     updateWsPort: jest.fn(),
-    setupChannel: jest.fn()
+    setupChannel: jest.fn(),
+    sendCallCommand: jest.fn()
 }));
 
 const { invoke } = await import("@tauri-apps/api/core");
 const { listen } = await import("@tauri-apps/api/event");
 const { AppPlugin } = await import("../app_plugin.ts");
-const { setRecordingMode, setupChannel } = await import("../ipc.ts");
+const { CallCommand } = await import("../call_commands.ts");
+const { setRecordingMode, setupChannel, sendCallCommand } = await import("../ipc.ts");
 
 const mockedInvoke = invoke as jest.MockedFunction<typeof invoke>;
 const mockedListen = listen as jest.MockedFunction<typeof listen>;
 const mockedSetRecordingMode = setRecordingMode as jest.MockedFunction<typeof setRecordingMode>;
 const mockedSetupChannel = setupChannel as jest.MockedFunction<typeof setupChannel>;
+const mockedSendCallCommand = sendCallCommand as jest.MockedFunction<typeof sendCallCommand>;
 
 describe("AppPlugin", () => {
     let plugin: InstanceType<typeof AppPlugin>;
@@ -63,6 +66,23 @@ describe("AppPlugin", () => {
         await plugin.toggleRecording();
         expect(plugin.isRecording()).toBe(false);
         expect(mockedSetRecordingMode).toHaveBeenCalledWith(false);
+    });
+
+    test("toggleMute sends call command when state is known", async () => {
+        mockedSendCallCommand.mockResolvedValue(true as never);
+        plugin.extensionConnected.set(true);
+        plugin.applyCallState({
+            hasCall: true,
+            hasState: true,
+            isMute: false,
+            isDeaf: false,
+            isCameraOn: false,
+            isScreenOn: false
+        });
+
+        await plugin.toggleMute();
+
+        expect(mockedSendCallCommand).toHaveBeenCalledWith(CallCommand.SetMute, true);
     });
 
     test("setupListeners sets up event listeners", async () => {

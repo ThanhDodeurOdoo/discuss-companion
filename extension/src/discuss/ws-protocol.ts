@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
 export { BindingInfo } from './ws-protocol/binding-info.js';
+export { CallState } from './ws-protocol/call-state.js';
 export { Error } from './ws-protocol/error.js';
 export { GetBinding } from './ws-protocol/get-binding.js';
 export { KeyBinding } from './ws-protocol/key-binding.js';

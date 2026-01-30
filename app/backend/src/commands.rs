@@ -12,7 +12,7 @@ use crate::flatbuffers::ipc_protocol_generated::discuss::ipc_protocol::{
 use crate::platform;
 use crate::platform::{check_accessibility_permission, get_binding, set_binding, set_recording};
 use crate::server;
-use crate::state::{KeyBinding, VERSION};
+use crate::state::{KeyBinding, OutgoingMessage, VERSION, current_timestamp, encode_call_state};
 use tauri::ipc::{Channel, InvokeBody};
 
 /// JUSTIFICATION: for all `clippy::needless_pass_by_value` below
@@ -161,5 +161,97 @@ pub fn update_ws_port(
 #[allow(clippy::unwrap_used, reason = "mutex poisoning")]
 #[allow(clippy::missing_panics_doc, reason = "tauri API")]
 pub fn establish_channel(state: State<'_, WsState>, channel: Channel) {
+    let call_state = state.call_state.lock().ok().and_then(|guard| *guard);
+    if let Some(call_state) = call_state {
+        let _ = channel.send(InvokeBody::Raw(encode_call_state(&call_state)).into());
+    }
     *state.event_channel.lock().unwrap() = Some(channel);
+}
+
+fn build_call_command_payload(command: &str, value: Option<bool>) -> String {
+    value.map_or_else(
+        || command.to_string(),
+        |value| serde_json::json!({ "command": command, "value": value }).to_string(),
+    )
+}
+
+fn dispatch_call_command(state: &WsState, command: &str, value: Option<bool>) -> bool {
+    let payload = build_call_command_payload(command, value);
+    let message = OutgoingMessage::Status {
+        ts: current_timestamp(),
+        state: payload,
+        version: VERSION.to_string(),
+    };
+    state.ws_tx.send(message.to_flatbuffer()).is_ok()
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "tauri API")]
+#[must_use]
+pub fn send_call_command(state: State<'_, WsState>, command: String, value: Option<bool>) -> bool {
+    dispatch_call_command(&state, &command, value)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+    use std::sync::atomic::AtomicU16;
+
+    use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
+    use tokio::sync::broadcast;
+
+    #[test]
+    fn test_build_call_command_payload_plain() {
+        let payload = build_call_command_payload("toggle-microphone", None);
+        assert_eq!(payload, "toggle-microphone");
+    }
+
+    #[test]
+    fn test_build_call_command_payload_with_value() {
+        let payload = build_call_command_payload("set-mute", Some(true));
+        let parsed: serde_json::Value = serde_json::from_str(&payload).expect("valid json payload");
+        assert_eq!(
+            parsed.get("command").and_then(|value| value.as_str()),
+            Some("set-mute")
+        );
+        assert_eq!(
+            parsed.get("value").and_then(serde_json::Value::as_bool),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn test_dispatch_call_command_sends_status() {
+        let (ws_tx, mut ws_rx) = broadcast::channel(1);
+        let (shutdown_tx, _) = broadcast::channel(1);
+        let (conn_tx, _) = crossbeam_channel::unbounded();
+        let state = WsState {
+            port: AtomicU16::new(0),
+            ws_tx,
+            server_shutdown_tx: Mutex::new(shutdown_tx),
+            conn_tx,
+            event_channel: Mutex::new(None),
+            call_state: Mutex::new(None),
+        };
+
+        let did_send = dispatch_call_command(&state, "set-mute", Some(true));
+        assert!(did_send, "expected ws send to succeed");
+
+        let bin = ws_rx.try_recv().expect("expected ws payload");
+        let decoded = ws_protocol::root_as_message(&bin).expect("valid ws message");
+        assert_eq!(decoded.body_type(), ws_protocol::MessageBody::Status);
+
+        let status = decoded.body_as_status().expect("status payload");
+        let payload = status.state().expect("status state");
+        let parsed: serde_json::Value = serde_json::from_str(payload).expect("valid status json");
+        assert_eq!(
+            parsed.get("command").and_then(|value| value.as_str()),
+            Some("set-mute")
+        );
+        assert_eq!(
+            parsed.get("value").and_then(serde_json::Value::as_bool),
+            Some(true)
+        );
+    }
 }
