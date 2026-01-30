@@ -9,6 +9,7 @@ declare module "*/compile_templates.mjs" {
 
 type Store = {
     rtc: {
+        pipService?: object;
         selfSession?: {
             isMute: boolean;
             is_deaf: boolean;
@@ -18,6 +19,7 @@ type Store = {
         channel?: {
             open: () => void;
         };
+        openPip(options: object): Promise<void>;
         toggleDeafen(): Promise<void>;
         toggleMicrophone(): Promise<void>;
         toggleVideo(type: "camera" | "screen"): Promise<void>;

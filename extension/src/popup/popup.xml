@@ -26,7 +26,10 @@
                 </div>
             </div>
             <div class="actions">
-                <button class="btn btn--ghost actions__primary" t-if="this.popup.hasCallTab()" t-on-click="() => this.popup.onClickGoToCall()">Go to Call</button>
+                <button class="btn btn--ghost" t-if="this.popup.hasCallTab()" t-on-click="() => this.popup.onClickGoToCall()">Go to Call</button>
+                <button class="btn btn--icon btn--ghost actions__pip actions__primary" t-if="this.popup.hasCallTab()" t-att-title="'Open Picture in Picture'" t-on-click="() => this.popup.openPip()">
+                    <span class="icon" aria-hidden="true">picture_in_picture</span>
+                </button>
                 <button class="btn btn--success actions__primary text-truncate" t-if="!this.popup.hasCallTab() &amp;&amp; this.popup.lastJoinedCall()" t-on-click="() => this.popup.rejoinLastCall()" t-att-title="'Re-join ' + this.popup.lastJoinedCall().name">Re-join "<t t-esc="this.popup.lastJoinedCall().name"/>"</button>
                 <button class="btn btn--icon btn--ghost actions__settings" t-on-click="() => this.popup.toggleSettings()" t-att-title="'Open settings'">
                     <span class="icon" aria-hidden="true">settings</span>

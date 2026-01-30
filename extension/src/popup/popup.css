@@ -313,6 +313,12 @@ body {
     background: var(--color-surface-muted);
 }
 
+.actions__pip {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+}
+
 .actions__settings:hover {
     border-color: var(--color-border);
     color: var(--color-text);

@@ -76,6 +76,15 @@ async function toggleScreenInTab() {
     return true;
 }
 
+async function openPipInTab() {
+    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
+    if (!store?.rtc?.pipService) {
+        return false;
+    }
+    await store.rtc.openPip({});
+    return true;
+}
+
 async function leaveCallInTab() {
     const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
     if (!store?.rtc?.leaveCall) {
@@ -202,6 +211,10 @@ export class PopupPlugin extends Plugin {
     // Screen share needs the call tab focused to avoid being blocked.
     async toggleScreen() {
         await this.runCallAction(toggleScreenInTab, { focusCallTab: true });
+    }
+
+    async openPip() {
+        await this.runCallAction(openPipInTab);
     }
 
     async leaveCall() {
