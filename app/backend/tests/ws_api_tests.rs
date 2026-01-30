@@ -27,7 +27,7 @@ mod tests {
     use tokio::{
         net::{TcpListener, TcpStream},
         sync::broadcast,
-        time::sleep,
+        time::{sleep, timeout},
     };
     use tokio_tungstenite::tungstenite::Message::Binary;
 
@@ -546,5 +546,100 @@ mod tests {
 
         shutdown_tx_2.send(()).unwrap();
         h2.await.unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_restart_closes_existing_connections() {
+        server::reset_connection_count();
+        let (tx, _) = broadcast::channel(10);
+        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let app_handle = app.handle().clone();
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let port = addr.port();
+        drop(listener);
+
+        let (conn_tx, _) = crossbeam_channel::unbounded();
+        let server_handle = tokio::spawn(async move {
+            start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
+        });
+
+        sleep(Duration::from_millis(100)).await;
+
+        let stream = TcpStream::connect(addr).await.unwrap();
+        let (mut ws, _) = tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port}"), stream)
+            .await
+            .unwrap();
+
+        sleep(Duration::from_millis(50)).await;
+        assert!(is_connected());
+
+        shutdown_tx.send(()).unwrap();
+
+        let close_result = timeout(Duration::from_millis(500), ws.next()).await;
+        assert!(close_result.is_ok(), "expected close or EOF after shutdown");
+        let _ = server_handle.await;
+        assert!(!is_connected());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_generation_reset_ignores_old_connections() {
+        server::reset_connection_count();
+        let (tx, _) = broadcast::channel(10);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let app_handle = app.handle().clone();
+
+        let (shutdown_tx_a, shutdown_rx_a) = broadcast::channel(1);
+        let listener_a = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr_a = listener_a.local_addr().unwrap();
+        let port_a = addr_a.port();
+        drop(listener_a);
+
+        let (conn_tx_a, _) = crossbeam_channel::unbounded();
+        let tx_a = tx.clone();
+        let h1 = tokio::spawn(async move {
+            start_ws_server(port_a, tx_a, shutdown_rx_a, app_handle.clone(), conn_tx_a).await;
+        });
+
+        sleep(Duration::from_millis(100)).await;
+
+        let stream_a = TcpStream::connect(addr_a).await.unwrap();
+        let (ws_a, _) =
+            tokio_tungstenite::client_async(format!("ws://127.0.0.1:{port_a}"), stream_a)
+                .await
+                .unwrap();
+        assert!(is_connected());
+
+        let (shutdown_tx_b, shutdown_rx_b) = broadcast::channel(1);
+        let listener_b = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr_b = listener_b.local_addr().unwrap();
+        let port_b = addr_b.port();
+        drop(listener_b);
+
+        let (conn_tx_b, _) = crossbeam_channel::unbounded();
+        let tx_b = tx.clone();
+        let app_handle_b = app.handle().clone();
+        let h2 = tokio::spawn(async move {
+            start_ws_server(port_b, tx_b, shutdown_rx_b, app_handle_b, conn_tx_b).await;
+        });
+
+        sleep(Duration::from_millis(100)).await;
+        assert!(
+            !is_connected(),
+            "old connections should not count after restart"
+        );
+
+        drop(ws_a);
+        sleep(Duration::from_millis(50)).await;
+        assert!(!is_connected());
+
+        shutdown_tx_a.send(()).unwrap();
+        shutdown_tx_b.send(()).unwrap();
+        let _ = h1.await;
+        let _ = h2.await;
     }
 }

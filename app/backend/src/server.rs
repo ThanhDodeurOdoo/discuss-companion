@@ -1,6 +1,6 @@
 use std::{
     net::SocketAddr,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::atomic::{AtomicU64, AtomicUsize, Ordering},
 };
 
 use futures_util::{SinkExt, StreamExt};
@@ -24,6 +24,7 @@ use crate::{
 };
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
+static CURRENT_SERVER_ID: AtomicU64 = AtomicU64::new(0);
 
 pub fn is_connected() -> bool {
     CONNECTION_COUNT.load(Ordering::SeqCst) > 0
@@ -32,6 +33,7 @@ pub fn is_connected() -> bool {
 // Helper for testing
 pub fn reset_connection_count() {
     CONNECTION_COUNT.store(0, Ordering::SeqCst);
+    CURRENT_SERVER_ID.store(0, Ordering::SeqCst);
 }
 
 pub async fn start_ws_server<R: tauri::Runtime>(
@@ -41,6 +43,8 @@ pub async fn start_ws_server<R: tauri::Runtime>(
     app_handle: tauri::AppHandle<R>,
     conn_tx: crossbeam_channel::Sender<bool>,
 ) {
+    let server_id = CURRENT_SERVER_ID.fetch_add(1, Ordering::SeqCst) + 1;
+    CONNECTION_COUNT.store(0, Ordering::SeqCst);
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = match TcpListener::bind(&addr).await {
         Ok(l) => l,
@@ -54,8 +58,6 @@ pub async fn start_ws_server<R: tauri::Runtime>(
     let tx_clone = tx;
     let conn_tx_clone = conn_tx.clone();
 
-    // Reset connection count on start
-    CONNECTION_COUNT.store(0, Ordering::SeqCst);
     let _ = conn_tx.send(false);
 
     loop {
@@ -71,7 +73,8 @@ pub async fn start_ws_server<R: tauri::Runtime>(
                 let tx = tx_clone.clone();
                 let app_handle = app_handle.clone();
                 let conn_tx = conn_tx_clone.clone();
-                tokio::spawn(handle_connection(stream, addr, tx, app_handle, conn_tx));
+                let shutdown_rx = shutdown_rx.resubscribe();
+                tokio::spawn(handle_connection(stream, addr, tx, app_handle, conn_tx, shutdown_rx, server_id));
             }
             _ = shutdown_rx.recv() => {
                 info!("WS server shutting down");
@@ -83,17 +86,26 @@ pub async fn start_ws_server<R: tauri::Runtime>(
 
 fn send_to_frontend<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, bin: Vec<u8>) {
     // We use try_state because this might be called during shutdown or tests where state is gone
-    if let Some(state) = app_handle.try_state::<WsState>()
-        && let Ok(guard) = state.event_channel.read()
-        && let Some(channel) = guard.as_ref()
+    let channel = app_handle.try_state::<WsState>().map_or_else(
+        || None,
+        |state| {
+            state
+                .event_channel
+                .read()
+                .ok()
+                .and_then(|guard| guard.as_ref().cloned())
+        },
+    );
+    if let Some(channel) = channel
         && let Err(e) = channel.send(InvokeBody::Raw(bin).into())
     {
-        error!("Failed to send to frontend channel: {}", e);
+        error!("Failed to send to frontend channel: {e}");
     }
 }
 
 #[allow(
     clippy::too_many_lines,
+    clippy::cognitive_complexity,
     reason = "WebSocket loop handles multiple message types and connection states."
 )]
 async fn handle_connection<R: tauri::Runtime>(
@@ -102,7 +114,10 @@ async fn handle_connection<R: tauri::Runtime>(
     tx: broadcast::Sender<Vec<u8>>,
     app_handle: tauri::AppHandle<R>,
     conn_tx: crossbeam_channel::Sender<bool>,
+    mut shutdown_rx: broadcast::Receiver<()>,
+    server_id: u64,
 ) {
+    let is_current_server = |id| CURRENT_SERVER_ID.load(Ordering::SeqCst) == id;
     let callback = |request: &handshake::server::Request, response: handshake::server::Response| {
         info!("Received handshake request from: {:?}", addr);
         for (name, value) in request.headers() {
@@ -119,21 +134,30 @@ async fn handle_connection<R: tauri::Runtime>(
         }
     };
     info!("New WebSocket connection from: {}", addr);
-    if CONNECTION_COUNT.fetch_add(1, Ordering::SeqCst) == 0 {
-        let _ = conn_tx.send(true);
+    let mut counted = false;
+    if is_current_server(server_id) {
+        if CONNECTION_COUNT.fetch_add(1, Ordering::SeqCst) == 0 {
+            let _ = conn_tx.send(true);
+        }
+        counted = true;
     }
 
-    // let _ = app_handle.emit("ws-connection", format!("Connected: {addr}"));
-    send_to_frontend(
-        &app_handle,
-        encode_ws_connection(ipc_protocol::ConnectionStatus::Connected),
-    );
+    if is_current_server(server_id) {
+        send_to_frontend(
+            &app_handle,
+            encode_ws_connection(ipc_protocol::ConnectionStatus::Connected),
+        );
+    }
 
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
     let mut rx = tx.subscribe();
 
     loop {
         tokio::select! {
+            _ = shutdown_rx.recv() => {
+                let _ = ws_sender.send(Message::Close(None)).await;
+                break;
+            }
             msg = rx.recv() => {
                 if let Ok(msg) = msg
                     && let Err(e) = ws_sender.send(Message::Binary(msg.into())).await
@@ -165,26 +189,34 @@ async fn handle_connection<R: tauri::Runtime>(
                                                 modifiers,
                                             };
                                             let incoming = IncomingMessage::SetBinding { binding };
-                                            send_to_frontend(&app_handle, incoming.to_ipc_flatbuffer());
+                                            if is_current_server(server_id) {
+                                                send_to_frontend(&app_handle, incoming.to_ipc_flatbuffer());
+                                            }
                                         }
                                     }
                                     ws_protocol::MessageBody::GetBinding => {
                                          let incoming = IncomingMessage::GetBinding;
-                                         send_to_frontend(&app_handle, incoming.to_ipc_flatbuffer());
+                                         if is_current_server(server_id) {
+                                             send_to_frontend(&app_handle, incoming.to_ipc_flatbuffer());
+                                         }
                                     }
                                     ws_protocol::MessageBody::Shutdown => {
                                          let incoming = IncomingMessage::Shutdown;
-                                         send_to_frontend(&app_handle, incoming.to_ipc_flatbuffer());
+                                         if is_current_server(server_id) {
+                                             send_to_frontend(&app_handle, incoming.to_ipc_flatbuffer());
+                                         }
                                     }
                                     ws_protocol::MessageBody::CallState => {
                                         if let Some(call_state) = message.body_as_call_state() {
                                             let state = CallState::from(call_state);
-                                            if let Some(ws_state) = app_handle.try_state::<WsState>()
-                                                && let Ok(mut guard) = ws_state.call_state.write()
-                                            {
-                                                *guard = Some(state);
+                                            if is_current_server(server_id) {
+                                                if let Some(ws_state) = app_handle.try_state::<WsState>()
+                                                    && let Ok(mut guard) = ws_state.call_state.write()
+                                                {
+                                                    *guard = Some(state);
+                                                }
+                                                send_to_frontend(&app_handle, encode_call_state(&state));
                                             }
-                                            send_to_frontend(&app_handle, encode_call_state(&state));
                                         }
                                     }
                                     _ => {
@@ -199,18 +231,24 @@ async fn handle_connection<R: tauri::Runtime>(
                     }
                     Some(Ok(Message::Close(_))) | None => {
                         info!("WebSocket connection closed: {}", addr);
-                         if CONNECTION_COUNT.fetch_sub(1, Ordering::SeqCst) == 1 {
-                             let _ = conn_tx.send(false);
-                         }
-                            send_to_frontend(
-                                &app_handle,
-                                encode_ws_connection(ipc_protocol::ConnectionStatus::Disconnected),
-                            );
                         break;
                     }
                     _ => {}
                 }
             }
         }
+        if !is_current_server(server_id) {
+            break;
+        }
+    }
+    if counted
+        && is_current_server(server_id)
+        && CONNECTION_COUNT.fetch_sub(1, Ordering::SeqCst) == 1
+    {
+        let _ = conn_tx.send(false);
+        send_to_frontend(
+            &app_handle,
+            encode_ws_connection(ipc_protocol::ConnectionStatus::Disconnected),
+        );
     }
 }
