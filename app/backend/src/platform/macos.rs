@@ -1,24 +1,33 @@
-use std::ffi::c_void;
-use std::ptr;
-use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU16, Ordering};
-use std::sync::{Arc, OnceLock, RwLock};
-use std::time::Duration;
+use std::{
+    ffi::c_void,
+    ptr,
+    sync::{
+        Arc, OnceLock, RwLock,
+        atomic::{AtomicBool, AtomicPtr, AtomicU16, Ordering},
+    },
+    time::Duration,
+};
 
 use anyhow::{Result, anyhow};
 // SAFETY: requires unsafe code for macOS Core Graphics FFI calls.
 // The CGEventTap API is inherently unsafe as it involves C callbacks and raw pointers.
-use core_foundation::base::TCFType;
-use core_foundation::dictionary;
-use core_foundation::mach_port::CFMachPortRef;
-use core_foundation::runloop::{
-    CFRunLoop, CFRunLoopAddSource, CFRunLoopSourceRef, kCFRunLoopCommonModes, kCFRunLoopDefaultMode,
+use core_foundation::{
+    base::TCFType,
+    dictionary,
+    mach_port::CFMachPortRef,
+    runloop::{
+        CFRunLoop, CFRunLoopAddSource, CFRunLoopSourceRef, kCFRunLoopCommonModes,
+        kCFRunLoopDefaultMode,
+    },
 };
 use core_graphics::event::{CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement};
 use crossbeam_channel::Sender;
 use tracing::{debug, error, info};
 
-use crate::platform::PttEngine;
-use crate::state::{KeyBinding, Modifier, OutgoingMessage, PttState, current_timestamp};
+use crate::{
+    platform::PttEngine,
+    state::{KeyBinding, Modifier, OutgoingMessage, PttState, current_timestamp},
+};
 
 type CGEventRef = *mut c_void;
 type CGEventTapProxy = *mut c_void;
@@ -120,9 +129,7 @@ impl PttEngine for MacosEngine {
     }
 
     fn check_accessibility_permission(&self) -> bool {
-        use core_foundation::boolean::CFBoolean;
-        use core_foundation::dictionary::CFDictionary;
-        use core_foundation::string::CFString;
+        use core_foundation::{boolean::CFBoolean, dictionary::CFDictionary, string::CFString};
 
         #[allow(
             unsafe_code,

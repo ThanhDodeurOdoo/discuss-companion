@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, atomic::AtomicBool};
 
 use anyhow::Result;
 use crossbeam_channel::Sender;

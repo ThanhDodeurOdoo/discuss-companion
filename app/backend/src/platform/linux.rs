@@ -1,12 +1,13 @@
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, atomic::AtomicBool};
 
 use anyhow::Result;
 use crossbeam_channel::Sender;
 use tracing::warn;
 
-use crate::platform::PttEngine;
-use crate::state::{KeyBinding, OutgoingMessage};
+use crate::{
+    platform::PttEngine,
+    state::{KeyBinding, OutgoingMessage},
+};
 
 pub struct LinuxEngine;
 

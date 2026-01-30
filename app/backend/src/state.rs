@@ -1,11 +1,11 @@
 use std::time::SystemTime;
 
 use flatbuffers::FlatBufferBuilder;
-use serde::de::Error;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 
-use crate::flatbuffers::ipc_protocol_generated::discuss::ipc_protocol;
-use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
+use crate::flatbuffers::{
+    ipc_protocol_generated::discuss::ipc_protocol, ws_protocol_generated::discuss::ws_protocol,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
