@@ -11,7 +11,7 @@ use std::{
     env,
     io::stderr,
     sync::{
-        Arc, Mutex,
+        Arc, Mutex, RwLock,
         atomic::{AtomicBool, AtomicU16, Ordering},
     },
     thread,
@@ -49,8 +49,8 @@ pub struct WsState {
     pub ws_tx: broadcast::Sender<Vec<u8>>,
     pub server_shutdown_tx: Mutex<broadcast::Sender<()>>,
     pub conn_tx: crossbeam_channel::Sender<bool>,
-    pub event_channel: Mutex<Option<Channel>>,
-    pub call_state: Mutex<Option<state::CallState>>,
+    pub event_channel: RwLock<Option<Channel>>,
+    pub call_state: RwLock<Option<state::CallState>>,
 }
 
 fn setup_logging() {
@@ -82,7 +82,7 @@ fn handle_ws_server(
 }
 
 struct PttHandler {
-    app_handle: Mutex<Option<tauri::AppHandle>>,
+    app_handle: tauri::AppHandle,
     ws_tx: broadcast::Sender<Vec<u8>>,
     active_online_img: Option<Image<'static>>,
     inactive_online_img: Option<Image<'static>>,
@@ -94,7 +94,7 @@ struct PttHandler {
 impl PttHandler {
     fn new(app_handle: tauri::AppHandle, ws_tx: broadcast::Sender<Vec<u8>>) -> Self {
         Self {
-            app_handle: Mutex::new(Some(app_handle)),
+            app_handle,
             ws_tx,
             active_online_img: Image::from_bytes(ICON_ACTIVE_ONLINE).ok(),
             inactive_online_img: Image::from_bytes(ICON_INACTIVE_ONLINE).ok(),
@@ -104,42 +104,30 @@ impl PttHandler {
         }
     }
 
-    #[allow(
-        clippy::unwrap_used,
-        reason = "Legacy code, mutex poisoning not handled"
-    )]
     fn handle_ptt(&self, event: &state::OutgoingMessage) {
-        if let Some(app_handle) = self.app_handle.lock().unwrap().as_ref() {
-            let (is_active, key, is_repeat) = match event {
-                state::OutgoingMessage::PttDown { key, is_repeat, .. } => (true, key, *is_repeat),
-                state::OutgoingMessage::PttUp { key, .. } => (false, key, false),
-                _ => return, // Only PttDown/PttUp are relevant for active state
-            };
-            if let Some(state) = app_handle.try_state::<WsState>()
-                && let Ok(guard) = state.event_channel.lock()
-                && let Some(channel) = guard.as_ref()
-            {
-                let _ = channel.send(
-                    InvokeBody::Raw(state::encode_ptt_state(
-                        is_active,
-                        key.code,
-                        &key.modifiers,
-                        is_repeat,
-                    ))
-                    .into(),
-                );
-            }
+        let (is_active, key, is_repeat) = match event {
+            state::OutgoingMessage::PttDown { key, is_repeat, .. } => (true, key, *is_repeat),
+            state::OutgoingMessage::PttUp { key, .. } => (false, key, false),
+            _ => return, // Only PttDown/PttUp are relevant for active state
+        };
+        if let Some(state) = self.app_handle.try_state::<WsState>()
+            && let Ok(guard) = state.event_channel.read()
+            && let Some(channel) = guard.as_ref()
+        {
+            let _ = channel.send(
+                InvokeBody::Raw(state::encode_ptt_state(
+                    is_active,
+                    key.code,
+                    &key.modifiers,
+                    is_repeat,
+                ))
+                .into(),
+            );
         }
     }
-    #[allow(
-        clippy::unwrap_used,
-        reason = "Legacy code, mutex poisoning not handled"
-    )]
     fn handle_ptt_old(&mut self, msg: &state::OutgoingMessage) {
         debug!("PttHandler handling event: {:?}", msg);
-        if let Some(handler) = self.app_handle.lock().unwrap().as_ref() {
-            let _ = handler.emit("ptt-event", msg);
-        }
+        let _ = self.app_handle.emit("ptt-event", msg);
 
         match msg {
             state::OutgoingMessage::PttDown { is_repeat, .. } => {
@@ -164,16 +152,8 @@ impl PttHandler {
         self.update_tray();
     }
 
-    #[allow(
-        clippy::unwrap_used,
-        reason = "Legacy code, mutex poisoning not handled"
-    )]
     fn update_tray(&self) {
-        let guard = self.app_handle.lock().unwrap();
-        let Some(app_handle) = guard.as_ref() else {
-            return;
-        };
-        let Some(tray) = app_handle.tray_by_id(TRAY_ID) else {
+        let Some(tray) = self.app_handle.tray_by_id(TRAY_ID) else {
             return;
         };
 
@@ -259,8 +239,8 @@ pub fn run() {
                 ws_tx: ws_tx_clone.clone(),
                 server_shutdown_tx: Mutex::new(ws_shutdown_tx_clone),
                 conn_tx: conn_tx.clone(),
-                event_channel: Mutex::new(None),
-                call_state: Mutex::new(None),
+                event_channel: RwLock::new(None),
+                call_state: RwLock::new(None),
             });
 
             handle_ws_server(
@@ -279,7 +259,7 @@ pub fn run() {
                 if let Err(e) = platform::start_engine(event_tx, &shutdown_clone) {
                     error!("Platform engine error: {}", e);
                     if let Some(state) = handle_tap.try_state::<WsState>()
-                        && let Ok(guard) = state.event_channel.lock()
+                        && let Ok(guard) = state.event_channel.read()
                         && let Some(channel) = guard.as_ref()
                     {
                         let _ = channel.send(

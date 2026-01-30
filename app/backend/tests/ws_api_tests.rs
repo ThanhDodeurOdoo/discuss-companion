@@ -132,7 +132,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_set_binding_message_handling() {
-        use std::sync::{Arc, Mutex};
+        use std::sync::{Arc, Mutex, RwLock};
 
         use ws_protocol::{
             Message as FBMessage, MessageArgs, MessageBody, SetBinding, SetBindingArgs,
@@ -161,8 +161,8 @@ mod tests {
             ws_tx: tx.clone(),
             server_shutdown_tx: Mutex::new(server_shutdown_tx),
             conn_tx: conn_tx_state,
-            event_channel: Mutex::new(Some(channel)),
-            call_state: Mutex::new(None),
+            event_channel: RwLock::new(Some(channel)),
+            call_state: RwLock::new(None),
         });
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -232,7 +232,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_shutdown_message_handling() {
-        use std::sync::{Arc, Mutex};
+        use std::sync::{Arc, Mutex, RwLock};
 
         use ws_protocol::{Message as FBMessage, MessageArgs, MessageBody, Shutdown, ShutdownArgs};
 
@@ -259,8 +259,8 @@ mod tests {
             ws_tx: tx.clone(),
             server_shutdown_tx: Mutex::new(server_shutdown_tx),
             conn_tx: conn_tx_state,
-            event_channel: Mutex::new(Some(channel)),
-            call_state: Mutex::new(None),
+            event_channel: RwLock::new(Some(channel)),
+            call_state: RwLock::new(None),
         });
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -316,7 +316,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_call_state_message_handling() {
-        use std::sync::{Arc, Mutex};
+        use std::sync::{Arc, Mutex, RwLock};
 
         use ws_protocol::{
             CallState, CallStateArgs, Message as FBMessage, MessageArgs, MessageBody,
@@ -345,8 +345,8 @@ mod tests {
             ws_tx: tx.clone(),
             server_shutdown_tx: Mutex::new(server_shutdown_tx),
             conn_tx: conn_tx_state,
-            event_channel: Mutex::new(Some(channel)),
-            call_state: Mutex::new(None),
+            event_channel: RwLock::new(Some(channel)),
+            call_state: RwLock::new(None),
         });
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

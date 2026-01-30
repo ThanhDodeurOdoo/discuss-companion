@@ -84,7 +84,7 @@ pub async fn start_ws_server<R: tauri::Runtime>(
 fn send_to_frontend<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, bin: Vec<u8>) {
     // We use try_state because this might be called during shutdown or tests where state is gone
     if let Some(state) = app_handle.try_state::<WsState>()
-        && let Ok(guard) = state.event_channel.lock()
+        && let Ok(guard) = state.event_channel.read()
         && let Some(channel) = guard.as_ref()
         && let Err(e) = channel.send(InvokeBody::Raw(bin).into())
     {
@@ -180,7 +180,7 @@ async fn handle_connection<R: tauri::Runtime>(
                                         if let Some(call_state) = message.body_as_call_state() {
                                             let state = CallState::from(call_state);
                                             if let Some(ws_state) = app_handle.try_state::<WsState>()
-                                                && let Ok(mut guard) = ws_state.call_state.lock()
+                                                && let Ok(mut guard) = ws_state.call_state.write()
                                             {
                                                 *guard = Some(state);
                                             }
