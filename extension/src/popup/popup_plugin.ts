@@ -1,5 +1,8 @@
 import { Plugin, signal, computed } from "@odoo/owl";
-import { executeInCurrentTab, executeInCallTab } from "../utils";
+import { executeInCurrentTab } from "../utils";
+import { CallActionType, type CallAction } from "../call_actions";
+import { requestCallAction, requestCallState, requestFocusCallTab } from "../command_api";
+import { CallState, getCallTabId, getStoredCallState } from "../call_state";
 
 const IS_FIREFOX = /Firefox/i.test(navigator.userAgent);
 
@@ -8,90 +11,6 @@ export enum StatusCode {
     Saving = 1,
     Success = 2,
     InvalidPort = 3
-}
-
-type CallState = {
-    isMute: boolean;
-    isDeaf: boolean;
-    isCameraOn: boolean;
-    isScreenOn: boolean;
-};
-
-function readCallStateInTab(): CallState | undefined {
-    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-    const selfSession = store?.rtc?.selfSession;
-    if (!selfSession) {
-        return undefined;
-    }
-    return {
-        isMute: selfSession.isMute,
-        isDeaf: selfSession.is_deaf,
-        isCameraOn: selfSession.is_camera_on,
-        isScreenOn: selfSession.is_screen_sharing_on
-    };
-}
-
-function openChannelInTab() {
-    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-    if (!store?.rtc?.channel) {
-        return false;
-    }
-    store.rtc.channel.open();
-    return true;
-}
-
-async function toggleMicrophoneInTab() {
-    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-    if (!store?.rtc?.selfSession) {
-        return false;
-    }
-    await store.rtc.toggleMicrophone();
-    return true;
-}
-
-async function toggleDeafenInTab() {
-    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-    if (!store?.rtc?.selfSession) {
-        return false;
-    }
-    await store.rtc.toggleDeafen();
-    return true;
-}
-
-async function toggleCameraInTab() {
-    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-    if (!store?.rtc?.selfSession) {
-        return false;
-    }
-    await store.rtc.toggleVideo("camera");
-    return true;
-}
-
-async function toggleScreenInTab() {
-    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-    if (!store?.rtc?.selfSession) {
-        return false;
-    }
-    await store.rtc.toggleVideo("screen");
-    return true;
-}
-
-async function openPipInTab() {
-    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-    if (!store?.rtc?.pipService) {
-        return false;
-    }
-    await store.rtc.openPip({});
-    return true;
-}
-
-async function leaveCallInTab() {
-    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-    if (!store?.rtc?.leaveCall) {
-        return false;
-    }
-    await store.rtc.leaveCall();
-    return true;
 }
 
 export class PopupPlugin extends Plugin {
@@ -132,6 +51,18 @@ export class PopupPlugin extends Plugin {
         this.restoreOptions();
         this.collectCurrentTabData();
         this.collectCallTabData();
+        chrome.storage.onChanged.addListener((changes, area) => {
+            if (area !== "session") {
+                return;
+            }
+            if (changes.callState) {
+                const nextState = changes.callState.newValue as CallState | null | undefined;
+                this.applyCallState(nextState ?? undefined);
+            }
+            if (changes.callTabId) {
+                this.hasCallTab.set(Boolean(changes.callTabId.newValue));
+            }
+        });
     }
 
     openShortcuts() {
@@ -182,103 +113,68 @@ export class PopupPlugin extends Plugin {
     }
 
     async collectCallTabData() {
-        const { isTalkingByTabId = {} } = (await chrome.storage.session.get(
-            "isTalkingByTabId"
-        )) as {
-            isTalkingByTabId: Record<string, boolean>;
-        };
-        const hasCall = Object.keys(isTalkingByTabId).length > 0;
-        this.hasCallTab.set(hasCall);
-        if (hasCall) {
-            await this.refreshCallState();
-        } else {
-            this.applyCallState();
+        const callTabId = await getCallTabId();
+        this.hasCallTab.set(Boolean(callTabId));
+        if (callTabId !== null) {
+            const state = await requestCallState();
+            this.applyCallState(state);
+            return;
         }
+        const storedState = await getStoredCallState();
+        this.applyCallState(storedState);
     }
 
     async toggleMicrophone() {
-        await this.runCallAction(toggleMicrophoneInTab);
+        await this.runCallAction({ type: CallActionType.ToggleMicrophone });
     }
 
     async toggleDeafen() {
-        await this.runCallAction(toggleDeafenInTab);
+        await this.runCallAction({ type: CallActionType.ToggleDeafen });
     }
 
     async toggleCamera() {
-        await this.runCallAction(toggleCameraInTab);
+        await this.runCallAction({ type: CallActionType.ToggleCamera });
     }
 
     // Screen share needs the call tab focused to avoid being blocked.
     async toggleScreen() {
-        await this.runCallAction(toggleScreenInTab, { focusCallTab: true });
+        // Routed through the service worker so focus is applied from the SW thread;
+        // this can close the popup when the call tab is focused.
+        await this.runCallAction({ type: CallActionType.ToggleScreen }, { focusCallTab: true });
     }
 
     async openPip() {
-        await this.runCallAction(openPipInTab);
+        await this.runCallAction({ type: CallActionType.OpenPip });
     }
 
     async leaveCall() {
-        const didLeave = await this.runCallAction(leaveCallInTab);
+        const didLeave = await this.runCallAction({ type: CallActionType.LeaveCall });
         if (didLeave) {
             await this.collectCallTabData();
         }
     }
 
-    applyCallState(state?: {
-        isMute?: boolean;
-        isDeaf?: boolean;
-        isCameraOn?: boolean;
-        isScreenOn?: boolean;
-    }) {
+    applyCallState(state?: Partial<CallState>) {
         this.isMute.set(Boolean(state?.isMute));
         this.isDeaf.set(Boolean(state?.isDeaf));
         this.isCameraOn.set(Boolean(state?.isCameraOn));
         this.isScreenOn.set(Boolean(state?.isScreenOn));
     }
 
-    async refreshCallState() {
-        const result = await executeInCallTab(readCallStateInTab);
-        this.hasCallTab.set(Boolean(result));
-        this.applyCallState(result);
-        return result;
-    }
-
     async runCallAction(
-        action: () => Promise<boolean> | boolean,
+        action: CallAction,
         { focusCallTab = false }: { focusCallTab?: boolean } = {}
     ) {
-        if (focusCallTab) {
-            this.goToCall();
+        const result = await requestCallAction(action, { focusCallTab });
+        if (!result) {
+            return false;
         }
-        const didRun = await executeInCallTab(action);
-        if (didRun) {
-            await this.refreshCallState();
-        } else {
-            this.applyCallState();
-        }
-        return didRun;
+        this.applyCallState(result.state);
+        return result.didRun;
     }
 
     async goToCall() {
-        const { isTalkingByTabId = {} } = (await chrome.storage.session.get(
-            "isTalkingByTabId"
-        )) as {
-            isTalkingByTabId: Record<string, boolean>;
-        };
-        const tabIds = Object.keys(isTalkingByTabId);
-        if (tabIds.length > 0) {
-            const tabId = parseInt(tabIds[0], 10);
-            try {
-                const tab = await chrome.tabs.get(tabId);
-                if (tab) {
-                    executeInCallTab(openChannelInTab);
-                    await chrome.tabs.update(tabId, { active: true });
-                    await chrome.windows.update(tab.windowId, { focused: true });
-                }
-            } catch (e) {
-                console.error("Failed to focus tab", e);
-            }
-        }
+        await requestFocusCallTab();
     }
 
     async restoreOptions() {

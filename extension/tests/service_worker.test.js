@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import { jest, describe, test, expect, beforeEach } from "@jest/globals";
-import { mockChrome, mockWebSocket } from "./utils.js";
+import { flushPromises, mockChrome, mockWebSocket } from "./utils.js";
 
 const mockStorage = mockChrome({
     isTalkingByTabId: {},
@@ -22,6 +22,7 @@ const { Message } = await import("../src/discuss/ws-protocol/message.ts");
 const { MessageBody } = await import("../src/discuss/ws-protocol/message-body.ts");
 const { PttDown } = await import("../src/discuss/ws-protocol/ptt-down.ts");
 const { PttUp } = await import("../src/discuss/ws-protocol/ptt-up.ts");
+const { CallActionType } = await import("../src/call_actions.ts");
 const flatbuffers = await import("flatbuffers");
 
 describe("Extension Service_worker Script", () => {
@@ -85,6 +86,129 @@ describe("Extension Service_worker Script", () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
 
         expect(sendResponse).toHaveBeenCalledWith("1.0.0");
+    });
+
+    test("handles update-mute message", async () => {
+        mockStorage.callTabId = 123;
+        chrome.scripting.executeScript
+            .mockResolvedValueOnce([{ result: true }])
+            .mockResolvedValueOnce([
+                {
+                    result: {
+                        isMute: true,
+                        isDeaf: false,
+                        isCameraOn: true,
+                        isScreenOn: false
+                    }
+                }
+            ]);
+        const sendResponse = jest.fn();
+
+        capturedHandleMessage(
+            { type: "update-mute", value: true },
+            { tab: { id: 123 } },
+            sendResponse
+        );
+        await flushPromises();
+
+        expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(2);
+        expect(sendResponse).toHaveBeenCalledWith({
+            status: "ok",
+            didRun: true,
+            state: {
+                isMute: true,
+                isDeaf: false,
+                isCameraOn: true,
+                isScreenOn: false
+            }
+        });
+        expect(mockStorage.callState).toEqual({
+            isMute: true,
+            isDeaf: false,
+            isCameraOn: true,
+            isScreenOn: false
+        });
+    });
+
+    test("handles call-action message", async () => {
+        mockStorage.callTabId = 123;
+        chrome.scripting.executeScript
+            .mockResolvedValueOnce([{ result: true }])
+            .mockResolvedValueOnce([
+                {
+                    result: {
+                        isMute: false,
+                        isDeaf: false,
+                        isCameraOn: true,
+                        isScreenOn: true
+                    }
+                }
+            ]);
+        const sendResponse = jest.fn();
+
+        capturedHandleMessage(
+            {
+                type: "call-action",
+                value: { action: { type: CallActionType.OpenPip }, options: {} }
+            },
+            { tab: { id: 123 } },
+            sendResponse
+        );
+        await flushPromises();
+
+        expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(2);
+        expect(sendResponse).toHaveBeenCalledWith({
+            status: "ok",
+            didRun: true,
+            state: {
+                isMute: false,
+                isDeaf: false,
+                isCameraOn: true,
+                isScreenOn: true
+            }
+        });
+    });
+
+    test("handles refresh-call-state message", async () => {
+        mockStorage.callTabId = 123;
+        chrome.scripting.executeScript.mockResolvedValueOnce([
+            {
+                result: {
+                    isMute: true,
+                    isDeaf: true,
+                    isCameraOn: false,
+                    isScreenOn: false
+                }
+            }
+        ]);
+        const sendResponse = jest.fn();
+
+        capturedHandleMessage({ type: "refresh-call-state" }, {}, sendResponse);
+        await flushPromises();
+
+        expect(sendResponse).toHaveBeenCalledWith({
+            status: "ok",
+            state: {
+                isMute: true,
+                isDeaf: true,
+                isCameraOn: false,
+                isScreenOn: false
+            }
+        });
+    });
+
+    test("handles focus-call-tab message", async () => {
+        mockStorage.callTabId = 123;
+        chrome.scripting.executeScript.mockResolvedValueOnce([{ result: true }]);
+        const sendResponse = jest.fn();
+
+        capturedHandleMessage({ type: "focus-call-tab" }, {}, sendResponse);
+        await flushPromises();
+
+        expect(chrome.tabs.get).toHaveBeenCalledWith(123);
+        expect(chrome.tabs.update).toHaveBeenCalledWith(123, { active: true });
+        expect(chrome.windows.update).toHaveBeenCalledWith(1, { focused: true });
+        expect(sendResponse).toHaveBeenCalledWith({ status: "ok", didFocus: true });
     });
 
     test("removes tab from storage on tab removal", async () => {

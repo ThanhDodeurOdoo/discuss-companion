@@ -30,9 +30,30 @@ jobs:
       - name: Run extension lint
         run: npm run lint:extension
 
+  typecheck:
+    name: Extension Typecheck
+    needs: lint
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ">=24.13.0"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run extension typecheck
+        run: npm run typecheck:extension
+
   test:
     name: Extension Tests
-    needs: lint
+    needs: [lint, typecheck]
     runs-on: macos-latest
     steps:
       - name: Checkout repository

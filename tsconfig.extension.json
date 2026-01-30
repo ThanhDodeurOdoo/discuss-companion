@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "extension/src/**/*",
+    "extension/tests/**/*",
+    "extension/vite.config.ts",
+    "extension/vite-plugin-owl-xml.ts",
+    "jest.config.js",
+    "jest.setup.js",
+    "jest.xmlTransformer.js"
+  ]
+}

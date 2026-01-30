@@ -30,9 +30,30 @@ jobs:
       - name: Run frontend lint
         run: npm run lint:frontend
 
+  typecheck:
+    name: Frontend Typecheck
+    needs: lint
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ">=24.13.0"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run frontend typecheck
+        run: npm run typecheck:frontend
+
   test:
     name: Frontend Tests
-    needs: lint
+    needs: [lint, typecheck]
     runs-on: macos-latest
     steps:
       - name: Checkout repository
