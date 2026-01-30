@@ -9,9 +9,9 @@ const mockStorage = mockChrome({
 mockWebSocket();
 
 /**
- * Import background script to register listeners
+ * Import service_worker script to register listeners
  */
-await import("../src/background.ts");
+await import("../src/service_worker.ts");
 
 const capturedHandleMessage = chrome.runtime.onMessageExternal.addListener.mock.calls[0][0];
 
@@ -29,7 +29,7 @@ describe("PTT Service Compatibility", () => {
         mockStorage.isTalkingByTabId = {};
         service = new MockPttExtensionService();
         /**
-         * Wire up the mock service to the extension background script
+         * Wire up the mock service to the extension service_worker script
          * Service -> Extension
          */
         service.onSendMessage = (message) => {

@@ -20,7 +20,7 @@
     },
     "background": {
         "scripts": [
-            "background.js"
+            "service_worker.js"
         ],
         "type": "module"
     },
