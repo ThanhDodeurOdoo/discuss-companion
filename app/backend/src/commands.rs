@@ -1,19 +1,23 @@
 use std::sync::atomic::Ordering;
 
-use tauri::{Emitter, State};
+use tauri::{
+    Emitter, State,
+    ipc::{Channel, InvokeBody},
+};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
 use tracing::info;
 
-use crate::WsState;
-use crate::flatbuffers::ipc_protocol_generated::discuss::ipc_protocol::{
-    PttBinding, SetRecordingMode, SetWsPort,
+use crate::{
+    WsState,
+    flatbuffers::ipc_protocol_generated::discuss::ipc_protocol::{
+        PttBinding, SetRecordingMode, SetWsPort,
+    },
+    platform,
+    platform::{check_accessibility_permission, get_binding, set_binding, set_recording},
+    server,
+    state::{KeyBinding, OutgoingMessage, VERSION, current_timestamp, encode_call_state},
 };
-use crate::platform;
-use crate::platform::{check_accessibility_permission, get_binding, set_binding, set_recording};
-use crate::server;
-use crate::state::{KeyBinding, OutgoingMessage, VERSION, current_timestamp, encode_call_state};
-use tauri::ipc::{Channel, InvokeBody};
 
 /// JUSTIFICATION: for all `clippy::needless_pass_by_value` below
 /// Tauri commands require owned values for dependency injection of the app handle
@@ -194,12 +198,12 @@ pub fn send_call_command(state: State<'_, WsState>, command: String, value: Opti
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::sync::Mutex;
-    use std::sync::atomic::AtomicU16;
+    use std::sync::{Mutex, atomic::AtomicU16};
 
-    use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
     use tokio::sync::broadcast;
+
+    use super::*;
+    use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
 
     #[test]
     fn test_build_call_command_payload_plain() {

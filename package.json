@@ -30,6 +30,7 @@
     "test:backend": "cd app/backend && cargo test",
     "test:api:ipc": "cd app/backend && cargo test --test ipc_api_tests",
     "test:api:ws": "cd app/backend && cargo test --test ws_api_tests",
+    "format:backend": "cd app/backend && cargo +nightly fmt",
     "pre:dev": "vite",
     "pre:build": "tsc && vite build",
     "tauri": "tauri"

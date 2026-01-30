@@ -7,22 +7,25 @@
         reason = "tests are allowed to panic"
     )
 )]
-use crate::state::{encode_backend_error, encode_ptt_state};
-use std::env;
-use std::io::stderr;
-use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::thread::sleep;
-use std::time::Duration;
-use tauri::ipc::InvokeBody;
+use std::{
+    env,
+    io::stderr,
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, AtomicU16, Ordering},
+    },
+    thread,
+    thread::sleep,
+    time::Duration,
+};
 
-use tauri::async_runtime;
-use tauri::image::Image;
-use tauri::ipc::Channel;
-use tauri::menu::{Menu, MenuItem};
-use tauri::tray::TrayIconBuilder;
-use tauri::{Emitter, Manager};
+use tauri::{
+    Emitter, Manager, async_runtime,
+    image::Image,
+    ipc::{Channel, InvokeBody},
+    menu::{Menu, MenuItem},
+    tray::TrayIconBuilder,
+};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, level_filters::LevelFilter};
@@ -117,7 +120,7 @@ impl PttHandler {
                 && let Some(channel) = guard.as_ref()
             {
                 let _ = channel.send(
-                    InvokeBody::Raw(encode_ptt_state(
+                    InvokeBody::Raw(state::encode_ptt_state(
                         is_active,
                         key.code,
                         &key.modifiers,
@@ -280,13 +283,12 @@ pub fn run() {
                         && let Some(channel) = guard.as_ref()
                     {
                         let _ = channel.send(
-                            InvokeBody::Raw(encode_backend_error(&format!(
+                            InvokeBody::Raw(state::encode_backend_error(&format!(
                                 "Global shortcut error: {e:?}"
                             )))
                             .into(),
                         );
                     }
-                    // app.emit("error", format!("Global shortcut error: {:?}", error));
                 }
             });
 

@@ -6,21 +6,29 @@
 )]
 #[cfg(test)]
 mod tests {
-    use discuss_companion_lib::WsState;
-    use discuss_companion_lib::flatbuffers::ipc_protocol_generated::discuss::ipc_protocol;
-    use discuss_companion_lib::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
-    use discuss_companion_lib::server::{self, is_connected, start_ws_server};
+    use std::{sync::atomic::AtomicU16, time::Duration};
+
+    use discuss_companion_lib::{
+        WsState,
+        flatbuffers::{
+            ipc_protocol_generated::discuss::ipc_protocol,
+            ws_protocol_generated::discuss::ws_protocol,
+        },
+        server::{self, is_connected, start_ws_server},
+    };
     use flatbuffers::FlatBufferBuilder;
     use futures_util::{SinkExt, StreamExt};
     use serial_test::serial;
-    use std::sync::atomic::AtomicU16;
-    use std::time::Duration;
-    use tauri::Manager;
-    use tauri::ipc::{Channel, InvokeResponseBody};
-    use tauri::test::{mock_builder, mock_context, noop_assets};
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::sync::broadcast;
-    use tokio::time::sleep;
+    use tauri::{
+        Manager,
+        ipc::{Channel, InvokeResponseBody},
+        test::{mock_builder, mock_context, noop_assets},
+    };
+    use tokio::{
+        net::{TcpListener, TcpStream},
+        sync::broadcast,
+        time::sleep,
+    };
     use tokio_tungstenite::tungstenite::Message::Binary;
 
     #[tokio::test]

@@ -1,20 +1,26 @@
-use std::net::SocketAddr;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{
+    net::SocketAddr,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 use futures_util::{SinkExt, StreamExt};
-use tauri::Manager;
-use tauri::ipc::InvokeBody;
-use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::broadcast;
+use tauri::{Manager, ipc::InvokeBody};
+use tokio::{
+    net::{TcpListener, TcpStream},
+    sync::broadcast,
+};
 use tokio_tungstenite::tungstenite::{Message, handshake};
 use tracing::{error, info};
 
-use crate::WsState;
-use crate::flatbuffers::ipc_protocol_generated::discuss::ipc_protocol;
-use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
-use crate::state::{
-    CallState, IncomingMessage, KeyBinding, Modifier, OutgoingMessage, current_timestamp,
-    encode_call_state, encode_ws_connection,
+use crate::{
+    WsState,
+    flatbuffers::{
+        ipc_protocol_generated::discuss::ipc_protocol, ws_protocol_generated::discuss::ws_protocol,
+    },
+    state::{
+        CallState, IncomingMessage, KeyBinding, Modifier, OutgoingMessage, current_timestamp,
+        encode_call_state, encode_ws_connection,
+    },
 };
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);

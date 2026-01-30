@@ -7,15 +7,19 @@
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        path::PathBuf,
+        sync::{Mutex, atomic::AtomicU16},
+    };
+
     use discuss_companion_lib::commands;
-    use std::path::PathBuf;
-    use std::sync::Mutex;
-    use std::sync::atomic::AtomicU16;
-    use tauri::Manager;
-    use tauri::http::HeaderMap;
-    use tauri::ipc::{CallbackFn, InvokeBody};
-    use tauri::test::{INVOKE_KEY, assert_ipc_response, mock_builder, mock_context, noop_assets};
-    use tauri::webview::InvokeRequest;
+    use tauri::{
+        Manager,
+        http::HeaderMap,
+        ipc::{CallbackFn, InvokeBody},
+        test::{INVOKE_KEY, assert_ipc_response, mock_builder, mock_context, noop_assets},
+        webview::InvokeRequest,
+    };
     use tokio::sync::broadcast;
 
     #[tokio::test]
