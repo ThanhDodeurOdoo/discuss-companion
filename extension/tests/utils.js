@@ -22,11 +22,19 @@ export function mockChrome(storageInitial = {}) {
         tabs: {
             onRemoved: { addListener: jest.fn() },
             sendMessage: jest.fn(),
-            create: jest.fn()
+            create: jest.fn(),
+            get: jest.fn().mockImplementation((tabId) => Promise.resolve({ id: tabId, windowId: 1 })),
+            update: jest.fn().mockImplementation(() => Promise.resolve())
+        },
+        windows: {
+            update: jest.fn().mockImplementation(() => Promise.resolve())
         },
         action: {
             onClicked: { addListener: jest.fn() },
             setIcon: jest.fn()
+        },
+        scripting: {
+            executeScript: jest.fn()
         },
         storage: {
             session: {

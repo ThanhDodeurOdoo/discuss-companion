@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "app/frontend/**/*",
+    "vite.config.ts",
+    "jest.config.js",
+    "jest.setup.js",
+    "jest.xmlTransformer.js"
+  ]
+}

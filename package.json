@@ -7,7 +7,7 @@
     "node": "24.13.0"
   },
   "scripts": {
-    "verify": "npm run lint && npm run test",
+    "verify": "npm run lint && npm run typecheck && npm run test",
     "dev": "tauri dev --config app/backend/tauri.conf.json",
     "dev:debug": "RUST_LOG=debug tauri dev --config app/backend/tauri.conf.json",
     "gen:flatbuffers": "npm run build:flatbuffers:ws && npm run build:flatbuffers:ipc",
@@ -18,6 +18,9 @@
     "build:extension:chrome": "TARGET=chrome vite build -c extension/vite.config.ts",
     "build:extension:firefox": "TARGET=firefox vite build -c extension/vite.config.ts",
     "lint": "npm run lint:extension && npm run lint:frontend && npm run lint:backend",
+    "typecheck": "npm run typecheck:extension && npm run typecheck:frontend",
+    "typecheck:extension": "tsc -p tsconfig.extension.json --noEmit",
+    "typecheck:frontend": "tsc -p tsconfig.frontend.json --noEmit",
     "lint:extension": "eslint extension/src --ext .ts",
     "lint:frontend": "eslint app/frontend --ext .ts",
     "lint:backend": "cd app/backend && cargo fmt --check && cargo clippy --tests -- -D warnings",
