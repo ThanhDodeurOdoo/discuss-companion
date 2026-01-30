@@ -110,19 +110,23 @@ impl PttHandler {
             state::OutgoingMessage::PttUp { key, .. } => (false, key, false),
             _ => return, // Only PttDown/PttUp are relevant for active state
         };
-        if let Some(state) = self.app_handle.try_state::<WsState>()
-            && let Ok(guard) = state.event_channel.read()
-            && let Some(channel) = guard.as_ref()
-        {
-            let _ = channel.send(
-                InvokeBody::Raw(state::encode_ptt_state(
-                    is_active,
-                    key.code,
-                    &key.modifiers,
-                    is_repeat,
-                ))
-                .into(),
-            );
+        if let Some(state) = self.app_handle.try_state::<WsState>() {
+            let channel = state
+                .event_channel
+                .read()
+                .ok()
+                .and_then(|guard| guard.as_ref().cloned());
+            if let Some(channel) = channel {
+                let _ = channel.send(
+                    InvokeBody::Raw(state::encode_ptt_state(
+                        is_active,
+                        key.code,
+                        &key.modifiers,
+                        is_repeat,
+                    ))
+                    .into(),
+                );
+            }
         }
     }
     fn handle_ptt_old(&mut self, msg: &state::OutgoingMessage) {
@@ -258,16 +262,20 @@ pub fn run() {
             thread::spawn(move || {
                 if let Err(e) = platform::start_engine(event_tx, &shutdown_clone) {
                     error!("Platform engine error: {}", e);
-                    if let Some(state) = handle_tap.try_state::<WsState>()
-                        && let Ok(guard) = state.event_channel.read()
-                        && let Some(channel) = guard.as_ref()
-                    {
-                        let _ = channel.send(
-                            InvokeBody::Raw(state::encode_backend_error(&format!(
-                                "Global shortcut error: {e:?}"
-                            )))
-                            .into(),
-                        );
+                    if let Some(state) = handle_tap.try_state::<WsState>() {
+                        let channel = state
+                            .event_channel
+                            .read()
+                            .ok()
+                            .and_then(|guard| guard.as_ref().cloned());
+                        if let Some(channel) = channel {
+                            let _ = channel.send(
+                                InvokeBody::Raw(state::encode_backend_error(&format!(
+                                    "Global shortcut error: {e:?}"
+                                )))
+                                .into(),
+                            );
+                        }
                     }
                 }
             });
