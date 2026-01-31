@@ -1,0 +1,12 @@
+/**
+ * Discuss Companion - Common Styles
+ *
+ * Import this file along with your preferred theme:
+ * - theme-light.css for light mode (extension popup)
+ * - theme-dark.css for dark mode (desktop app)
+ */
+
+@import "./tokens.css";
+@import "./base.css";
+@import "./icons.css";
+@import "./components.css";

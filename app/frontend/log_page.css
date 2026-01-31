@@ -1,73 +1,68 @@
+/**
+ * Log Page Styles
+ */
+
 .logs-section {
-  background: var(--bg-color);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+    background: var(--color-bg);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .logs-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
 }
 
 .logs-header h2 {
     font-size: 1rem;
-    color: var(--text-secondary);
+    color: var(--color-text-muted);
     text-transform: uppercase;
     font-weight: 600;
 }
 
 .logs-container {
-  flex: 1;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8125rem;
-  overflow-y: auto;
-  padding-right: 8px;
-}
-
-.logs-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.logs-container::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    overflow-y: auto;
+    padding-right: var(--space-2);
 }
 
 .log-entry {
-  padding: 8px 12px;
-  border-radius: 6px;
-  margin-bottom: 4px;
-  display: flex;
-  gap: 12px;
-  transition: background 0.2s ease;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-1);
+    display: flex;
+    gap: var(--space-3);
+    transition: background var(--transition-slow);
 }
 
 .log-entry:hover {
-  background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .log-ts {
-  color: var(--text-secondary);
-  flex-shrink: 0;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
 }
 
 .log-type {
-  font-weight: 600;
-  text-transform: uppercase;
-  width: 60px;
-  flex-shrink: 0;
+    font-weight: 600;
+    text-transform: uppercase;
+    width: 60px;
+    flex-shrink: 0;
 }
 
-.type-down { color: var(--success); }
-.type-up { color: var(--text-secondary); }
-.type-error { color: var(--error); }
-.type-ws { color: var(--accent-color); }
+.type-down { color: var(--color-success); }
+.type-up { color: var(--color-text-muted); }
+.type-error { color: var(--color-danger); }
+.type-ws { color: var(--color-accent); }
 .type-ws-msg { color: #d2a8ff; }
 
 .log-msg {
-  word-break: break-all;
+    word-break: break-all;
 }

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tauri::{
     AppHandle, LogicalSize, Manager, PhysicalPosition, Position, Runtime, WebviewUrl,
     image::Image,
+    menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 use tracing::warn;
@@ -11,8 +12,8 @@ pub const TRAY_ID: &str = "main-tray";
 
 pub const CALL_CONTROLS_WINDOW_LABEL: &str = "call-controls";
 const CALL_CONTROLS_WINDOW_TITLE: &str = "Call Controls";
-const CALL_CONTROLS_WINDOW_WIDTH: f64 = 360.0;
-const CALL_CONTROLS_WINDOW_HEIGHT: f64 = 280.0;
+const CALL_CONTROLS_WINDOW_WIDTH: f64 = 300.0;
+const CALL_CONTROLS_WINDOW_HEIGHT: f64 = 120.0;
 const CALL_CONTROLS_WINDOW_MARGIN: i32 = 8;
 
 /// Sets up the tray icon. Clicking it toggles the call controls window.
@@ -20,8 +21,17 @@ const CALL_CONTROLS_WINDOW_MARGIN: i32 = 8;
 /// # Errors
 /// Returns an error if the tray icon cannot be created.
 pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) -> tauri::Result<()> {
-    let _tray = TrayIconBuilder::<R>::with_id(TRAY_ID)
+    let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&quit_i])?;
+
+    let mut builder = TrayIconBuilder::<R>::with_id(TRAY_ID)
         .icon(tray_icon)
+        .menu(&menu)
+        .on_menu_event(|app, event| {
+            if event.id() == "quit" {
+                app.exit(0);
+            }
+        })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
@@ -32,8 +42,14 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) ->
             {
                 toggle_call_controls_window(tray.app_handle(), position.x, position.y);
             }
-        })
-        .build(app)?;
+        });
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.show_menu_on_left_click(false);
+    }
+
+    builder.build(app)?;
     Ok(())
 }
 
@@ -65,6 +81,7 @@ fn toggle_call_controls_window<R: Runtime>(
     .resizable(false)
     .decorations(false)
     .always_on_top(true)
+    .accept_first_mouse(true)
     .skip_taskbar(true)
     .visible(false)
     .build();

@@ -43,6 +43,10 @@ export default defineConfig(({ mode }) => {
                         dest: "assets"
                     },
                     {
+                        src: resolve(__dirname, "../common/fonts"),
+                        dest: "fonts"
+                    },
+                    {
                         src: "extension/options.html",
                         dest: "."
                     }

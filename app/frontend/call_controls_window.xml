@@ -1,88 +1,66 @@
 <div class="call-controls-window prevent-select">
-    <div class="call-controls-header">
-        <div class="call-controls-drag" data-tauri-drag-region="">
-            <span class="call-controls-title">Call Controls</span>
-            <span
-                class="call-status"
-                t-att-class="this.app.callStatusClass()"
-                t-out="this.app.callStatusText()"
-            />
-        </div>
-        <!--
-        <button
-            class="call-controls-close"
-            t-att-title="'Hide'"
-            t-on-click="() => this.hideWindow()">
-            ×
-        </button>
-        -->
-    </div>
-    <div class="call-panel call-controls-panel">
-        <div class="call-grid">
+    <div class="call call-controls-panel">
+        <div class="call__pulse" aria-hidden="true"></div>
+        <div class="call__actions">
             <button
-                class="call-btn"
+                class="btn btn--icon call__btn"
                 t-att-class="{ 'is-off': this.app.isMute() }"
                 t-att-disabled="!this.app.canUseCallToggles()"
                 t-att-title="this.app.isMute() ? 'Unmute' : 'Mute'"
                 t-on-click="() => this.app.toggleMute()">
-                <span t-out="this.app.isMute() ? 'Unmute' : 'Mute'"/>
+                <span class="icon" t-if="this.app.isMute()" aria-hidden="true">mic_off</span>
+                <span class="icon" t-else="" aria-hidden="true">mic</span>
             </button>
             <button
-                class="call-btn"
+                class="btn btn--icon call__btn"
                 t-att-class="{ 'is-off': this.app.isDeaf() }"
                 t-att-disabled="!this.app.canUseCallToggles()"
                 t-att-title="this.app.isDeaf() ? 'Undeafen' : 'Deafen'"
                 t-on-click="() => this.app.toggleDeafen()">
-                <span t-out="this.app.isDeaf() ? 'Undeafen' : 'Deafen'"/>
+                <span class="icon" t-if="this.app.isDeaf()" aria-hidden="true">volume_off</span>
+                <span class="icon" t-else="" aria-hidden="true">volume_up</span>
             </button>
             <button
-                class="call-btn"
+                class="btn btn--icon call__btn"
                 t-att-class="{ 'is-on': this.app.isCameraOn() }"
                 t-att-disabled="!this.app.canUseCallToggles()"
                 t-att-title="this.app.isCameraOn() ? 'Turn camera off' : 'Turn camera on'"
                 t-on-click="() => this.app.toggleCamera()">
-                <span t-out="this.app.isCameraOn() ? 'Camera off' : 'Camera on'"/>
+                <span class="icon" t-if="this.app.isCameraOn()" aria-hidden="true">videocam</span>
+                <span class="icon" t-else="" aria-hidden="true">videocam_off</span>
             </button>
             <button
-                class="call-btn"
+                class="btn btn--icon call__btn"
                 t-att-class="{ 'is-on': this.app.isScreenOn() }"
                 t-att-disabled="!this.app.canUseCallToggles()"
                 t-att-title="this.app.isScreenOn() ? 'Stop sharing screen' : 'Share screen'"
                 t-on-click="() => this.app.toggleScreen()">
-                <span t-out="this.app.isScreenOn() ? 'Stop share' : 'Share screen'"/>
-            </button>
-        </div>
-        <div class="call-actions">
-            <button
-                class="std-btn call-action-btn"
-                t-att-disabled="!this.app.hasActiveCall()"
-                t-on-click="() => this.app.goToCall()">
-                Go to Call
+                <span class="icon" t-if="this.app.isScreenOn()" aria-hidden="true">stop_screen_share</span>
+                <span class="icon" t-else="" aria-hidden="true">screen_share</span>
             </button>
             <button
-                class="std-btn call-action-btn"
-                t-att-disabled="!this.app.hasActiveCall()"
-                t-on-click="() => this.app.openPip()">
-                PiP
-            </button>
-            <button
-                class="std-btn call-action-btn danger"
-                t-att-disabled="!this.app.hasActiveCall()"
+                class="btn btn--icon btn--danger call__btn"
+                t-att-disabled="!this.app.canUseCallToggles()"
+                t-att-title="'Leave call'"
                 t-on-click="() => this.app.leaveCall()">
-                Leave
+                <span class="icon" aria-hidden="true">call_end</span>
             </button>
         </div>
     </div>
-    <div class="call-controls-footer">
+    <div class="call-controls-footer" data-tauri-drag-region="">
         <button
-            class="std-btn call-footer-btn"
-            t-on-click="() => this.app.showMainWindow()">
-            Show App
+            class="btn btn-sm btn--ghost"
+            t-att-title="'Go to call'"
+            t-att-disabled="!this.app.hasActiveCall()"
+            t-on-click="() => this.app.goToCall()">
+            <span>Go to call</span>
         </button>
+        <span class="call-controls-spacer" data-tauri-drag-region=""></span>
         <button
-            class="std-btn call-footer-btn danger"
-            t-on-click="() => this.app.quitApp()">
-            Quit
+            class="btn btn--icon btn--sm btn--ghost"
+            t-att-title="'Show App'"
+            t-on-click="() => this.app.showMainWindow()">
+            <span class="icon" aria-hidden="true">open_in_full</span>
         </button>
     </div>
 </div>

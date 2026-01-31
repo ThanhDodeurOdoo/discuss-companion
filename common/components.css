@@ -1,0 +1,426 @@
+/**
+ * Shared Components
+ * Buttons, inputs, and common UI elements
+ */
+
+/* ========================================
+   BUTTONS
+   ======================================== */
+
+.btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    line-height: 1.4;
+    text-decoration: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition:
+        background var(--transition-base),
+        border-color var(--transition-base),
+        color var(--transition-base),
+        transform var(--transition-fast);
+}
+
+.btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Primary Button */
+.btn--primary {
+    background: var(--color-accent);
+    border-color: var(--color-accent-strong);
+    color: #ffffff;
+}
+
+.btn--primary:hover:not(:disabled) {
+    background: var(--color-accent-strong);
+}
+
+/* Ghost Button */
+.btn--ghost {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.btn--ghost:hover:not(:disabled) {
+    border-color: var(--color-accent);
+    color: var(--color-text);
+}
+
+/* Outline Button */
+.btn--outline {
+    background: transparent;
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.btn--outline:hover:not(:disabled) {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background: var(--color-accent-muted);
+}
+
+/* Danger Button */
+.btn--danger {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: #ffffff;
+}
+
+.btn--danger:hover:not(:disabled) {
+    filter: brightness(0.9);
+}
+
+/* Success Button */
+.btn--success {
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: #ffffff;
+}
+
+.btn--success:hover:not(:disabled) {
+    filter: brightness(0.9);
+}
+
+/* Icon Button */
+.btn--icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+.btn--icon:hover:not(:disabled) {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.btn--icon.is-off {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: #ffffff;
+}
+
+.btn--icon.is-on {
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: #ffffff;
+}
+
+.btn--icon.is-off:hover:not(:disabled),
+.btn--icon.is-on:hover:not(:disabled) {
+    filter: brightness(0.95);
+}
+
+.btn--icon.btn--danger {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: #ffffff;
+}
+
+.btn--icon.btn--danger:hover:not(:disabled) {
+    filter: brightness(0.9);
+}
+
+.btn--icon.btn--success {
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: #ffffff;
+}
+
+.btn--icon.btn--success:hover:not(:disabled) {
+    filter: brightness(0.9);
+}
+
+.btn--icon .icon {
+    font-size: 20px;
+}
+
+/* Small Button */
+.btn--sm {
+    padding: var(--space-1) var(--space-2);
+    font-size: 12px;
+    border-radius: var(--radius-sm);
+}
+
+.btn--sm.btn--icon {
+    width: 28px;
+    height: 28px;
+}
+
+.btn--sm.btn--icon .icon {
+    font-size: 16px;
+}
+
+/* Large Button */
+.btn--lg {
+    padding: var(--space-3) var(--space-4);
+    font-size: 14px;
+    border-radius: var(--radius-lg);
+}
+
+.btn--lg.btn--icon {
+    width: 44px;
+    height: 44px;
+}
+
+.btn--lg.btn--icon .icon {
+    font-size: 24px;
+}
+
+/* ========================================
+   INPUTS
+   ======================================== */
+
+.input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    font-size: 14px;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition:
+        border-color var(--transition-base),
+        box-shadow var(--transition-base);
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-muted);
+}
+
+.input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.input::placeholder {
+    color: var(--color-text-subtle);
+}
+
+/* ========================================
+   TOGGLE / CHECKBOX
+   ======================================== */
+
+.toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.toggle__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.toggle__input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+}
+
+/* ========================================
+   FIELD
+   ======================================== */
+
+.field {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.field__label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+}
+
+.field__row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-2);
+    align-items: center;
+}
+
+/* ========================================
+   CARD / PANEL
+   ======================================== */
+
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.card--elevated {
+    box-shadow: var(--shadow-md);
+}
+
+.card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.card__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.card__body {
+    padding: var(--space-4);
+}
+
+.card__footer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+/* ========================================
+   STATUS INDICATORS
+   ======================================== */
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-3);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    background: var(--color-surface-muted);
+}
+
+.status__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.status--success {
+    color: var(--color-success);
+    border-color: var(--color-success);
+    background: var(--color-success-muted);
+}
+
+.status--danger {
+    color: var(--color-danger);
+    border-color: var(--color-danger);
+    background: var(--color-danger-muted);
+}
+
+.status--accent {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    background: var(--color-accent-muted);
+}
+
+/* Pulsing animation for active status */
+.status--pulse .status__dot {
+    animation: status-pulse 1.6s infinite;
+}
+
+@keyframes status-pulse {
+    0% {
+        box-shadow: 0 0 0 0 currentColor;
+        opacity: 1;
+    }
+    70% {
+        box-shadow: 0 0 0 6px transparent;
+        opacity: 0.7;
+    }
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+        opacity: 1;
+    }
+}
+
+/* ========================================
+   CALL CONTROLS (shared between app/ext)
+   ======================================== */
+
+.call {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.call__pulse {
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    min-height: 10px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--color-danger);
+    border: 1px solid var(--color-danger);
+    box-shadow: 0 0 0 0 var(--color-danger);
+    animation: call-pulse 1.6s infinite;
+}
+
+@keyframes call-pulse {
+    0% {
+        box-shadow: 0 0 0 0 var(--color-danger);
+    }
+    70% {
+        box-shadow: 0 0 0 8px transparent;
+    }
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+    }
+}
+
+.call__actions {
+    display: grid;
+    flex: 1;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-2);
+}
+
+.call__btn {
+    width: 100%;
+}
