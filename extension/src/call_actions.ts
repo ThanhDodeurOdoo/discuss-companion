@@ -102,6 +102,11 @@ export function requiresUserGesture(action: CallAction): boolean {
     return CALL_ACTIONS_BY_ID[action.type].requiresUserGesture === true;
 }
 
+export function requiresFocusCallTab(action: CallAction): boolean {
+    const definition = CALL_ACTIONS_BY_ID[action.type] as { requiresFocusCallTab?: boolean };
+    return definition.requiresFocusCallTab === true;
+}
+
 function hasActionValue(action: CallAction): action is Extract<CallAction, { value: boolean }> {
     return "value" in action;
 }
@@ -136,7 +141,7 @@ export async function executeCallAction(
     action: CallAction,
     options: CallActionOptions = {}
 ): Promise<CallActionResult> {
-    if (options.focusCallTab) {
+    if (options.focusCallTab || requiresFocusCallTab(action)) {
         await focusCallTab();
     }
     const definition = CALL_ACTIONS_BY_ID[action.type];
