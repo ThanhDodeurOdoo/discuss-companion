@@ -68,11 +68,7 @@ fn setup_logging() {
 
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::from_default_env().add_directive(
-                "discuss_agent_app=warn"
-                    .parse()
-                    .unwrap_or_else(|_| LevelFilter::WARN.into()),
-            ),
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")),
         )
         .with_writer(stderr)
         .with_target(false)
