@@ -1,4 +1,4 @@
-use std::sync::atomic::Ordering;
+use std::{env, sync::atomic::Ordering};
 
 use tauri::{
     Emitter, Manager, State,
@@ -29,6 +29,12 @@ use crate::{
 #[must_use]
 pub fn get_version() -> String {
     VERSION.to_string()
+}
+
+#[tauri::command]
+#[must_use]
+pub fn get_platform() -> &'static str {
+    env::consts::OS
 }
 
 #[tauri::command]

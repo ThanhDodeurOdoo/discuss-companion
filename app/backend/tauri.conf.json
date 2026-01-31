@@ -13,9 +13,23 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "discuss-companion",
         "width": 800,
         "height": 600
+      },
+      {
+        "label": "call-controls",
+        "title": "Call Controls",
+        "width": 300,
+        "height": 120,
+        "visible": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "center": false,
+        "acceptFirstMouse": true
       }
     ],
     "security": {

@@ -26,7 +26,7 @@ use tauri::{
 };
 use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
-use tracing::{debug, error, info, level_filters::LevelFilter};
+use tracing::{debug, error, info};
 
 pub mod commands;
 pub mod flatbuffers;
@@ -68,11 +68,7 @@ fn setup_logging() {
 
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::from_default_env().add_directive(
-                "discuss_agent_app=warn"
-                    .parse()
-                    .unwrap_or_else(|_| LevelFilter::WARN.into()),
-            ),
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")),
         )
         .with_writer(stderr)
         .with_target(false)
@@ -215,6 +211,7 @@ pub fn run() {
 
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(move |app| {
             let mut port = DEFAULT_PORT;
@@ -287,6 +284,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_version,
+            commands::get_platform,
             commands::update_binding,
             commands::set_recording_mode,
             commands::get_current_binding,

@@ -48,6 +48,7 @@ export class AppPlugin extends Plugin {
     isDeaf = signal(false);
     isCameraOn = signal(false);
     isScreenOn = signal(false);
+    platform = signal("");
 
     // WS Port Management
     wsPort = signal(DEFAULT_PORT);
@@ -66,6 +67,8 @@ export class AppPlugin extends Plugin {
 
     async init() {
         this.addLog("SYSTEM", "Ready");
+        const platform = await invoke<string>("get_platform");
+        this.platform.set(platform);
         await this.fetchCurrentBinding();
         await this.fetchWsPort();
         await this.checkPermission();
