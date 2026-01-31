@@ -32,6 +32,7 @@ mod tests {
     use tokio_tungstenite::tungstenite::Message::Binary;
 
     #[tokio::test]
+    #[serial]
     async fn test_is_connected_initial() {
         assert!(!is_connected());
     }
