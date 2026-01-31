@@ -4,7 +4,7 @@ use std::{
 };
 
 use futures_util::{SinkExt, StreamExt};
-use tauri::{Manager, ipc::InvokeBody};
+use tauri::Manager;
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::broadcast,
@@ -84,22 +84,10 @@ pub async fn start_ws_server<R: tauri::Runtime>(
     }
 }
 
-fn send_to_frontend<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, bin: Vec<u8>) {
+fn send_to_frontend<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, bin: &[u8]) {
     // We use try_state because this might be called during shutdown or tests where state is gone
-    let channel = app_handle.try_state::<WsState>().map_or_else(
-        || None,
-        |state| {
-            state
-                .event_channel
-                .read()
-                .ok()
-                .and_then(|guard| guard.as_ref().cloned())
-        },
-    );
-    if let Some(channel) = channel
-        && let Err(e) = channel.send(InvokeBody::Raw(bin).into())
-    {
-        error!("Failed to send to frontend channel: {e}");
+    if let Some(state) = app_handle.try_state::<WsState>() {
+        state.broadcast(bin);
     }
 }
 
@@ -143,10 +131,8 @@ async fn handle_connection<R: tauri::Runtime>(
     }
 
     if is_current_server(server_id) {
-        send_to_frontend(
-            &app_handle,
-            encode_ws_connection(ipc_protocol::ConnectionStatus::Connected),
-        );
+        let payload = encode_ws_connection(ipc_protocol::ConnectionStatus::Connected);
+        send_to_frontend(&app_handle, &payload);
     }
 
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
@@ -190,20 +176,23 @@ async fn handle_connection<R: tauri::Runtime>(
                                             };
                                             let incoming = IncomingMessage::SetBinding { binding };
                                             if is_current_server(server_id) {
-                                                send_to_frontend(&app_handle, incoming.to_ipc_flatbuffer());
+                                                let payload = incoming.to_ipc_flatbuffer();
+                                                send_to_frontend(&app_handle, &payload);
                                             }
                                         }
                                     }
                                     ws_protocol::MessageBody::GetBinding => {
                                          let incoming = IncomingMessage::GetBinding;
                                          if is_current_server(server_id) {
-                                             send_to_frontend(&app_handle, incoming.to_ipc_flatbuffer());
+                                         let payload = incoming.to_ipc_flatbuffer();
+                                         send_to_frontend(&app_handle, &payload);
                                          }
                                     }
                                     ws_protocol::MessageBody::Shutdown => {
                                          let incoming = IncomingMessage::Shutdown;
                                          if is_current_server(server_id) {
-                                             send_to_frontend(&app_handle, incoming.to_ipc_flatbuffer());
+                                         let payload = incoming.to_ipc_flatbuffer();
+                                         send_to_frontend(&app_handle, &payload);
                                          }
                                     }
                                     ws_protocol::MessageBody::CallState => {
@@ -215,7 +204,8 @@ async fn handle_connection<R: tauri::Runtime>(
                                                 {
                                                     *guard = Some(state);
                                                 }
-                                                send_to_frontend(&app_handle, encode_call_state(&state));
+                                                let payload = encode_call_state(&state);
+                                                send_to_frontend(&app_handle, &payload);
                                             }
                                         }
                                     }
@@ -246,9 +236,7 @@ async fn handle_connection<R: tauri::Runtime>(
         && CONNECTION_COUNT.fetch_sub(1, Ordering::SeqCst) == 1
     {
         let _ = conn_tx.send(false);
-        send_to_frontend(
-            &app_handle,
-            encode_ws_connection(ipc_protocol::ConnectionStatus::Disconnected),
-        );
+        let payload = encode_ws_connection(ipc_protocol::ConnectionStatus::Disconnected);
+        send_to_frontend(&app_handle, &payload);
     }
 }

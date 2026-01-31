@@ -23,8 +23,6 @@ use tauri::{
     Emitter, Manager, async_runtime,
     image::Image,
     ipc::{Channel, InvokeBody},
-    menu::{Menu, MenuItem},
-    tray::TrayIconBuilder,
 };
 use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
@@ -32,12 +30,12 @@ use tracing::{debug, error, info, level_filters::LevelFilter};
 
 pub mod commands;
 pub mod flatbuffers;
+pub mod menu;
 pub mod platform;
 pub mod server;
 pub mod state;
 
 pub const DEFAULT_PORT: u16 = 49152;
-const TRAY_ID: &str = "main-tray";
 const ICON_ACTIVE_ONLINE: &[u8] = include_bytes!("../../../assets/icons/active_online_icon.png");
 const ICON_INACTIVE_ONLINE: &[u8] =
     include_bytes!("../../../assets/icons/inactive_online_icon.png");
@@ -49,8 +47,20 @@ pub struct WsState {
     pub ws_tx: broadcast::Sender<Vec<u8>>,
     pub server_shutdown_tx: Mutex<broadcast::Sender<()>>,
     pub conn_tx: crossbeam_channel::Sender<bool>,
-    pub event_channel: RwLock<Option<Channel>>,
+    pub event_channels: RwLock<Vec<Channel>>,
     pub call_state: RwLock<Option<state::CallState>>,
+}
+
+impl WsState {
+    pub(crate) fn broadcast(&self, payload: &[u8]) {
+        if let Ok(mut guard) = self.event_channels.write() {
+            guard.retain(|channel| {
+                channel
+                    .send(InvokeBody::Raw(payload.to_vec()).into())
+                    .is_ok()
+            });
+        }
+    }
 }
 
 fn setup_logging() {
@@ -111,22 +121,8 @@ impl PttHandler {
             _ => return, // Only PttDown/PttUp are relevant for active state
         };
         if let Some(state) = self.app_handle.try_state::<WsState>() {
-            let channel = state
-                .event_channel
-                .read()
-                .ok()
-                .and_then(|guard| guard.as_ref().cloned());
-            if let Some(channel) = channel {
-                let _ = channel.send(
-                    InvokeBody::Raw(state::encode_ptt_state(
-                        is_active,
-                        key.code,
-                        &key.modifiers,
-                        is_repeat,
-                    ))
-                    .into(),
-                );
-            }
+            let payload = state::encode_ptt_state(is_active, key.code, &key.modifiers, is_repeat);
+            state.broadcast(&payload);
         }
     }
     fn handle_ptt_old(&mut self, msg: &state::OutgoingMessage) {
@@ -157,7 +153,7 @@ impl PttHandler {
     }
 
     fn update_tray(&self) {
-        let Some(tray) = self.app_handle.tray_by_id(TRAY_ID) else {
+        let Some(tray) = self.app_handle.tray_by_id(menu::TRAY_ID) else {
             return;
         };
 
@@ -243,7 +239,7 @@ pub fn run() {
                 ws_tx: ws_tx_clone.clone(),
                 server_shutdown_tx: Mutex::new(ws_shutdown_tx_clone),
                 conn_tx: conn_tx.clone(),
-                event_channel: RwLock::new(None),
+                event_channels: RwLock::new(Vec::new()),
                 call_state: RwLock::new(None),
             });
 
@@ -263,43 +259,15 @@ pub fn run() {
                 if let Err(e) = platform::start_engine(event_tx, &shutdown_clone) {
                     error!("Platform engine error: {}", e);
                     if let Some(state) = handle_tap.try_state::<WsState>() {
-                        let channel = state
-                            .event_channel
-                            .read()
-                            .ok()
-                            .and_then(|guard| guard.as_ref().cloned());
-                        if let Some(channel) = channel {
-                            let _ = channel.send(
-                                InvokeBody::Raw(state::encode_backend_error(&format!(
-                                    "Global shortcut error: {e:?}"
-                                )))
-                                .into(),
-                            );
-                        }
+                        let payload =
+                            state::encode_backend_error(&format!("Global shortcut error: {e:?}"));
+                        state.broadcast(&payload);
                     }
                 }
             });
 
-            let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
-            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
-
             let tray_icon = Image::from_bytes(ICON_INACTIVE_OFFLINE)?;
-
-            let _tray = TrayIconBuilder::with_id(TRAY_ID)
-                .icon(tray_icon)
-                .menu(&menu)
-                .on_menu_event(move |app_handle, event| match event.id.as_ref() {
-                    "show" => {
-                        if let Some(window) = app_handle.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                    "quit" => app_handle.exit(0),
-                    _ => {}
-                })
-                .build(app)?;
+            menu::setup_tray(app, tray_icon)?;
 
             Ok(())
         })
@@ -307,6 +275,14 @@ pub fn run() {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let _ = window.hide();
                 api.prevent_close();
+
+                // Hide dock icon when main window is closed
+                #[cfg(target_os = "macos")]
+                if window.label() == "main" {
+                    let _ = window
+                        .app_handle()
+                        .set_activation_policy(tauri::ActivationPolicy::Accessory);
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -317,6 +293,8 @@ pub fn run() {
             commands::is_accessibility_granted,
             commands::is_extension_connected,
             commands::force_ptt_up,
+            commands::show_main_window,
+            commands::quit_app,
             commands::get_ws_port,
             commands::update_ws_port,
             commands::establish_channel,

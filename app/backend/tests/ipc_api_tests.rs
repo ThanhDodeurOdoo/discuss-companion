@@ -94,7 +94,7 @@ mod tests {
             ws_tx: broadcast::channel(1).0,
             server_shutdown_tx: Mutex::new(broadcast::channel(1).0),
             conn_tx: crossbeam_channel::unbounded().0,
-            event_channel: RwLock::new(None),
+            event_channels: RwLock::new(Vec::new()),
             call_state: RwLock::new(None),
         });
 
@@ -120,4 +120,7 @@ mod tests {
             Ok(12345),
         );
     }
+
+    // Note: show_main_window and quit_app commands require AppHandle which
+    // cannot be tested with MockRuntime. These are tested via frontend tests.
 }
