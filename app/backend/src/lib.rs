@@ -26,7 +26,7 @@ use tauri::{
 };
 use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
-use tracing::{debug, error, info, level_filters::LevelFilter};
+use tracing::{debug, error, info};
 
 pub mod commands;
 pub mod flatbuffers;
