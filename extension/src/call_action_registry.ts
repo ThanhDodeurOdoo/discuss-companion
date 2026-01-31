@@ -1,6 +1,7 @@
 type CallActionDefinitionBase = {
     id: string;
     requiresUserGesture?: boolean;
+    requiresFocusCallTab?: boolean;
     appCommands?: readonly string[];
 };
 
@@ -158,6 +159,7 @@ export const CALL_ACTIONS = defineCallActions({
         id: "toggle-screen",
         requiresValue: false,
         requiresUserGesture: false,
+        requiresFocusCallTab: true,
         run: toggleScreenInTab
     },
     OpenPip: {
@@ -203,6 +205,7 @@ export const CALL_ACTIONS = defineCallActions({
         id: "set-screen",
         requiresValue: true,
         requiresUserGesture: false,
+        requiresFocusCallTab: true,
         run: setScreenInTab,
         appCommands: ["update-screen"]
     }
