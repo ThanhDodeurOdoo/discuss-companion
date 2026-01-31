@@ -58,20 +58,20 @@
                     <button class="btn btn--primary" id="save" t-on-click="() => this.popup.save()">Save</button>
                 </div>
             </div>
+            <div t-else="" class="settings__actions">
+                <button class="btn btn--ghost" t-on-click="() => this.popup.openShortcuts()">
+                    <span class="icon" aria-hidden="true">keyboard</span>
+                    <span>Extension shortcuts</span>
+                </button>
+            </div>
             <div class="toggle">
                 <label class="toggle__label" for="logging">Logging Enabled</label>
                 <input class="toggle__input" type="checkbox" id="logging"
                     t-model="this.popup.isLoggingEnabled"
                     t-on-change="() => this.popup.updateLogging()" />
             </div>
-            <div id="status" class="status" t-att-class="{ 'status--default': this.popup.isStatusDefault(), 'status--error': this.popup.isStatusError(), 'status--success': this.popup.isStatusSuccess() }">
+            <div id="status" t-if="this.popup.statusText()" class="status" t-att-class="{ 'status--default': this.popup.isStatusDefault(), 'status--error': this.popup.isStatusError(), 'status--success': this.popup.isStatusSuccess() }">
                 <t t-out="this.popup.statusText()"/>
-            </div>
-            <div class="settings__actions">
-                <button class="btn btn--ghost" t-on-click="() => this.popup.openShortcuts()">
-                    <span class="icon" aria-hidden="true">keyboard</span>
-                    <span>Shortcuts</span>
-                </button>
             </div>
             <div class="info" t-if="this.popup.isOdoo()">
                  <div class="info__title">Odoo detected</div>
