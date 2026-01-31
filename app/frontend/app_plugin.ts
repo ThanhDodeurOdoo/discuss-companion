@@ -438,4 +438,12 @@ export class AppPlugin extends Plugin {
 
         return `${symbolString}${keySymbol}`;
     }
+
+    async showMainWindow() {
+        await invoke("show_main_window");
+    }
+
+    async quitApp() {
+        await invoke("quit_app");
+    }
 }

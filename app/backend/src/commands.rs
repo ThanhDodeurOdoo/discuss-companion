@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 
 use tauri::{
-    Emitter, State,
+    Emitter, Manager, State,
     ipc::{Channel, InvokeBody},
 };
 use tauri_plugin_store::StoreExt;
@@ -13,6 +13,7 @@ use crate::{
     flatbuffers::ipc_protocol_generated::discuss::ipc_protocol::{
         PttBinding, SetRecordingMode, SetWsPort,
     },
+    menu::CALL_CONTROLS_WINDOW_LABEL,
     platform,
     platform::{check_accessibility_permission, get_binding, set_binding, set_recording},
     server,
@@ -83,6 +84,27 @@ pub fn is_extension_connected() -> bool {
 #[tauri::command]
 pub fn force_ptt_up() {
     platform::force_ptt_up();
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "tauri API")]
+pub fn show_main_window(app_handle: tauri::AppHandle) {
+    #[cfg(target_os = "macos")]
+    let _ = app_handle.set_activation_policy(tauri::ActivationPolicy::Regular);
+
+    if let Some(window) = app_handle.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "tauri API")]
+pub fn quit_app(app_handle: tauri::AppHandle) {
+    if let Some(window) = app_handle.get_webview_window(CALL_CONTROLS_WINDOW_LABEL) {
+        let _ = window.hide();
+    }
+    app_handle.exit(0);
 }
 
 #[tauri::command]
@@ -168,8 +190,8 @@ pub fn establish_channel(state: State<'_, WsState>, channel: Channel) {
     if let Some(call_state) = call_state {
         let _ = channel.send(InvokeBody::Raw(encode_call_state(&call_state)).into());
     }
-    if let Ok(mut guard) = state.event_channel.write() {
-        *guard = Some(channel);
+    if let Ok(mut guard) = state.event_channels.write() {
+        guard.push(channel);
     }
 }
 
@@ -180,7 +202,7 @@ fn build_call_command_payload(command: &str, value: Option<bool>) -> String {
     )
 }
 
-fn dispatch_call_command(state: &WsState, command: &str, value: Option<bool>) -> bool {
+pub(crate) fn dispatch_call_command(state: &WsState, command: &str, value: Option<bool>) -> bool {
     let payload = build_call_command_payload(command, value);
     let message = OutgoingMessage::Status {
         ts: current_timestamp(),
@@ -236,7 +258,7 @@ mod tests {
             ws_tx,
             server_shutdown_tx: Mutex::new(shutdown_tx),
             conn_tx,
-            event_channel: RwLock::new(None),
+            event_channels: RwLock::new(Vec::new()),
             call_state: RwLock::new(None),
         };
 

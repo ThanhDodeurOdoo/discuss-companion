@@ -97,4 +97,20 @@ describe("AppPlugin", () => {
         // expect(mockedListen).toHaveBeenCalledWith("ptt-event", expect.any(Function)); // Moved to channel
         // expect(mockedListen).toHaveBeenCalledWith("error", expect.any(Function));
     });
+
+    test("showMainWindow invokes show_main_window command", async () => {
+        mockedInvoke.mockResolvedValue(undefined as never);
+
+        await plugin.showMainWindow();
+
+        expect(mockedInvoke).toHaveBeenCalledWith("show_main_window");
+    });
+
+    test("quitApp invokes quit_app command", async () => {
+        mockedInvoke.mockResolvedValue(undefined as never);
+
+        await plugin.quitApp();
+
+        expect(mockedInvoke).toHaveBeenCalledWith("quit_app");
+    });
 });

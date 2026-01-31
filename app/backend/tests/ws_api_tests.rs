@@ -161,7 +161,7 @@ mod tests {
             ws_tx: tx.clone(),
             server_shutdown_tx: Mutex::new(server_shutdown_tx),
             conn_tx: conn_tx_state,
-            event_channel: RwLock::new(Some(channel)),
+            event_channels: RwLock::new(vec![channel]),
             call_state: RwLock::new(None),
         });
 
@@ -259,7 +259,7 @@ mod tests {
             ws_tx: tx.clone(),
             server_shutdown_tx: Mutex::new(server_shutdown_tx),
             conn_tx: conn_tx_state,
-            event_channel: RwLock::new(Some(channel)),
+            event_channels: RwLock::new(vec![channel]),
             call_state: RwLock::new(None),
         });
 
@@ -345,7 +345,7 @@ mod tests {
             ws_tx: tx.clone(),
             server_shutdown_tx: Mutex::new(server_shutdown_tx),
             conn_tx: conn_tx_state,
-            event_channel: RwLock::new(Some(channel)),
+            event_channels: RwLock::new(vec![channel]),
             call_state: RwLock::new(None),
         });
 

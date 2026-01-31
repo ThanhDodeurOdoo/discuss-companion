@@ -1,0 +1,88 @@
+<div class="call-controls-window prevent-select">
+    <div class="call-controls-header">
+        <div class="call-controls-drag" data-tauri-drag-region="">
+            <span class="call-controls-title">Call Controls</span>
+            <span
+                class="call-status"
+                t-att-class="this.app.callStatusClass()"
+                t-out="this.app.callStatusText()"
+            />
+        </div>
+        <!--
+        <button
+            class="call-controls-close"
+            t-att-title="'Hide'"
+            t-on-click="() => this.hideWindow()">
+            ×
+        </button>
+        -->
+    </div>
+    <div class="call-panel call-controls-panel">
+        <div class="call-grid">
+            <button
+                class="call-btn"
+                t-att-class="{ 'is-off': this.app.isMute() }"
+                t-att-disabled="!this.app.canUseCallToggles()"
+                t-att-title="this.app.isMute() ? 'Unmute' : 'Mute'"
+                t-on-click="() => this.app.toggleMute()">
+                <span t-out="this.app.isMute() ? 'Unmute' : 'Mute'"/>
+            </button>
+            <button
+                class="call-btn"
+                t-att-class="{ 'is-off': this.app.isDeaf() }"
+                t-att-disabled="!this.app.canUseCallToggles()"
+                t-att-title="this.app.isDeaf() ? 'Undeafen' : 'Deafen'"
+                t-on-click="() => this.app.toggleDeafen()">
+                <span t-out="this.app.isDeaf() ? 'Undeafen' : 'Deafen'"/>
+            </button>
+            <button
+                class="call-btn"
+                t-att-class="{ 'is-on': this.app.isCameraOn() }"
+                t-att-disabled="!this.app.canUseCallToggles()"
+                t-att-title="this.app.isCameraOn() ? 'Turn camera off' : 'Turn camera on'"
+                t-on-click="() => this.app.toggleCamera()">
+                <span t-out="this.app.isCameraOn() ? 'Camera off' : 'Camera on'"/>
+            </button>
+            <button
+                class="call-btn"
+                t-att-class="{ 'is-on': this.app.isScreenOn() }"
+                t-att-disabled="!this.app.canUseCallToggles()"
+                t-att-title="this.app.isScreenOn() ? 'Stop sharing screen' : 'Share screen'"
+                t-on-click="() => this.app.toggleScreen()">
+                <span t-out="this.app.isScreenOn() ? 'Stop share' : 'Share screen'"/>
+            </button>
+        </div>
+        <div class="call-actions">
+            <button
+                class="std-btn call-action-btn"
+                t-att-disabled="!this.app.hasActiveCall()"
+                t-on-click="() => this.app.goToCall()">
+                Go to Call
+            </button>
+            <button
+                class="std-btn call-action-btn"
+                t-att-disabled="!this.app.hasActiveCall()"
+                t-on-click="() => this.app.openPip()">
+                PiP
+            </button>
+            <button
+                class="std-btn call-action-btn danger"
+                t-att-disabled="!this.app.hasActiveCall()"
+                t-on-click="() => this.app.leaveCall()">
+                Leave
+            </button>
+        </div>
+    </div>
+    <div class="call-controls-footer">
+        <button
+            class="std-btn call-footer-btn"
+            t-on-click="() => this.app.showMainWindow()">
+            Show App
+        </button>
+        <button
+            class="std-btn call-footer-btn danger"
+            t-on-click="() => this.app.quitApp()">
+            Quit
+        </button>
+    </div>
+</div>
