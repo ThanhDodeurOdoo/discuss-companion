@@ -1,6 +1,6 @@
 <div class="call-controls-window prevent-select">
     <div class="call call-controls-panel">
-        <div class="call__pulse" aria-hidden="true"></div>
+        <div t-if="this.app.hasActiveCall()" class="call__pulse" aria-hidden="true"></div>
         <div class="call__actions">
             <button
                 class="btn btn--icon call__btn"
