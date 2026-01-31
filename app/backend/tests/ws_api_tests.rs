@@ -34,6 +34,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_is_connected_initial() {
+        server::reset_connection_count();
         assert!(!is_connected());
     }
 
