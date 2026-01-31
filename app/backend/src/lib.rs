@@ -110,7 +110,7 @@ impl PttHandler {
         }
     }
 
-    fn handle_ptt(&self, event: &state::OutgoingMessage) {
+    fn handle_ptt_ipc(&self, event: &state::OutgoingMessage) {
         let (is_active, key, is_repeat) = match event {
             state::OutgoingMessage::PttDown { key, is_repeat, .. } => (true, key, *is_repeat),
             state::OutgoingMessage::PttUp { key, .. } => (false, key, false),
@@ -121,7 +121,7 @@ impl PttHandler {
             state.broadcast(&payload);
         }
     }
-    fn handle_ptt_old(&mut self, msg: &state::OutgoingMessage) {
+    fn handle_ptt_ws(&mut self, msg: &state::OutgoingMessage) {
         debug!("PttHandler handling event: {:?}", msg);
         let _ = self.app_handle.emit("ptt-event", msg);
 
@@ -179,16 +179,16 @@ fn handle_ptt_events(
             crossbeam_channel::select! {
                 recv(event_rx) -> msg => {
                     if let Ok(msg) = msg {
-                        handler.handle_ptt(&msg);
-                        handler.handle_ptt_old(&msg); // Keep old logic for now
+                        handler.handle_ptt_ipc(&msg);
+                        handler.handle_ptt_ws(&msg); // Keep old logic for now
                     } else {
                         break;
                     }
                 },
                 recv(conn_rx) -> connected => {
-                     if let Ok(connected) = connected {
+                    if let Ok(connected) = connected {
                         handler.handle_connection_change(connected);
-                     }
+                    }
                 }
             }
         }
