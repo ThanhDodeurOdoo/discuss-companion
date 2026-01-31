@@ -1,16 +1,20 @@
+/**
+ * Companion Layout
+ */
+
 main {
-  flex: 1;
-  background: var(--border-color);
-  overflow: hidden;
+    flex: 1;
+    background: var(--color-border);
+    overflow: hidden;
 }
 
 main:not(.settings-view) {
-  display: grid;
-  grid-template-columns: 350px 1fr;
-  gap: 1px;
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 1px;
 }
 
 main.settings-view {
-  background: var(--bg-color);
-  overflow-y: auto;
+    background: var(--color-bg);
+    overflow-y: auto;
 }

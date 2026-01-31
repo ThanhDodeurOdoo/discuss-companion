@@ -1,13 +1,10 @@
 /**
- * App Frontend Styles
- * Imports shared styles with dark theme
+ * Dark Theme
+ * Used by: Desktop app
  */
 
-@import "../../common/index.css";
-@import "../../common/theme-dark.css";
-
-/* Apply dark theme to root */
-:root {
+[data-theme="dark"],
+.theme-dark {
     color-scheme: dark;
 
     /* Backgrounds */
@@ -42,20 +39,4 @@
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
     --shadow-lg: 0 10px 26px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-
-/* ========================================
-   APP LAYOUT
-   ======================================== */
-
-body {
-    height: 100vh;
-    overflow: hidden;
-}
-
-#app {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
 }

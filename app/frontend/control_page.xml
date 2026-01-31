@@ -1,7 +1,7 @@
 <div class="ptt-control prevent-select">
-    <button 
-        class="key-display" 
-        t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }" 
+    <button
+        class="key-display"
+        t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }"
         t-on-click="() => this.app.toggleRecording()">
         <span t-if="this.app.isRecording()" class="key-text">PRESS ANY KEY...</span>
         <span t-elif="this.app.showSymbols()" class="key-text" t-out="this.keySymbol()"/>
@@ -12,59 +12,64 @@
             <h3>Call Controls</h3>
             <span class="call-status" t-att-class="this.app.callStatusClass()" t-out="this.app.callStatusText()"/>
         </div>
-        <div class="call-grid">
-            <button
-                class="call-btn"
-                t-att-class="{ 'is-off': this.app.isMute() }"
-                t-att-disabled="!this.app.canUseCallToggles()"
-                t-att-title="this.app.isMute() ? 'Unmute' : 'Mute'"
-                t-on-click="() => this.app.toggleMute()">
-                <span t-out="this.app.isMute() ? 'Unmute' : 'Mute'"/>
-            </button>
-            <button
-                class="call-btn"
-                t-att-class="{ 'is-off': this.app.isDeaf() }"
-                t-att-disabled="!this.app.canUseCallToggles()"
-                t-att-title="this.app.isDeaf() ? 'Undeafen' : 'Deafen'"
-                t-on-click="() => this.app.toggleDeafen()">
-                <span t-out="this.app.isDeaf() ? 'Undeafen' : 'Deafen'"/>
-            </button>
-            <button
-                class="call-btn"
-                t-att-class="{ 'is-on': this.app.isCameraOn() }"
-                t-att-disabled="!this.app.canUseCallToggles()"
-                t-att-title="this.app.isCameraOn() ? 'Turn camera off' : 'Turn camera on'"
-                t-on-click="() => this.app.toggleCamera()">
-                <span t-out="this.app.isCameraOn() ? 'Camera off' : 'Camera on'"/>
-            </button>
-            <button
-                class="call-btn"
-                t-att-class="{ 'is-on': this.app.isScreenOn() }"
-                t-att-disabled="!this.app.canUseCallToggles()"
-                t-att-title="this.app.isScreenOn() ? 'Stop sharing screen' : 'Share screen'"
-                t-on-click="() => this.app.toggleScreen()">
-                <span t-out="this.app.isScreenOn() ? 'Stop share' : 'Share screen'"/>
-            </button>
+        <div class="call" t-if="this.app.hasActiveCall()">
+            <div class="call__pulse" aria-hidden="true"></div>
+            <div class="call__actions">
+                <button
+                    class="btn btn--icon call__btn"
+                    t-att-class="{ 'is-off': this.app.isMute() }"
+                    t-att-disabled="!this.app.canUseCallToggles()"
+                    t-att-title="this.app.isMute() ? 'Unmute' : 'Mute'"
+                    t-on-click="() => this.app.toggleMute()">
+                    <span class="icon" t-if="this.app.isMute()" aria-hidden="true">mic_off</span>
+                    <span class="icon" t-else="" aria-hidden="true">mic</span>
+                </button>
+                <button
+                    class="btn btn--icon call__btn"
+                    t-att-class="{ 'is-off': this.app.isDeaf() }"
+                    t-att-disabled="!this.app.canUseCallToggles()"
+                    t-att-title="this.app.isDeaf() ? 'Undeafen' : 'Deafen'"
+                    t-on-click="() => this.app.toggleDeafen()">
+                    <span class="icon" t-if="this.app.isDeaf()" aria-hidden="true">volume_off</span>
+                    <span class="icon" t-else="" aria-hidden="true">volume_up</span>
+                </button>
+                <button
+                    class="btn btn--icon call__btn"
+                    t-att-class="{ 'is-on': this.app.isCameraOn() }"
+                    t-att-disabled="!this.app.canUseCallToggles()"
+                    t-att-title="this.app.isCameraOn() ? 'Turn camera off' : 'Turn camera on'"
+                    t-on-click="() => this.app.toggleCamera()">
+                    <span class="icon" t-if="this.app.isCameraOn()" aria-hidden="true">videocam</span>
+                    <span class="icon" t-else="" aria-hidden="true">videocam_off</span>
+                </button>
+                <button
+                    class="btn btn--icon call__btn"
+                    t-att-class="{ 'is-on': this.app.isScreenOn() }"
+                    t-att-disabled="!this.app.canUseCallToggles()"
+                    t-att-title="this.app.isScreenOn() ? 'Stop sharing screen' : 'Share screen'"
+                    t-on-click="() => this.app.toggleScreen()">
+                    <span class="icon" t-if="this.app.isScreenOn()" aria-hidden="true">stop_screen_share</span>
+                    <span class="icon" t-else="" aria-hidden="true">screen_share</span>
+                </button>
+                <button
+                    class="btn btn--icon btn--danger call__btn"
+                    t-att-disabled="!this.app.canUseCallToggles()"
+                    t-att-title="'Leave call'"
+                    t-on-click="() => this.app.leaveCall()">
+                    <span class="icon" aria-hidden="true">call_end</span>
+                </button>
+            </div>
         </div>
-        <div class="call-actions">
+        <div class="call-actions" t-if="this.app.hasActiveCall()">
             <button
-                class="std-btn call-action-btn"
-                t-att-disabled="!this.app.hasActiveCall()"
+                class="btn btn--ghost"
                 t-on-click="() => this.app.goToCall()">
                 Go to Call
             </button>
-            <button
-                class="std-btn call-action-btn"
-                t-att-disabled="!this.app.hasActiveCall()"
-                t-on-click="() => this.app.openPip()">
-                PiP
-            </button>
-            <button
-                class="std-btn call-action-btn danger"
-                t-att-disabled="!this.app.hasActiveCall()"
-                t-on-click="() => this.app.leaveCall()">
-                Leave
-            </button>
+        </div>
+        <div class="call-inactive" t-if="!this.app.hasActiveCall()">
+            <span class="icon call-inactive__icon" aria-hidden="true">call</span>
+            <span class="call-inactive__text">No active call</span>
         </div>
     </div>
 </div>

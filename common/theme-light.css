@@ -1,0 +1,42 @@
+/**
+ * Light Theme
+ * Used by: Extension popup
+ */
+
+:root,
+[data-theme="light"] {
+    color-scheme: light;
+
+    /* Backgrounds */
+    --color-bg: #f3f6fb;
+    --color-surface: #ffffff;
+    --color-surface-muted: #eef2f7;
+    --color-surface-hover: #e8edf4;
+
+    /* Borders */
+    --color-border: #d7dce5;
+    --color-border-strong: #c4cad4;
+
+    /* Text */
+    --color-text: #0f172a;
+    --color-text-muted: #475569;
+    --color-text-subtle: #64748b;
+
+    /* Accent */
+    --color-accent: #0ea5e9;
+    --color-accent-strong: #0284c7;
+    --color-accent-muted: rgba(14, 165, 233, 0.15);
+
+    /* Semantic */
+    --color-success: #16a34a;
+    --color-success-muted: rgba(22, 163, 74, 0.12);
+    --color-danger: #dc2626;
+    --color-danger-muted: rgba(220, 38, 38, 0.12);
+    --color-warning: #d97706;
+    --color-warning-muted: rgba(217, 119, 6, 0.12);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+    --shadow-lg: 0 10px 26px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.06);
+}

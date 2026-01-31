@@ -1,3 +1,7 @@
+/**
+ * Footer Styles
+ */
+
 .footer-controls {
     position: fixed;
     bottom: 10px;
@@ -5,22 +9,31 @@
     right: 10px;
     z-index: 100;
     display: flex;
-    gap: 12px;
+    gap: var(--space-3);
     align-items: center;
 }
 
-
+.text-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-subtle);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-xs);
+    transition: all var(--transition-slow);
+}
 
 .text-btn.source-btn {
-    color: var(--text-secondary);
+    color: var(--color-text-muted);
     border: 1px solid transparent;
     margin-left: auto;
 }
 
 .text-btn.source-btn:hover {
-    color: var(--accent-color);
-    border-color: rgba(47, 129, 247, 0.4);
-    background: rgba(47, 129, 247, 0.1);
+    color: var(--color-accent);
+    border-color: var(--color-accent-muted);
+    background: var(--color-accent-muted);
 }
 
 .text-btn.source-btn:active {
@@ -28,8 +41,8 @@
 }
 
 .text-btn.safety-btn:hover {
-    color: #ff5252;
-    background: rgba(255, 82, 82, 0.1);
+    color: var(--color-danger);
+    background: var(--color-danger-muted);
 }
 
 .text-btn.safety-btn:active {
