@@ -73,6 +73,10 @@
             <div id="status" t-if="this.popup.statusText()" class="status" t-att-class="{ 'status--default': this.popup.isStatusDefault(), 'status--error': this.popup.isStatusError(), 'status--success': this.popup.isStatusSuccess() }">
                 <t t-out="this.popup.statusText()"/>
             </div>
+            <div class="info">
+                <div class="info__title">Extension</div>
+                <div>Version: <t t-out="this.popup.extensionVersion()"/></div>
+            </div>
             <div class="info" t-if="this.popup.isOdoo()">
                  <div class="info__title">Odoo detected</div>
                  <div>Server Version: <t t-out="this.popup.serverVersion()"/></div>
