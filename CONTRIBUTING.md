@@ -65,6 +65,24 @@ npm run build:extension
 
 ### If you modify the app
 
+
+> [!WARNING]
+>On **Windows** you may need the C++ linker that comes with [C++ Visual Studio tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
+>
+>On **Linux** you may have to install the following libraries:
+>
+>
+>```bash
+>sudo apt-get update
+>sudo apt-get install -y \
+>            libglib2.0-dev \
+>            libgtk-3-dev \
+>            libwebkit2gtk-4.1-dev \
+>            pkg-config
+>```
+
+Then:
+
 ```bash
 npm run dev # for development
 # OR
