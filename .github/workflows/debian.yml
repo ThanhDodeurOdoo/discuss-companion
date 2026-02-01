@@ -1,40 +1,45 @@
-name: Nightly Verify
+name: Debian (Trixie)
 
 on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
   schedule:
-    - cron: "0 1 * * *"
-  workflow_dispatch:
+    - cron: '0 0 * * *'
 
 permissions:
   contents: read
 
 jobs:
   verify:
-    name: Verify (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+    name: Debian Verify
+    runs-on: ubuntu-latest
+    container:
+      image: debian:trixie
     steps:
-      - name: Configure git for LF checkout
-        if: runner.os == 'Windows'
+      - name: Install Debian system dependencies
         run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential \
+            ca-certificates \
+            curl \
+            git \
+            libayatana-appindicator3-dev \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libssl-dev \
+            libsoup-3.0-dev \
+            libwebkit2gtk-4.1-dev \
+            librsvg2-dev \
+            pkg-config \
+            python3 \
+            xz-utils
+          rm -rf /var/lib/apt/lists/*
 
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install Linux system dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libglib2.0-dev \
-            libgtk-3-dev \
-            libwebkit2gtk-4.1-dev \
-            pkg-config
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -56,9 +61,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             app/backend/target
-          key: ${{ runner.os }}-cargo-verify-${{ hashFiles('app/backend/Cargo.lock') }}
+          key: debian-cargo-verify-${{ hashFiles('app/backend/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-verify-
+            debian-cargo-verify-
 
       - name: Install dependencies
         run: npm install

@@ -5,10 +5,13 @@
 
 [![CodeQuality](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/github-code-scanning/codeql)
 
-targets:
-[![macOS](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/macOS.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/macOS.yml)
+### targets
 
-The Discuss Companion is a companion app for Odoo Discuss, currently supporting macOS (Linux support is Work in Progress). It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus.
+[![macOS](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/macOS.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/macOS.yml)
+[![Ubuntu](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ubuntu.yml)
+[![Debian Trixie](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/debian.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/debian.yml)
+
+The Discuss Companion is a companion app for Odoo Discuss, currently supporting macOS (and Linux/Windows with limited features). It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus, along with convenient quick-access call control features when in a call in Odoo Discuss. This also requires the extension to be installed in a compatible browser (chromium / firefox).
 
 ![Discuss Companion Example](assets/example.gif)
 

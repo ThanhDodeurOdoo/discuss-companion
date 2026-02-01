@@ -9,6 +9,8 @@ use crate::state::{KeyBinding, OutgoingMessage};
 mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_os = "windows")]
+mod windows;
 
 /// The `PttEngine` trait defines the interface for platform-specific
 /// Push-to-Talk engines. Each platform (macOS, Linux, etc.) must
@@ -51,6 +53,9 @@ pub type Engine = macos::MacosEngine;
 #[cfg(target_os = "linux")]
 pub type Engine = linux::LinuxEngine;
 
+#[cfg(target_os = "windows")]
+pub type Engine = windows::WindowsEngine;
+
 /// Returns a reference to the global `PttEngine` implementation for the current platform.
 #[must_use]
 pub fn get_engine() -> &'static Engine {
@@ -59,6 +64,9 @@ pub fn get_engine() -> &'static Engine {
 
     #[cfg(target_os = "linux")]
     return linux::get_engine();
+
+    #[cfg(target_os = "windows")]
+    return windows::get_engine();
 }
 
 // Shorthand functions for convenience, delegating to the global engine.
