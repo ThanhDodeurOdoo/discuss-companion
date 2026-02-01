@@ -1,4 +1,11 @@
-use std::sync::{Arc, atomic::AtomicBool};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+    time::Duration,
+};
 
 use anyhow::Result;
 use crossbeam_channel::Sender;
@@ -38,8 +45,8 @@ impl PttEngine for LinuxEngine {
         shutdown: &Arc<AtomicBool>,
     ) -> Result<()> {
         warn!("start_engine not implemented for Linux. Waiting for shutdown.");
-        while !shutdown.load(std::sync::atomic::Ordering::SeqCst) {
-            std::thread::sleep(std::time::Duration::from_millis(100));
+        while !shutdown.load(Ordering::SeqCst) {
+            thread::sleep(Duration::from_millis(100));
         }
         Ok(())
     }

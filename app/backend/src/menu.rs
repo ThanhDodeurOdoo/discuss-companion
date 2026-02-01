@@ -24,7 +24,7 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) ->
     let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&quit_i])?;
 
-    let mut builder = TrayIconBuilder::<R>::with_id(TRAY_ID)
+    let builder = TrayIconBuilder::<R>::with_id(TRAY_ID)
         .icon(tray_icon)
         .menu(&menu)
         .on_menu_event(|app, event| {
@@ -45,9 +45,7 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) ->
         });
 
     #[cfg(target_os = "macos")]
-    {
-        builder = builder.show_menu_on_left_click(false);
-    }
+    let builder = builder.show_menu_on_left_click(false);
 
     builder.build(app)?;
     Ok(())
