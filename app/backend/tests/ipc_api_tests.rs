@@ -48,7 +48,7 @@ mod tests {
                 headers: HeaderMap::default(),
                 invoke_key: INVOKE_KEY.to_string(),
             },
-            Ok("0.4.0"),
+            Ok(env!("CARGO_PKG_VERSION")),
         );
     }
 
