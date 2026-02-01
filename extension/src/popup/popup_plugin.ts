@@ -5,6 +5,7 @@ import { requestCallAction, requestCallState, requestFocusCallTab } from "../com
 import { CallState, getCallTabId, getStoredCallState } from "../call_state";
 
 const IS_FIREFOX = /Firefox/i.test(navigator.userAgent);
+const EXTENSION_VERSION = __EXTENSION_VERSION__;
 
 export enum StatusCode {
     Default = 0,
@@ -22,6 +23,7 @@ export class PopupPlugin extends Plugin {
     isLoggingEnabled = signal(false);
     isCompanionEnabled = signal(false);
     hasCallTab = signal(false);
+    extensionVersion = signal(EXTENSION_VERSION);
     isMute = signal(false);
     isDeaf = signal(false);
     isCameraOn = signal(false);

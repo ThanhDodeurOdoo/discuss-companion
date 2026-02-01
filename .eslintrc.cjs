@@ -18,7 +18,8 @@ module.exports = {
         es2024: true
     },
     globals: {
-        __APP_VERSION__: "readonly"
+        __APP_VERSION__: "readonly",
+        __EXTENSION_VERSION__: "readonly"
     },
     parser: "@typescript-eslint/parser",
     plugins: ["@typescript-eslint"],
