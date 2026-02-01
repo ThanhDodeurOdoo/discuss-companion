@@ -27,6 +27,9 @@ describe("Root Integration Tests", () => {
 
         // Default mock implementations
         invokeMock.mockImplementation((cmd) => {
+            if (cmd === "get_features") {
+                return Promise.resolve({ ptt: true, callControlsTray: true });
+            }
             if (cmd === "is_extension_connected") {
                 return Promise.resolve(false);
             }
@@ -67,6 +70,7 @@ describe("Root Integration Tests", () => {
 
     test("mounting initiates initialization calls", async () => {
         await mountApp();
+        expect(invokeMock).toHaveBeenCalledWith("get_features");
         expect(invokeMock).toHaveBeenCalledWith("get_current_binding");
         expect(invokeMock).toHaveBeenCalledWith("get_ws_port");
         expect(invokeMock).toHaveBeenCalledWith("is_accessibility_granted");

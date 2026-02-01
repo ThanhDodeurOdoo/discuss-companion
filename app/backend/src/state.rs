@@ -524,6 +524,31 @@ pub fn current_timestamp() -> u64 {
         .unwrap_or(0)
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Features {
+    pub ptt: bool,
+    pub call_controls_tray: bool,
+}
+
+#[cfg(target_os = "macos")]
+pub const FEATURES: Features = Features {
+    ptt: true,
+    call_controls_tray: true,
+};
+
+#[cfg(target_os = "linux")]
+pub const FEATURES: Features = Features {
+    ptt: false,
+    call_controls_tray: false,
+};
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+pub const FEATURES: Features = Features {
+    ptt: false,
+    call_controls_tray: false,
+};
+
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(test)]
@@ -635,5 +660,12 @@ mod tests {
         let body = decoded.body_as_error().expect("Body is Error");
         assert_eq!(body.ts(), 444);
         assert_eq!(body.message(), Some("Something went wrong"));
+    }
+
+    #[test]
+    fn test_features_serde_roundtrip() {
+        let json = serde_json::to_string(&FEATURES).expect("serialize features");
+        let decoded: Features = serde_json::from_str(&json).expect("deserialize features");
+        assert_eq!(decoded, FEATURES);
     }
 }

@@ -48,6 +48,9 @@ describe("Companion Component Interactions", () => {
 
         // Default mock implementations
         invokeMock.mockImplementation((cmd) => {
+            if (cmd === "get_features") {
+                return Promise.resolve({ ptt: true, callControlsTray: true });
+            }
             if (cmd === "is_extension_connected") {
                 return Promise.resolve(false);
             }
@@ -93,6 +96,35 @@ describe("Companion Component Interactions", () => {
         // Let's verify the subsequent call
         await pttBtn.click();
         expect(setRecordingModeMock).toHaveBeenCalledWith(false);
+    });
+
+    test("PTT UI is hidden when feature is disabled", async () => {
+        invokeMock.mockImplementation((cmd) => {
+            if (cmd === "get_features") {
+                return Promise.resolve({ ptt: false, callControlsTray: false });
+            }
+            if (cmd === "is_extension_connected") {
+                return Promise.resolve(false);
+            }
+            if (cmd === "get_current_binding") {
+                return Promise.resolve({ code: 0, modifiers: [] });
+            }
+            if (cmd === "get_ws_port") {
+                return Promise.resolve(49152);
+            }
+            if (cmd === "is_accessibility_granted") {
+                return Promise.resolve(true);
+            }
+            return Promise.resolve(null);
+        });
+
+        await mountApp();
+
+        const pttBtn = target.querySelector(".key-display");
+        expect(pttBtn).toBeNull();
+
+        const forceBtn = target.querySelector(".safety-btn");
+        expect(forceBtn).toBeNull();
     });
 
     test("Force Release button triggers force_ptt_up", async () => {

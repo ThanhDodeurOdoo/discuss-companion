@@ -14,6 +14,7 @@ import {
 import { CallCommand } from "./call_commands";
 
 const DEFAULT_PORT = 49152;
+const FEATURES_COMMAND = "get_features";
 
 type LogEntry = {
     id: number;
@@ -27,6 +28,16 @@ type PttBinding = {
     modifiers: number[];
 };
 
+type CompanionFeatures = {
+    ptt: boolean;
+    callControlsTray: boolean;
+};
+
+const DEFAULT_FEATURES: CompanionFeatures = {
+    ptt: false,
+    callControlsTray: false
+};
+
 const MAX_LOGS = 20;
 const MODIFIER_ORDER: Record<string, number> = { Cmd: 0, Ctrl: 1, Option: 2, Shift: 3 };
 
@@ -38,6 +49,7 @@ export class AppPlugin extends Plugin {
     showSymbols = signal(true);
     permissionGranted = signal(false);
     extensionConnected = signal(false);
+    features = signal<CompanionFeatures>(DEFAULT_FEATURES);
     currentBinding = signal<PttBinding>({ code: 0, modifiers: [] });
     isForcingRelease = false;
     logs = signal.Array<LogEntry>([]);
@@ -66,6 +78,7 @@ export class AppPlugin extends Plugin {
 
     async init() {
         this.addLog("SYSTEM", "Ready");
+        await this.fetchFeatures();
         await this.fetchCurrentBinding();
         await this.fetchWsPort();
         await this.checkPermission();
@@ -168,6 +181,18 @@ export class AppPlugin extends Plugin {
         });
 
         this.unlistenFns.push(wsStatusUnlisten);
+    }
+
+    async fetchFeatures() {
+        try {
+            const features = await invoke<CompanionFeatures>(FEATURES_COMMAND);
+            if (features) {
+                this.features.set(features);
+            }
+        } catch (error) {
+            this.features.set(DEFAULT_FEATURES);
+            this.addLog("ERROR", `Failed to load features: ${String(error)}`);
+        }
     }
 
     async checkPermission() {
