@@ -10,6 +10,9 @@ export default defineConfig(async () => ({
     define: {
         __APP_VERSION__: JSON.stringify(packageJson.version)
     },
+    optimizeDeps: {
+        entries: ["index.html"]
+    },
     server: {
         port: 1420,
         strictPort: true,

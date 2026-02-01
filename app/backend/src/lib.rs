@@ -52,6 +52,13 @@ pub struct WsState {
 }
 
 impl WsState {
+    /// Broadcasts a binary payload to all connected frontend channels.
+    ///
+    /// Note: Each channel receives a clone of the payload because Tauri's
+    /// `InvokeBody::Raw` requires `Vec<u8>` ownership. Using `Arc<[u8]>` is
+    /// not possible with the current Tauri IPC API. This is acceptable since:
+    /// - Typically only 1-2 channels are connected
+    /// - Payloads are small (`FlatBuffers` are compact)
     pub(crate) fn broadcast(&self, payload: &[u8]) {
         if let Ok(mut guard) = self.event_channels.write() {
             guard.retain(|channel| {
@@ -117,7 +124,7 @@ impl PttHandler {
             _ => return, // Only PttDown/PttUp are relevant for active state
         };
         if let Some(state) = self.app_handle.try_state::<WsState>() {
-            let payload = state::encode_ptt_state(is_active, key.code, &key.modifiers, is_repeat);
+            let payload = state::encode_ptt_state(is_active, key.code, key.modifiers, is_repeat);
             state.broadcast(&payload);
         }
     }

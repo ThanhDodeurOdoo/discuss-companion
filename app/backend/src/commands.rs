@@ -48,7 +48,7 @@ pub fn update_binding(app_handle: tauri::AppHandle, request: tauri::ipc::Request
         && let Ok(binding) = flatbuffers::root::<PttBinding>(data)
     {
         let key_binding: KeyBinding = binding.into();
-        set_binding(key_binding.clone());
+        set_binding(key_binding);
 
         // Save to store
         if let Ok(store) = app_handle.store("settings.json") {

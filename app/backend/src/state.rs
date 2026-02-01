@@ -2,10 +2,15 @@ use std::time::SystemTime;
 
 use flatbuffers::FlatBufferBuilder;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
+use tracing::warn;
 
 use crate::flatbuffers::{
     ipc_protocol_generated::discuss::ipc_protocol, ws_protocol_generated::discuss::ws_protocol,
 };
+
+/// macOS virtual keycode for the Space key.
+/// Used as the default PTT binding.
+pub const KEYCODE_SPACE: u16 = 49;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
@@ -57,27 +62,45 @@ impl From<Modifier> for ws_protocol::Modifier {
 }
 
 impl From<ws_protocol::Modifier> for Modifier {
-    #[allow(clippy::match_same_arms, reason = "shift is a valid default")]
+    #[allow(
+        clippy::match_same_arms,
+        reason = "shift is a valid default for unknown variants"
+    )]
     fn from(m: ws_protocol::Modifier) -> Self {
         match m {
             ws_protocol::Modifier::Shift => Self::Shift,
             ws_protocol::Modifier::Control => Self::Control,
             ws_protocol::Modifier::Alt => Self::Alt,
             ws_protocol::Modifier::Meta => Self::Meta,
-            _ => Self::Shift,
+            other => {
+                warn!(
+                    "Unknown ws_protocol::Modifier variant {:?}, defaulting to Shift",
+                    other
+                );
+                Self::Shift
+            }
         }
     }
 }
 
 impl From<ipc_protocol::Modifier> for Modifier {
-    #[allow(clippy::match_same_arms, reason = "shift is a valid default")]
+    #[allow(
+        clippy::match_same_arms,
+        reason = "shift is a valid default for unknown variants"
+    )]
     fn from(m: ipc_protocol::Modifier) -> Self {
         match m {
             ipc_protocol::Modifier::Shift => Self::Shift,
             ipc_protocol::Modifier::Control => Self::Control,
             ipc_protocol::Modifier::Alt => Self::Alt,
             ipc_protocol::Modifier::Meta => Self::Meta,
-            _ => Self::Shift,
+            other => {
+                warn!(
+                    "Unknown ipc_protocol::Modifier variant {:?}, defaulting to Shift",
+                    other
+                );
+                Self::Shift
+            }
         }
     }
 }
@@ -93,29 +116,127 @@ impl From<Modifier> for ipc_protocol::Modifier {
     }
 }
 
+/// A compact, stack-allocated set of keyboard modifiers.
+///
+/// Internally uses a bitmask (`u8`) to avoid heap allocations while supporting
+/// up to 4 modifiers. Serializes as an array of `Modifier` for JSON compatibility.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Modifiers(u8);
+
+impl Modifiers {
+    const SHIFT_BIT: u8 = 1 << 0;
+    const CONTROL_BIT: u8 = 1 << 1;
+    const ALT_BIT: u8 = 1 << 2;
+    const META_BIT: u8 = 1 << 3;
+
+    #[must_use]
+    pub const fn empty() -> Self {
+        Self(0)
+    }
+
+    #[must_use]
+    pub const fn from_bits(bits: u8) -> Self {
+        Self(bits)
+    }
+
+    #[must_use]
+    pub const fn bits(self) -> u8 {
+        self.0
+    }
+
+    #[must_use]
+    pub const fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+
+    #[must_use]
+    pub const fn contains(self, m: Modifier) -> bool {
+        (self.0 & Self::bit_for(m)) != 0
+    }
+
+    pub fn insert(&mut self, m: Modifier) {
+        self.0 |= Self::bit_for(m);
+    }
+
+    pub fn iter(self) -> impl Iterator<Item = Modifier> {
+        [
+            Modifier::Shift,
+            Modifier::Control,
+            Modifier::Alt,
+            Modifier::Meta,
+        ]
+        .into_iter()
+        .filter(move |&m| self.contains(m))
+    }
+
+    const fn bit_for(m: Modifier) -> u8 {
+        match m {
+            Modifier::Shift => Self::SHIFT_BIT,
+            Modifier::Control => Self::CONTROL_BIT,
+            Modifier::Alt => Self::ALT_BIT,
+            Modifier::Meta => Self::META_BIT,
+        }
+    }
+}
+
+impl FromIterator<Modifier> for Modifiers {
+    fn from_iter<T: IntoIterator<Item = Modifier>>(iter: T) -> Self {
+        let mut mods = Self::empty();
+        for m in iter {
+            mods.insert(m);
+        }
+        mods
+    }
+}
+
+impl Serialize for Modifiers {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use serde::ser::SerializeSeq;
+        let items: Vec<Modifier> = self.iter().collect();
+        let mut seq = serializer.serialize_seq(Some(items.len()))?;
+        for m in items {
+            seq.serialize_element(&m)?;
+        }
+        seq.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Modifiers {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let items: Vec<Modifier> = Vec::deserialize(deserializer)?;
+        Ok(items.into_iter().collect())
+    }
+}
+
 impl<'a> From<ipc_protocol::PttBinding<'a>> for KeyBinding {
     fn from(binding: ipc_protocol::PttBinding<'a>) -> Self {
         Self {
             code: binding.code(),
             modifiers: binding
                 .modifiers()
-                .map(|mods| mods.iter().map(Into::into).collect())
+                .map(|mods| mods.iter().map(Modifier::from).collect())
                 .unwrap_or_default(),
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub struct KeyBinding {
     pub code: u16,
-    pub modifiers: Vec<Modifier>,
+    pub modifiers: Modifiers,
 }
 
 impl Default for KeyBinding {
     fn default() -> Self {
         Self {
-            code: 49, // Space key
-            modifiers: vec![],
+            code: KEYCODE_SPACE,
+            modifiers: Modifiers::empty(),
         }
     }
 }
@@ -198,13 +319,18 @@ pub enum OutgoingMessage {
         if we don't use self."
 )]
 impl OutgoingMessage {
+    /// Serializes the message to a `FlatBuffer` binary format.
+    ///
+    /// Note: Creates a new `FlatBufferBuilder` on each call. Reusing builders
+    /// via thread-local storage or pooling would add complexity for marginal
+    /// gains.
     #[must_use]
     pub fn to_flatbuffer(&self) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
         let message_offset = match self {
             OutgoingMessage::PttDown { ts, key, is_repeat } => {
                 let modifiers: Vec<ws_protocol::Modifier> =
-                    key.modifiers.iter().map(|&m| m.into()).collect();
+                    key.modifiers.iter().map(Into::into).collect();
                 let modifiers_offset = builder.create_vector(&modifiers);
                 let key_offset = ws_protocol::KeyBinding::create(
                     &mut builder,
@@ -231,7 +357,7 @@ impl OutgoingMessage {
             }
             OutgoingMessage::PttUp { ts, key } => {
                 let modifiers: Vec<ws_protocol::Modifier> =
-                    key.modifiers.iter().map(|&m| m.into()).collect();
+                    key.modifiers.iter().map(Into::into).collect();
                 let modifiers_offset = builder.create_vector(&modifiers);
                 let key_offset = ws_protocol::KeyBinding::create(
                     &mut builder,
@@ -293,7 +419,7 @@ impl OutgoingMessage {
             }
             OutgoingMessage::BindingInfo { ts, binding } => {
                 let modifiers: Vec<ws_protocol::Modifier> =
-                    binding.modifiers.iter().map(|&m| m.into()).collect();
+                    binding.modifiers.iter().map(Into::into).collect();
                 let modifiers_offset = builder.create_vector(&modifiers);
                 let key_offset = ws_protocol::KeyBinding::create(
                     &mut builder,
@@ -349,7 +475,7 @@ impl IncomingMessage {
         let union_offset = match self {
             Self::SetBinding { binding } => {
                 let modifiers: Vec<ipc_protocol::Modifier> =
-                    binding.modifiers.iter().map(|&m| m.into()).collect();
+                    binding.modifiers.iter().map(Into::into).collect();
                 let modifiers_offset = builder.create_vector(&modifiers);
                 let binding_offset = ipc_protocol::PttBinding::create(
                     &mut builder,
@@ -462,12 +588,12 @@ pub fn encode_call_state(state: &CallState) -> Vec<u8> {
 pub fn encode_ptt_state(
     is_active: bool,
     code: u16,
-    modifiers: &[Modifier],
+    modifiers: Modifiers,
     is_repeat: bool,
 ) -> Vec<u8> {
     let mut builder = flatbuffers::FlatBufferBuilder::new();
 
-    let modifiers_vec: Vec<ipc_protocol::Modifier> = modifiers.iter().map(|&m| m.into()).collect();
+    let modifiers_vec: Vec<ipc_protocol::Modifier> = modifiers.iter().map(Into::into).collect();
     let modifiers_offset = builder.create_vector(&modifiers_vec);
 
     let ptt_state_offset = ipc_protocol::PttState::create(
@@ -572,7 +698,7 @@ mod tests {
             ts: 123_456_789,
             key: KeyBinding {
                 code: 1,
-                modifiers: vec![Modifier::Shift],
+                modifiers: [Modifier::Shift].into_iter().collect(),
             },
             is_repeat: true,
         };
@@ -624,7 +750,7 @@ mod tests {
             ts: 222,
             binding: KeyBinding {
                 code: 56,
-                modifiers: vec![Modifier::Control, Modifier::Alt],
+                modifiers: [Modifier::Control, Modifier::Alt].into_iter().collect(),
             },
         };
         let bin = msg.to_flatbuffer();
