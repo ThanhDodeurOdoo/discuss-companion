@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vite";
 import { resolve } from "path";
 import { viteStaticCopy } from "vite-plugin-static-copy";
@@ -8,8 +9,13 @@ export default defineConfig(({ mode }) => {
     const outDir = `extension/dist/${target}`;
     const manifestSrc =
         target === "firefox" ? "extension/manifest.firefox.json" : "extension/manifest.json";
+    const manifestPath = resolve(__dirname, "..", manifestSrc);
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { version: string };
 
     return {
+        define: {
+            __EXTENSION_VERSION__: JSON.stringify(manifest.version)
+        },
         build: {
             outDir,
             emptyOutDir: true,

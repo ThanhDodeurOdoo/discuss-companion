@@ -7,6 +7,8 @@ declare module "*/compile_templates.mjs" {
     export function compileTemplates(paths: string[]): Promise<string>;
 }
 
+declare const __EXTENSION_VERSION__: string;
+
 type Store = {
     rtc: {
         pipService?: object;
