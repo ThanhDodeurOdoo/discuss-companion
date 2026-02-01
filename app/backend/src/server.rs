@@ -169,7 +169,7 @@ async fn handle_connection<R: tauri::Runtime>(
                                         if let Some(binding_table) = message.body_as_set_binding()
                                             && let Some(key) = binding_table.binding()
                                         {
-                                            let modifiers: Vec<Modifier> = key.modifiers().map(|m| m.iter().map(Modifier::from).collect()).unwrap_or_default();
+                                            let modifiers = key.modifiers().map(|m| m.iter().map(Modifier::from).collect()).unwrap_or_default();
                                             let binding = KeyBinding {
                                                 code: key.code(),
                                                 modifiers,

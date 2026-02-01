@@ -26,7 +26,7 @@ use tracing::{debug, error, info};
 
 use crate::{
     platform::PttEngine,
-    state::{KeyBinding, Modifier, OutgoingMessage, PttState, current_timestamp},
+    state::{KEYCODE_SPACE, KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp},
 };
 
 type CGEventRef = *mut c_void;
@@ -79,8 +79,6 @@ const K_CG_EVENT_KEY_UP: u32 = 11;
 const K_CG_KEYBOARD_EVENT_KEYCODE: u32 = 9;
 const K_CG_KEYBOARD_EVENT_AUTOREPEAT: u32 = 8;
 
-const DEFAULT_KEYCODE: u16 = 49;
-
 const K_CG_EVENT_FLAG_MASK_SHIFT: u64 = 0x0002_0000;
 const K_CG_EVENT_FLAG_MASK_CONTROL: u64 = 0x0004_0000;
 const K_CG_EVENT_FLAG_MASK_ALTERNATE: u64 = 0x0008_0000; // Option/Alt
@@ -98,7 +96,7 @@ const K_CG_EVENT_TAP_DISABLED_BY_USER_INTEREST: u32 = 0xFFFF_FFFF;
     clippy::as_conversions,
     reason = "const packed binding needs a safe widening cast"
 )]
-const DEFAULT_BINDING_PACKED: u32 = (DEFAULT_KEYCODE as u32) << 8;
+const DEFAULT_BINDING_PACKED: u32 = (KEYCODE_SPACE as u32) << 8;
 
 static HELD: AtomicBool = AtomicBool::new(false);
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
@@ -111,7 +109,7 @@ pub struct MacosEngine;
 
 impl PttEngine for MacosEngine {
     fn set_binding(&self, binding: KeyBinding) {
-        BINDING_PACKED.store(pack_binding(&binding), Ordering::SeqCst);
+        BINDING_PACKED.store(pack_binding(binding), Ordering::SeqCst);
     }
 
     fn set_recording(&self, recording: bool) {
@@ -354,6 +352,12 @@ extern "C" fn event_callback(
         );
     }
 
+    // NOTE on atomicity: These loads are individually atomic but not atomic as a group.
+    // If `set_binding()` is called concurrently from another thread, we might read a mix of
+    // old and new state. This is acceptable because:
+    // 1. Binding changes are rare (user-initiated configuration)
+    // 2. The worst case is a single PTT event firing slightly early or late
+    // 3. The next event will use consistent state
     let packed_binding = BINDING_PACKED.load(Ordering::SeqCst);
     let (binding_code, binding_mask) = unpack_binding(packed_binding);
     let recording = IS_RECORDING.load(Ordering::SeqCst);
@@ -475,45 +479,17 @@ fn modifiers_mask_from_flags(flags: u64) -> u8 {
     mask
 }
 
-fn modifiers_from_mask(mask: u8) -> Vec<Modifier> {
-    let mut mods = Vec::new();
-
-    if (mask & MOD_MASK_SHIFT) != 0 {
-        mods.push(Modifier::Shift);
-    }
-    if (mask & MOD_MASK_CONTROL) != 0 {
-        mods.push(Modifier::Control);
-    }
-    if (mask & MOD_MASK_ALT) != 0 {
-        mods.push(Modifier::Alt);
-    }
-    if (mask & MOD_MASK_META) != 0 {
-        mods.push(Modifier::Meta);
-    }
-
-    mods
+fn modifiers_from_mask(mask: u8) -> Modifiers {
+    // The bitmask layout matches Modifiers::from_bits exactly
+    Modifiers::from_bits(mask)
 }
 
-fn modifiers_to_mask(modifiers: &[Modifier]) -> u8 {
-    let mut mask = 0;
-    for modifier in modifiers {
-        match modifier {
-            Modifier::Shift => mask |= MOD_MASK_SHIFT,
-            Modifier::Control => mask |= MOD_MASK_CONTROL,
-            Modifier::Alt => mask |= MOD_MASK_ALT,
-            Modifier::Meta => mask |= MOD_MASK_META,
-        }
-    }
-    mask
-}
-
-fn pack_binding(binding: &KeyBinding) -> u32 {
-    let mask = modifiers_to_mask(&binding.modifiers);
-    (u32::from(binding.code) << 8) | u32::from(mask)
+fn pack_binding(binding: KeyBinding) -> u32 {
+    (u32::from(binding.code) << 8) | u32::from(binding.modifiers.bits())
 }
 
 fn unpack_binding(packed: u32) -> (u16, u8) {
-    let code = u16::try_from(packed >> 8).unwrap_or(DEFAULT_KEYCODE);
+    let code = u16::try_from(packed >> 8).unwrap_or(KEYCODE_SPACE);
     let mask = u8::try_from(packed & 0xFF).unwrap_or(0);
     (code, mask)
 }
@@ -529,18 +505,20 @@ fn binding_from_packed(packed: u32) -> KeyBinding {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::state::Modifier;
 
     #[test]
     fn test_binding_storage() {
         let engine = MacosEngine;
         let binding = KeyBinding {
             code: 123,
-            modifiers: vec![Modifier::Meta],
+            modifiers: [Modifier::Meta].into_iter().collect(),
         };
         engine.set_binding(binding);
         let stored = engine.get_binding();
         assert_eq!(stored.code, 123);
-        assert_eq!(stored.modifiers, vec![Modifier::Meta]);
+        assert!(stored.modifiers.contains(Modifier::Meta));
+        assert_eq!(stored.modifiers.iter().count(), 1);
     }
 
     #[test]
@@ -556,14 +534,14 @@ mod tests {
     fn test_get_modifiers_from_flags() {
         let flags = K_CG_EVENT_FLAG_MASK_SHIFT | K_CG_EVENT_FLAG_MASK_COMMAND;
         let mods = modifiers_from_mask(modifiers_mask_from_flags(flags));
-        assert_eq!(mods.len(), 2);
-        assert!(mods.contains(&Modifier::Shift));
-        assert!(mods.contains(&Modifier::Meta));
+        assert_eq!(mods.iter().count(), 2);
+        assert!(mods.contains(Modifier::Shift));
+        assert!(mods.contains(Modifier::Meta));
 
         let flags = K_CG_EVENT_FLAG_MASK_CONTROL | K_CG_EVENT_FLAG_MASK_ALTERNATE;
         let mods = modifiers_from_mask(modifiers_mask_from_flags(flags));
-        assert_eq!(mods.len(), 2);
-        assert!(mods.contains(&Modifier::Control));
-        assert!(mods.contains(&Modifier::Alt));
+        assert_eq!(mods.iter().count(), 2);
+        assert!(mods.contains(Modifier::Control));
+        assert!(mods.contains(Modifier::Alt));
     }
 }
