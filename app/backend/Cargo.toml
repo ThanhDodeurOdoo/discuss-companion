@@ -29,12 +29,12 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 crossbeam-channel = "0.5"
 tokio = { version = "1", features = ["full"] }
-tokio-tungstenite = "0.26"
+tokio-tungstenite = "0.28"
 futures-util = "0.3"
-flatbuffers = "25.12.19"
+flatbuffers = "25.12"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-core-graphics = "0.24"
+core-graphics = "0.25"
 core-foundation = "0.10"
 
 [dev-dependencies]
