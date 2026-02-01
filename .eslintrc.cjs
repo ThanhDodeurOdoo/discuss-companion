@@ -27,6 +27,8 @@ module.exports = {
             files: [
                 ".eslintrc.cjs",
                 "vite.config.ts",
+                "scripts/**/*.mjs",
+                "scripts/**/*.js",
                 "extension/**/*.js",
                 "jest.config.js",
                 "jest.setup.js",

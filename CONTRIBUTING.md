@@ -100,3 +100,21 @@ or all at the same time:
 ```bash
 npm run verify
 ```
+
+## Versioning
+
+The repo keeps app and extension versions in sync for major/minor bumps. Patch/fix bumps can diverge.
+
+```bash
+# bump both app + extension (major/minor only allowed in all scope)
+npm run bump major
+npm run bump minor
+
+# bump app + extension independently (patch/fix allowed)
+npm run bump fix
+npm run bump patch
+
+# bump a single scope (patch/fix only)
+npm run bump app fix
+npm run bump extension fix
+```
