@@ -318,7 +318,7 @@ export function createMessageHandlers({
                 await setCallTabId(tabId);
             }
         }
-        const state = payload.hasState ? payload.state ?? null : null;
+        const state = payload.hasState ? (payload.state ?? null) : null;
         await setStoredCallState(state);
         await sendCallStateToApp(state);
     }

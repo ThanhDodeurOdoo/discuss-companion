@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => {
                         dest: "fonts"
                     },
                     {
-                        src: "extension/options.html",
+                        src: "extension/popup.html",
                         dest: "."
                     }
                 ]
