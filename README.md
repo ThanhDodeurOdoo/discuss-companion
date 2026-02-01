@@ -32,6 +32,8 @@ The communication between the App and the Extension (WS), and between the backen
 
 ## Development
 
+Read [CONTRIBUTING.md](https://github.com/ThanhDodeurOdoo/discuss-companion/blob/master/CONTRIBUTING.md).
+
 ### Prerequisites
 
 #### Dev:
