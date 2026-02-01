@@ -17,7 +17,10 @@ use crate::{
     platform,
     platform::{check_accessibility_permission, get_binding, set_binding, set_recording},
     server,
-    state::{KeyBinding, OutgoingMessage, VERSION, current_timestamp, encode_call_state},
+    state::{
+        FEATURES, Features, KeyBinding, OutgoingMessage, VERSION, current_timestamp,
+        encode_call_state,
+    },
 };
 
 /// JUSTIFICATION: for all `clippy::needless_pass_by_value` below
@@ -29,6 +32,12 @@ use crate::{
 #[must_use]
 pub fn get_version() -> String {
     VERSION.to_string()
+}
+
+#[tauri::command]
+#[must_use]
+pub fn get_features() -> Features {
+    FEATURES
 }
 
 #[tauri::command]

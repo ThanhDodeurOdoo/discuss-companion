@@ -1,5 +1,6 @@
 <div class="ptt-control prevent-select">
     <button
+        t-if="this.app.features()?.ptt"
         class="key-display"
         t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }"
         t-on-click="() => this.app.toggleRecording()">

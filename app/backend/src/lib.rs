@@ -283,6 +283,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_version,
+            commands::get_features,
             commands::update_binding,
             commands::set_recording_mode,
             commands::get_current_binding,
