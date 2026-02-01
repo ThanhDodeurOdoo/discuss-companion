@@ -17,6 +17,7 @@
     "build:extension": "npm run build:extension:chrome && npm run build:extension:firefox",
     "build:extension:chrome": "TARGET=chrome vite build -c extension/vite.config.ts",
     "build:extension:firefox": "TARGET=firefox vite build -c extension/vite.config.ts",
+    "bump": "node scripts/bump-version.mjs",
     "lint": "npm run lint:extension && npm run lint:frontend && npm run lint:backend",
     "typecheck": "npm run typecheck:extension && npm run typecheck:frontend",
     "typecheck:extension": "tsc -p tsconfig.extension.json --noEmit",
