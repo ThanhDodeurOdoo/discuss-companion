@@ -1,10 +1,10 @@
 [package]
-name = "discuss-companion"
-version = "0.5.0"
-description = "Odoo Discuss Companion"
 authors = ["ThanhDodeurOdoo"]
+description = "Odoo Discuss Companion"
 edition = "2024"
+name = "discuss-companion"
 rust-version = "1.92"
+version = "0.6.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,39 +12,39 @@ rust-version = "1.92"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+crate-type = ["cdylib", "rlib", "staticlib"]
 name = "discuss_companion_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2.5", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon", "image-png", "test"] }
-tauri-plugin-opener = "2"
-tauri-plugin-store = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-anyhow = "1"
+anyhow = "1.0"
+crossbeam-channel = "0.5"
+flatbuffers = "25.12"
+futures-util = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tauri = { version = "2.10", features = ["image-png", "test", "tray-icon"] }
+tauri-plugin-opener = "2.5"
+tauri-plugin-store = "2.4"
+tokio = { version = "1.49", features = ["full"] }
+tokio-tungstenite = "0.28"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-crossbeam-channel = "0.5"
-tokio = { version = "1", features = ["full"] }
-tokio-tungstenite = "0.28"
-futures-util = "0.3"
-flatbuffers = "25.12"
 
 # profiling
 dhat = { version = "0.3.3", optional = true }
 
 [features]
 default = []
-dhat-heap = ["dep:dhat"]
 dhat-ad-hoc = ["dep:dhat"]
+dhat-heap = ["dep:dhat"]
 x11 = ["dep:x11"]
 
 [target.'cfg(target_os = "macos")'.dependencies]
-core-graphics = "0.25"
 core-foundation = "0.10"
+core-graphics = "0.25"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.180"
@@ -54,8 +54,8 @@ x11 = { version = "2.21.0", features = ["xlib", "xrecord"], optional = true }
 serial_test = "3"
 
 [lints.rust]
-unsafe_code = "deny"
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(rust_analyzer)"] }
+unsafe_code = "deny"
 
 [lints.clippy] # https://rust-lang.github.io/rust-clippy/
 correctness = { level = "deny", priority = -1 }
@@ -87,7 +87,7 @@ map_err_ignore = "warn"
 mem_forget = "warn"
 non_ascii_literal = "warn"
 print_stderr = "warn"
-print_stdout = "warn" 
+print_stdout = "warn"
 todo = "warn"
 unimplemented = "warn"
 unreachable = "warn"
