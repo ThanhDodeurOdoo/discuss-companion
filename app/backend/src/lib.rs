@@ -104,6 +104,14 @@ struct PttHandler {
     inactive_offline_img: Option<Image<'static>>,
     is_active: bool,
     is_connected: bool,
+    last_tray_state: Option<TrayIconState>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum TrayIconState {
+    InactiveOffline,
+    InactiveOnline,
+    ActiveOnline,
 }
 
 impl PttHandler {
@@ -116,6 +124,7 @@ impl PttHandler {
             inactive_offline_img: Image::from_bytes(ICON_INACTIVE_OFFLINE).ok(),
             is_active: false,
             is_connected: false,
+            last_tray_state: None,
         }
     }
 
@@ -134,45 +143,69 @@ impl PttHandler {
         debug!("PttHandler handling event: {:?}", msg);
         let _ = self.app_handle.emit("ptt-event", msg);
 
+        let mut should_update_tray = false;
         match msg {
             state::OutgoingMessage::PttDown { is_repeat, .. } => {
-                if !is_repeat {
+                if !is_repeat && !self.is_active {
                     self.is_active = true;
+                    should_update_tray = true;
                 }
             }
             state::OutgoingMessage::PttUp { .. } => {
-                self.is_active = false;
+                if self.is_active {
+                    self.is_active = false;
+                    should_update_tray = true;
+                }
             }
             _ => {}
         }
 
-        self.update_tray();
+        if should_update_tray {
+            self.update_tray();
+        }
         let bin = msg.to_flatbuffer();
         let _ = self.ws_tx.send(bin);
     }
 
     fn handle_connection_change(&mut self, is_connected: bool) {
         debug!("Connection state changed: connected={}", is_connected);
-        self.is_connected = is_connected;
-        self.update_tray();
+        if self.is_connected != is_connected {
+            self.is_connected = is_connected;
+            self.update_tray();
+        }
     }
 
-    fn update_tray(&self) {
+    fn update_tray(&mut self) {
         let Some(tray) = self.app_handle.tray_by_id(menu::TRAY_ID) else {
             return;
         };
 
-        let img = if !self.is_connected {
-            self.inactive_offline_img.as_ref()
+        let state = if !self.is_connected {
+            TrayIconState::InactiveOffline
         } else if self.is_active {
-            self.active_online_img.as_ref()
+            TrayIconState::ActiveOnline
         } else {
-            self.inactive_online_img.as_ref()
+            TrayIconState::InactiveOnline
         };
 
-        if let Some(img) = img {
-            let _ = tray.set_icon(Some(img.clone()));
+        if self.last_tray_state == Some(state) {
+            return;
         }
+
+        if let Some(img) = self.tray_image(state) {
+            let _ = tray.set_icon(Some(img));
+            self.last_tray_state = Some(state);
+        }
+    }
+
+    fn tray_image(&self, state: TrayIconState) -> Option<Image<'_>> {
+        let img = match state {
+            TrayIconState::InactiveOffline => self.inactive_offline_img.as_ref(),
+            TrayIconState::InactiveOnline => self.inactive_online_img.as_ref(),
+            TrayIconState::ActiveOnline => self.active_online_img.as_ref(),
+        }?;
+
+        Some(Image::new(img.rgba(), img.width(), img.height()))
     }
 }
 
