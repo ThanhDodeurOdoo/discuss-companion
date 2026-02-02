@@ -9,6 +9,7 @@
   "scripts": {
     "verify": "npm run lint && npm run typecheck && npm run test",
     "dev": "tauri dev --config app/backend/tauri.conf.json",
+    "dev:x11": "tauri dev --config app/backend/tauri.conf.json -- --features x11",
     "dev:debug": "RUST_LOG=debug tauri dev --config app/backend/tauri.conf.json",
     "dev:profiling": "bash scripts/dev-profiling.sh",
     "gen:flatbuffers": "npm run build:flatbuffers:ws && npm run build:flatbuffers:ipc",

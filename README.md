@@ -10,8 +10,9 @@
 [![macOS](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/macOS.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/macOS.yml)
 [![Ubuntu](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ubuntu.yml)
 [![Debian Trixie](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/debian.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/debian.yml)
+[![Debian X11](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/debian-x11.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/debian-x11.yml)
 
-The Discuss Companion is a companion app for Odoo Discuss, currently supporting macOS (and Linux/Windows with limited features). It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus, along with convenient quick-access call control features when in a call in Odoo Discuss. This also requires the extension to be installed in a compatible browser (chromium / firefox).
+The Discuss Companion is a companion app for Odoo Discuss, currently supporting macOS and Linux (X11). It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus, along with convenient quick-access call control features when in a call in Odoo Discuss. This also requires the extension to be installed in a compatible browser (chromium / firefox).
 
 ![Discuss Companion Example](assets/example.gif)
 
@@ -20,12 +21,12 @@ The app backend is written in Rust, the app frontend (and the extension) is writ
 ## Architecture
 
 The repository contains 2 parts:
-1.  **The App (macOS and Linux\*)**:
+1.  **The App (macOS and Linux)**:
     -   Captures global key events using platform-specific APIs and runs a WebSocket server.
+    -   macOS: Uses Core Graphics Event Tap
+    -   Linux: Uses XRecord (X11 only, Wayland not yet supported)
 2.  **The Extension (Chrome & Firefox)**:
     -   Connects to the desktop agent via WebSockets and relays PTT signals to the Odoo web page.
-
-*: not yet
 
 The communication between the App and the Extension (WS), and between the backend and the frontend of the app (IPC) uses [FlatBuffers](https://google.github.io/flatbuffers/), The schema is defined in `ws_protocol.fbs` and `ipc_protocol.fbs`. 
 
@@ -44,7 +45,7 @@ Read [CONTRIBUTING.md](https://github.com/ThanhDodeurOdoo/discuss-companion/blob
     -  **flatbuffers (latests)** ([link](https://flatbuffers.dev/flatc/))
 #### Main:
 -  **Browser**: Google Chrome or Mozilla Firefox required for the extension.
--  **OS**: macOS (Linux support coming soon).
+-  **OS**: macOS or Linux (X11 only, Wayland not yet supported).
 
 
 ### Running Locally
@@ -54,7 +55,8 @@ Read [CONTRIBUTING.md](https://github.com/ThanhDodeurOdoo/discuss-companion/blob
     ```
 2.  **Start the app in development mode**:
     ```bash
-    npm run dev
+    npm run dev        # macOS
+    npm run dev:x11    # Linux (X11)
     ```
 
 3.  **Permissions**:
@@ -103,10 +105,10 @@ The output will be generated in `app/backend/target/release/bundle/`.
 The application automatically detects the target OS based on the build environment. If you want to build for a specific target manually using Cargo:
 
 - **macOS**: `npm run tauri build -- --target aarch64-apple-darwin`
-- **Linux**: `npm run tauri build -- --target x86_64-unknown-linux-gnu` (Note: PTT engine not yet implemented)
+- **Linux (X11)**: `npm run tauri build -- --target x86_64-unknown-linux-gnu -- --features x11`
 
-> [!WARNING]  
-> LINUX TARGET IS NOT YET IMPLEMENTED, pull requests are welcome I do not have a Linux machine to test on.
+> [!NOTE]
+> Linux support requires X11. Wayland is not yet supported.
 > see: [Issue#1](https://github.com/ThanhDodeurOdoo/discuss-companion/issues/1)
 
 When using Tauri, the target is determined by the host system:

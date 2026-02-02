@@ -37,12 +37,18 @@ flatbuffers = "25.12"
 dhat = { version = "0.3.3", optional = true }
 
 [features]
+default = []
 dhat-heap = ["dep:dhat"]
 dhat-ad-hoc = ["dep:dhat"]
+x11 = ["dep:x11"]
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-graphics = "0.25"
 core-foundation = "0.10"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2.180"
+x11 = { version = "2.21.0", features = ["xlib", "xrecord"], optional = true }
 
 [dev-dependencies]
 serial_test = "3"

@@ -314,20 +314,6 @@ pub fn run() {
 
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                let _ = window.hide();
-                api.prevent_close();
-
-                // Hide dock icon when main window is closed
-                #[cfg(target_os = "macos")]
-                if window.label() == "main" {
-                    let _ = window
-                        .app_handle()
-                        .set_activation_policy(tauri::ActivationPolicy::Accessory);
-                }
-            }
-        })
         .invoke_handler(tauri::generate_handler![
             commands::get_version,
             commands::get_features,
@@ -344,6 +330,21 @@ pub fn run() {
             commands::establish_channel,
             commands::send_call_command,
         ]);
+
+    // TODO: when the tray feature becomes available in Linux
+    // this behavior should also be extended.
+    #[cfg(target_os = "macos")]
+    let builder = builder.on_window_event(|window, event| {
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            let _ = window.hide();
+            api.prevent_close();
+            if window.label() == "main" {
+                let _ = window
+                    .app_handle()
+                    .set_activation_policy(tauri::ActivationPolicy::Accessory);
+            }
+        }
+    });
 
     if let Err(e) = builder.run(tauri::generate_context!()) {
         error!("error while running tauri application: {e}");

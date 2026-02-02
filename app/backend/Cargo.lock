@@ -761,6 +761,7 @@ dependencies = [
  "dhat",
  "flatbuffers",
  "futures-util",
+ "libc",
  "serde",
  "serde_json",
  "serial_test",
@@ -772,6 +773,7 @@ dependencies = [
  "tokio-tungstenite",
  "tracing",
  "tracing-subscriber",
+ "x11",
 ]
 
 [[package]]

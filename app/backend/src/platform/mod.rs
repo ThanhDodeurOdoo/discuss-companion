@@ -5,7 +5,9 @@ use crossbeam_channel::Sender;
 
 use crate::state::{KeyBinding, OutgoingMessage};
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "x11"))]
+mod debian_x11;
+#[cfg(all(target_os = "linux", not(feature = "x11")))]
 mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
@@ -50,7 +52,10 @@ pub trait PttEngine: Send + Sync {
 #[cfg(target_os = "macos")]
 pub type Engine = macos::MacosEngine;
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "x11"))]
+pub type Engine = debian_x11::DebianX11Engine;
+
+#[cfg(all(target_os = "linux", not(feature = "x11")))]
 pub type Engine = linux::LinuxEngine;
 
 #[cfg(target_os = "windows")]
@@ -62,7 +67,10 @@ pub fn get_engine() -> &'static Engine {
     #[cfg(target_os = "macos")]
     return macos::get_engine();
 
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", feature = "x11"))]
+    return debian_x11::get_engine();
+
+    #[cfg(all(target_os = "linux", not(feature = "x11")))]
     return linux::get_engine();
 
     #[cfg(target_os = "windows")]
