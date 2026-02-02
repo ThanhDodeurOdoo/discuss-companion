@@ -51,6 +51,12 @@ panic = { level = "deny", priority = -1 }
 suspicious = { level = "deny", priority = -1 }
 unwrap_used = { level = "deny", priority = -1 }
 
+# groups
+complexity = "warn"
+pedantic = "warn"
+perf = "warn"
+style = "warn"
+
 absolute_paths = "warn"
 allow_attributes_without_reason = "warn"
 as_conversions = "warn"
@@ -59,10 +65,20 @@ as_underscore = "warn"
 assigning_clones = "warn"
 clone_on_ref_ptr = "warn"
 cognitive_complexity = "warn"
-complexity = "warn"
-pedantic = "warn"
-perf = "warn"
-style = "warn"
+dbg_macro = "warn"
+disallowed_script_idents = "warn"
+empty_drop = "warn"
+exit = "warn"
+map_err_ignore = "warn"
+mem_forget = "warn"
+non_ascii_literal = "warn"
+print_stderr = "warn"
+print_stdout = "warn" 
+todo = "warn"
+unimplemented = "warn"
+unreachable = "warn"
+unused_result_ok = "warn"
+wildcard_dependencies = "warn"
 
 # nursery as of rust 1.92 https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html?groups=nursery
 needless_pass_by_ref_mut = "warn"

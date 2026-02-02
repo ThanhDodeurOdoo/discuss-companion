@@ -160,7 +160,7 @@ impl PttEngine for MacosEngine {
     ) -> Result<()> {
         EVENT_SENDER
             .set(sender)
-            .map_err(|_| anyhow!("Event sender already initialized"))?;
+            .map_err(|_sender| anyhow!("Event sender already initialized"))?;
 
         // We also want to listen for flags changed to update modifiers if needed,
         let event_mask: u64 =
@@ -197,7 +197,7 @@ impl PttEngine for MacosEngine {
             error!("Failed to create event tap - NULL return");
             return Err(anyhow!(
                 "Failed to create event tap. Accessibility permission may be missing. \
-                 Grant permission in System Settings → Privacy & Security → Accessibility."
+                 Grant permission in System Settings -> Privacy & Security -> Accessibility."
             ));
         }
         debug!("CGEventTap created successfully");
