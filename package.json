@@ -1,7 +1,7 @@
 {
   "name": "discuss-companion",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "engines": {
     "node": "24.13.0"
@@ -12,13 +12,13 @@
     "dev:x11": "tauri dev --config app/backend/tauri.conf.json -- --features x11",
     "dev:debug": "RUST_LOG=debug tauri dev --config app/backend/tauri.conf.json",
     "dev:profiling": "bash scripts/dev-profiling.sh",
+    "dev:extension": "npm run dev:extension:chrome && npm run dev:extension:firefox",
+    "dev:extension:chrome": "TARGET=chrome vite build -c extension/vite.config.ts",
+    "dev:extension:firefox": "TARGET=firefox vite build -c extension/vite.config.ts",
     "gen:flatbuffers": "npm run build:flatbuffers:ws && npm run build:flatbuffers:ipc",
     "build:flatbuffers:ws": "flatc --rust -o app/backend/src/flatbuffers ws_protocol.fbs && flatc --ts -o extension/src ws_protocol.fbs",
     "build:flatbuffers:ipc": "flatc --rust -o app/backend/src/flatbuffers ipc_protocol.fbs && flatc --ts -o app/frontend/flatbuffers ipc_protocol.fbs",
     "build:app": "tauri build --config app/backend/tauri.conf.json",
-    "build:extension": "npm run build:extension:chrome && npm run build:extension:firefox",
-    "build:extension:chrome": "TARGET=chrome vite build -c extension/vite.config.ts",
-    "build:extension:firefox": "TARGET=firefox vite build -c extension/vite.config.ts",
     "bump": "node scripts/bump-version.mjs",
     "lint": "npm run lint:extension && npm run lint:frontend && npm run lint:backend",
     "typecheck": "npm run typecheck:extension && npm run typecheck:frontend",
@@ -40,12 +40,12 @@
   },
   "dependencies": {
     "@odoo/owl": "file:vendor/owl",
-    "@tauri-apps/api": "^2.9.1",
+    "@tauri-apps/api": "^2.10",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "flatbuffers": "^25.9.23"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2",
+    "@tauri-apps/cli": "^2.10",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.39.2",
     "@testing-library/jest-dom": "^6.9.1",
