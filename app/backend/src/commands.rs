@@ -113,6 +113,7 @@ pub fn quit_app(app_handle: tauri::AppHandle) {
     if let Some(window) = app_handle.get_webview_window(CALL_CONTROLS_WINDOW_LABEL) {
         let _ = window.hide();
     }
+    crate::profiling_drop!();
     app_handle.exit(0);
 }
 

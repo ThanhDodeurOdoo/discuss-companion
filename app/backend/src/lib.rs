@@ -7,6 +7,7 @@
         reason = "tests are allowed to panic"
     )
 )]
+
 use std::{
     env,
     io::stderr,
@@ -32,6 +33,7 @@ pub mod commands;
 pub mod flatbuffers;
 pub mod menu;
 pub mod platform;
+mod profiling;
 pub mod server;
 pub mod state;
 
@@ -210,6 +212,7 @@ fn handle_ptt_events(
 )]
 pub fn run() {
     setup_logging();
+    crate::profiling_init!();
     debug!("debug enabled");
     info!("Discuss Companion starting");
 
@@ -312,6 +315,8 @@ pub fn run() {
     if let Err(e) = builder.run(tauri::generate_context!()) {
         error!("error while running tauri application: {e}");
     }
+
+    crate::profiling_drop!();
 
     // Safety: Ensure PTT is released when app quits
     platform::force_ptt_up();

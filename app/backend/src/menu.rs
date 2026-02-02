@@ -29,6 +29,10 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) ->
         .menu(&menu)
         .on_menu_event(|app, event| {
             if event.id() == "quit" {
+                if let Some(window) = app.get_webview_window(CALL_CONTROLS_WINDOW_LABEL) {
+                    let _ = window.hide();
+                }
+                crate::profiling_drop!();
                 app.exit(0);
             }
         })

@@ -89,6 +89,29 @@ npm run dev # for development
 npm run build:app # for deployment
 ```
 
+## Profiling
+
+To capture a CPU flamegraph and a DHAT heap profile:
+
+```bash
+npm run dev:profiling
+```
+
+Prerequisites:
+
+- `npm install` (for the Tauri CLI in `node_modules/.bin`)
+- `flamegraph` available in `PATH` (install with `cargo install flamegraph`)
+
+Outputs are written to:
+
+- `app/profiling/flamegraph.svg`
+- `app/profiling/dhat-heap.json`
+
+Notes:
+
+- Quit the app via the tray "Quit" action to flush the DHAT output file.
+- The flamegraph capture stops automatically when the app exits.
+
 
 ## Verification
 
