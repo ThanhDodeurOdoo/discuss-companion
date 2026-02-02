@@ -663,7 +663,13 @@ pub const FEATURES: Features = Features {
     call_controls_tray: true,
 };
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "x11"))]
+pub const FEATURES: Features = Features {
+    ptt: true,
+    call_controls_tray: false,
+};
+
+#[cfg(all(target_os = "linux", not(feature = "x11")))]
 pub const FEATURES: Features = Features {
     ptt: false,
     call_controls_tray: false,
