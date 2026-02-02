@@ -8,6 +8,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+profiling/
 
 # Dependency directories
 node_modules/
