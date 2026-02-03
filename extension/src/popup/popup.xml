@@ -59,7 +59,7 @@
                 </div>
             </div>
             <div t-else="" class="settings__actions">
-                <button class="btn btn--ghost" t-on-click="() => this.popup.openShortcuts()">
+                <button class="btn btn--ghost" t-if="!this.popup.isFirefoxBuild" t-on-click="() => this.popup.openShortcuts()">
                     <span class="icon" aria-hidden="true">keyboard</span>
                     <span>Extension shortcuts</span>
                 </button>

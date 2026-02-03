@@ -16,6 +16,7 @@ import {
 } from "./storage/session_state";
 import { type SwToContentMessage } from "./messaging/sw_channel";
 import { throttle } from "./utils";
+import { IS_FIREFOX_BUILD } from "./env";
 
 const ACTIVE_ONLINE_ICON = "/assets/icons/active_online_icon.png";
 const INACTIVE_ONLINE_ICON = "/assets/icons/inactive_online_icon.png";
@@ -299,6 +300,9 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
     }
 
     async function onCommand(command: string) {
+        if (IS_FIREFOX_BUILD) {
+            return;
+        }
         log("[BG] onCommand", command);
         const isTalkingByTabId = await getIsTalkingByTabId();
         const tabIds = Object.keys(isTalkingByTabId);
@@ -343,9 +347,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
     }
 
     function handleActionClicked() {
-        const isFirefox = /Firefox/i.test(navigator.userAgent);
-        if (isFirefox) {
-            chrome.tabs.create({ url: "about:addons" });
+        if (IS_FIREFOX_BUILD) {
             return;
         }
         chrome.tabs.create({ url: "chrome://extensions/shortcuts" });

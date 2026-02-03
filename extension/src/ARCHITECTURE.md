@@ -96,6 +96,19 @@ Supported WS command formats:
 - Key/value: `toggle-microphone:true`
 - Bare command: `toggle-microphone`
 
+## Firefox FlatBuffers Compatibility
+
+Firefox occasionally throws a cross-compartment security error while decoding some FlatBuffers
+`Status` messages in the content script environment (seen as `Permission denied to access property "constructor"`).
+This only affected the `Status` payloads used for app-driven call commands; PTT events still decoded correctly.
+
+To avoid this, the extension uses a small, Firefox-only fallback parser for WS frames:
+
+- Chrome and other browsers: use the generated FlatBuffers classes (`Message`, `Status`, etc.).
+- Firefox: manually parse the `Message` table via `DataView` and extract `bodyType` plus the `Status.state` string.
+
+This keeps the wire format unchanged and avoids runtime exceptions in Firefox while preserving behavior.
+
 ## Internal message types
 
 ### Page → Extension

@@ -36,7 +36,8 @@ export default defineConfig([
                 ...globals.node,
                 ...globals.webextensions,
                 __APP_VERSION__: "readonly",
-                __EXTENSION_VERSION__: "readonly"
+                __EXTENSION_VERSION__: "readonly",
+                __BROWSER_TARGET__: "readonly"
             },
             parser: tsParser
         },
