@@ -55,7 +55,7 @@ Read [CONTRIBUTING.md](https://github.com/ThanhDodeurOdoo/discuss-companion/blob
     ```
 2.  **Start the app in development mode**:
     ```bash
-    npm run dev        # macOS
+    npm run dev        # Will use your current OS
     npm run dev:x11    # Linux (X11)
     ```
 
@@ -75,10 +75,10 @@ see [Extension's Readme](./extension/README.md)
 
 To link the app with Odoo:
 
-1.  **Build the Extension**:
+1.  **Build the unpacked Extensions**:
     ```bash
     # Build for both Chrome and Firefox
-    npm run build:extension
+    npm run dev:extension
     ```
     This will generate `extension/dist/chrome` and `extension/dist/firefox`.
 
