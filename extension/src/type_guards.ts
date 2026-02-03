@@ -1,4 +1,4 @@
-import type { CallState } from "./call_state";
+import type { CallState } from "./call_state_types";
 
 export type CallStateObserverPayload = {
     hasState: boolean;

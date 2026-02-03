@@ -1,12 +1,11 @@
 import { jest, describe, test, expect, beforeEach } from "@jest/globals";
-import { mockChrome, mockWebSocket, flushPromises } from "./utils.js";
+import { mockChrome, flushPromises } from "./utils.js";
 import { MockPttExtensionService } from "./extension_service.mock.js";
 
 const mockStorage = mockChrome({
     isTalkingByTabId: {},
     isCompanionEnabled: true
 });
-mockWebSocket();
 
 /**
  * Import service_worker script to register listeners
@@ -14,11 +13,6 @@ mockWebSocket();
 await import("../src/service_worker.ts");
 
 const capturedHandleMessage = chrome.runtime.onMessageExternal.addListener.mock.calls[0][0];
-
-const { Message } = await import("../src/discuss/ws-protocol/message");
-const { MessageBody } = await import("../src/discuss/ws-protocol/message-body");
-const { PttDown } = await import("../src/discuss/ws-protocol/ptt-down");
-const flatbuffers = await import("flatbuffers");
 
 describe("PTT Service Compatibility", () => {
     let service;
@@ -39,7 +33,7 @@ describe("PTT Service Compatibility", () => {
         };
 
         chrome.tabs.sendMessage.mockImplementation((tabId, message) => {
-            if (tabId === TAB_ID) {
+            if (tabId === TAB_ID && message.from === "discuss-push-to-talk") {
                 service.receiveMessage(message);
             }
         });
@@ -64,17 +58,23 @@ describe("PTT Service Compatibility", () => {
         await flushPromises();
 
         expect(mockStorage.isTalkingByTabId[TAB_ID]).toBe(false);
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(TAB_ID, {
+            type: "content-subscribe",
+            value: { isOwner: true }
+        });
 
         service.unsubscribe();
         await flushPromises();
 
         expect(mockStorage.isTalkingByTabId[TAB_ID]).toBeUndefined();
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(TAB_ID, { type: "content-unsubscribe" });
     });
 
     test("Is Talking state updates", async () => {
         service.start();
         await flushPromises();
         service.subscribe();
+        await flushPromises();
 
         service.notifyIsTalking(true);
         await flushPromises();
@@ -83,29 +83,5 @@ describe("PTT Service Compatibility", () => {
         service.notifyIsTalking(false);
         await flushPromises();
         expect(mockStorage.isTalkingByTabId[TAB_ID]).toBe(false);
-    });
-
-    test("Receives Toggle Voice command", async () => {
-        service.start();
-        await flushPromises();
-        service.subscribe();
-
-        const builder = new flatbuffers.Builder(64);
-        PttDown.startPttDown(builder);
-        const pttOffset = PttDown.endPttDown(builder);
-        Message.startMessage(builder);
-        Message.addBodyType(builder, MessageBody.PttDown);
-        Message.addBody(builder, pttOffset);
-        builder.finish(Message.endMessage(builder));
-        const data = builder.asUint8Array();
-
-        const socket = global.mockSockets[0];
-        socket.onmessage({ data });
-        await flushPromises();
-
-        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(TAB_ID, {
-            from: "discuss-push-to-talk",
-            type: "push-to-talk-pressed"
-        });
     });
 });

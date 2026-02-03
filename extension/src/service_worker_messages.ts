@@ -1,65 +1,33 @@
 import {
-    executeCallAction,
-    focusCallTab,
-    refreshCallState,
-    type CallAction,
     isCallAction,
+    requiresFocusCallTab,
+    type CallAction,
     type CallActionOptions
 } from "./call_actions";
+import { setStoredCallState } from "./call_state";
+import type { CallState } from "./call_state_types";
 import {
+    getAppConnected,
     getCallTabId,
-    getStoredCallState,
+    getIsTalkingByTabId,
+    setAppConnected,
     setCallTabId,
-    setStoredCallState,
-    type CallState
-} from "./call_state";
-import {
-    parseAppCommand,
-    resolveAppCommandAction,
-    type ParsedAppCommand
-} from "./service_worker_app_commands";
-import { isCallStateObserverPayload, type CallStateObserverPayload } from "./type_guards";
+    setIsTalkingByTabId
+} from "./storage/session_state";
+import { type SwToContentMessage } from "./messaging/sw_channel";
 import { throttle } from "./utils";
-import * as flatbuffers from "flatbuffers";
-import { Message } from "./discuss/ws-protocol/message";
-import { MessageBody } from "./discuss/ws-protocol/message-body";
-import { CallState as WsCallState } from "./discuss/ws-protocol/call-state";
 
 const ACTIVE_ONLINE_ICON = "/assets/icons/active_online_icon.png";
 const INACTIVE_ONLINE_ICON = "/assets/icons/inactive_online_icon.png";
 const INACTIVE_OFFLINE_ICON = "/assets/icons/inactive_offline_icon.png";
-const CALL_STATE_REFRESH_DELAY = 2000;
-// Used to relay call-state updates from MAIN to ISOLATED without reinjecting.
-const CALL_STATE_OBSERVER_EVENT = "discuss-companion-call-state";
-// MAIN world marker to avoid installing multiple polling observers in a call tab.
-const CALL_STATE_OBSERVER_MAIN_KEY = "__DISCUSS_COMPANION_CALL_STATE_OBSERVER__";
-// ISOLATED world marker to avoid registering multiple bridge listeners per tab.
-const CALL_STATE_OBSERVER_BRIDGE_KEY = "__DISCUSS_COMPANION_CALL_STATE_OBSERVER_BRIDGE__";
-const CALL_STATE_OBSERVER_ACTIVE_DELAY = 1000;
-const CALL_STATE_OBSERVER_IDLE_DELAY = 5000;
-
-interface IsTalkingMap {
-    [tabId: number]: boolean;
-}
 
 interface ExtensionMessage {
     type: string;
     value?: unknown;
 }
 
-type CallStateSnapshot = {
-    hasCall: boolean;
-    hasState: boolean;
-    isMute: boolean;
-    isDeaf: boolean;
-    isCameraOn: boolean;
-    isScreenOn: boolean;
-};
-
 type MessageHandlerDeps = {
     log: (...args: unknown[]) => void;
-    isConnected: () => boolean;
-    sendToApp: (data: Uint8Array) => boolean;
 };
 
 type Command = "ptt-pressed" | "ptt-released" | "toggle-voice";
@@ -70,8 +38,6 @@ export type MessageHandlers = {
         sender: chrome.runtime.MessageSender,
         sendResponse: (response?: unknown) => void
     ) => void;
-    handleStatusState: (rawState?: string | null) => void;
-    handleConnectionStateChange: (isConnected: boolean) => void;
     handleCommand: (command: string) => void;
     handleCommandImmediate: (command: string) => void;
     handleTabRemoved: (tabId: number) => void;
@@ -79,12 +45,8 @@ export type MessageHandlers = {
     updateAppIcon: () => Promise<void>;
 };
 
-export function createMessageHandlers({
-    log,
-    isConnected,
-    sendToApp
-}: MessageHandlerDeps): MessageHandlers {
-    function pickFirstTabId(isTalkingByTabId: IsTalkingMap): number | null {
+export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandlers {
+    function pickFirstTabId(isTalkingByTabId: Record<string, boolean>): number | null {
         const tabIds = Object.keys(isTalkingByTabId);
         if (tabIds.length === 0) {
             return null;
@@ -102,22 +64,21 @@ export function createMessageHandlers({
         await setStoredCallState(null);
     }
 
-    async function syncCallTabIdFromMap(isTalkingByTabId: IsTalkingMap): Promise<void> {
+    async function syncCallTabIdFromMap(
+        isTalkingByTabId: Record<string, boolean>
+    ): Promise<number | null> {
         const currentTabId = await getCallTabId();
         if (currentTabId !== null && isTalkingByTabId[currentTabId] !== undefined) {
-            return;
+            return currentTabId;
         }
         const nextTabId = pickFirstTabId(isTalkingByTabId);
         await setActiveCallTab(nextTabId);
-    }
-
-    async function getIsTalkingByTabId(): Promise<IsTalkingMap> {
-        const { isTalkingByTabId = {} } = await chrome.storage.session.get();
-        return isTalkingByTabId as IsTalkingMap;
+        return nextTabId;
     }
 
     async function updateAppIcon() {
-        if (!isConnected()) {
+        const connected = await getAppConnected();
+        if (!connected) {
             chrome.action.setIcon({ path: INACTIVE_OFFLINE_ICON });
             return;
         }
@@ -127,275 +88,70 @@ export function createMessageHandlers({
         chrome.action.setIcon({ path: isTalking ? ACTIVE_ONLINE_ICON : INACTIVE_ONLINE_ICON });
     }
 
-    function buildCallStateSnapshot(
-        state: CallState | null | undefined,
-        hasCall: boolean
-    ): CallStateSnapshot {
-        return {
-            hasCall,
-            hasState: Boolean(state),
-            isMute: Boolean(state?.isMute),
-            isDeaf: Boolean(state?.isDeaf),
-            isCameraOn: Boolean(state?.isCameraOn),
-            isScreenOn: Boolean(state?.isScreenOn)
-        };
+    function sendToContentTab(tabId: number, message: SwToContentMessage): void {
+        chrome.tabs.sendMessage(tabId, message);
     }
 
-    function buildCallStateMessage(snapshot: CallStateSnapshot): Uint8Array {
-        const builder = new flatbuffers.Builder(64);
-        const offset = WsCallState.createCallState(
-            builder,
-            BigInt(Date.now()),
-            snapshot.hasCall,
-            snapshot.hasState,
-            snapshot.isMute,
-            snapshot.isDeaf,
-            snapshot.isCameraOn,
-            snapshot.isScreenOn
-        );
-        Message.startMessage(builder);
-        Message.addBodyType(builder, MessageBody.CallState);
-        Message.addBody(builder, offset);
-        const messageOffset = Message.endMessage(builder);
-        builder.finish(messageOffset);
-        return builder.asUint8Array();
-    }
-
-    async function sendCallStateToApp(state?: CallState | null): Promise<void> {
-        if (!isConnected()) {
-            return;
-        }
-        const callTabId = await getCallTabId();
-        const hasCall = callTabId !== null;
-        const storedState = state ?? (await getStoredCallState());
-        const snapshot = buildCallStateSnapshot(storedState, hasCall);
-        const payload = buildCallStateMessage(snapshot);
-        const didSend = sendToApp(payload);
-        if (!didSend) {
-            log("[BG] Failed to send call state to app");
-        }
-    }
-
-    async function refreshAndSendCallState(): Promise<void> {
-        const state = await refreshCallState();
-        await sendCallStateToApp(state ?? null);
-    }
-
-    function scheduleCallStateRefresh(): void {
-        setTimeout(() => {
-            void refreshAndSendCallState();
-        }, CALL_STATE_REFRESH_DELAY);
-    }
-
-    /**
-     * Ensures a single observer pipeline per call tab (MAIN poller + ISOLATED bridge).
-     * Uses window markers to avoid duplicate injections across reconnects.
-     */
-    async function ensureCallStateObserver(tabId: number): Promise<void> {
-        try {
-            await chrome.scripting.executeScript({
-                target: { tabId },
-                world: "MAIN",
-                func: (
-                    eventName: string,
-                    observerKey: string,
-                    activeDelay: number,
-                    idleDelay: number
-                ) => {
-                    type ObserverState = {
-                        stop: () => void;
-                    };
-                    type OdooWindow = Window & {
-                        odoo?: {
-                            __WOWL_DEBUG__?: {
-                                root: {
-                                    env: {
-                                        services: {
-                                            "mail.store"?: unknown;
-                                        };
-                                    };
-                                };
-                            };
-                        };
-                    };
-                    const win = window as OdooWindow;
-                    const observerStore = win as unknown as Record<
-                        string,
-                        ObserverState | undefined
-                    >;
-                    if (observerStore[observerKey]) {
-                        return;
-                    }
-                    const readState = () => {
-                        const store = win.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"] as
-                            | {
-                                  rtc?: {
-                                      selfSession?: {
-                                          isMute: boolean;
-                                          is_deaf: boolean;
-                                          is_camera_on: boolean;
-                                          is_screen_sharing_on: boolean;
-                                      };
-                                  };
-                              }
-                            | undefined;
-                        const selfSession = store?.rtc?.selfSession;
-                        if (!selfSession) {
-                            return null;
-                        }
-                        return {
-                            isMute: Boolean(selfSession.isMute),
-                            isDeaf: Boolean(selfSession.is_deaf),
-                            isCameraOn: Boolean(selfSession.is_camera_on),
-                            isScreenOn: Boolean(selfSession.is_screen_sharing_on)
-                        };
-                    };
-                    let lastSignature = "";
-                    let timeoutId = 0;
-                    const emit = (state: ReturnType<typeof readState>) => {
-                        const payload = state ? { hasState: true, state } : { hasState: false };
-                        const signature = JSON.stringify(payload);
-                        if (signature === lastSignature) {
-                            return;
-                        }
-                        lastSignature = signature;
-                        win.dispatchEvent(new CustomEvent(eventName, { detail: payload }));
-                    };
-                    const tick = () => {
-                        const state = readState();
-                        emit(state);
-                        const delay = state ? activeDelay : idleDelay;
-                        timeoutId = win.setTimeout(tick, delay);
-                    };
-                    tick();
-                    observerStore[observerKey] = {
-                        stop: () => win.clearTimeout(timeoutId)
-                    };
-                },
-                args: [
-                    CALL_STATE_OBSERVER_EVENT,
-                    CALL_STATE_OBSERVER_MAIN_KEY,
-                    CALL_STATE_OBSERVER_ACTIVE_DELAY,
-                    CALL_STATE_OBSERVER_IDLE_DELAY
-                ]
+    async function notifyOwnerChange(
+        previousOwner: number | null,
+        nextOwner: number | null,
+        isTalkingByTabId: Record<string, boolean>
+    ) {
+        if (nextOwner !== null && nextOwner !== previousOwner) {
+            sendToContentTab(nextOwner, {
+                type: "content-owner-update",
+                value: { isOwner: true }
             });
-            await chrome.scripting.executeScript({
-                target: { tabId },
-                world: "ISOLATED",
-                func: (eventName: string, bridgeKey: string) => {
-                    type BridgeState = {
-                        handler: (event: Event) => void;
-                    };
-                    const win = window as Window;
-                    const bridgeStore = win as unknown as Record<string, BridgeState | undefined>;
-                    if (bridgeStore[bridgeKey]) {
-                        return;
-                    }
-                    const handler = (event: Event) => {
-                        const customEvent = event as CustomEvent<unknown>;
-                        chrome.runtime.sendMessage({
-                            type: "call-state-observer-update",
-                            value: customEvent.detail
-                        });
-                    };
-                    win.addEventListener(eventName, handler);
-                    bridgeStore[bridgeKey] = { handler };
-                },
-                args: [CALL_STATE_OBSERVER_EVENT, CALL_STATE_OBSERVER_BRIDGE_KEY]
+        }
+        if (
+            previousOwner !== null &&
+            previousOwner !== nextOwner &&
+            isTalkingByTabId[previousOwner] !== undefined
+        ) {
+            sendToContentTab(previousOwner, {
+                type: "content-owner-update",
+                value: { isOwner: false }
             });
-        } catch (error) {
-            log("[BG] Failed to install call state observer", error);
         }
     }
 
-    async function handleCallStateObserverUpdate(
+    async function forwardCallAction(
         tabId: number,
-        payload: CallStateObserverPayload
-    ): Promise<void> {
-        if (payload.hasState) {
-            const currentTabId = await getCallTabId();
-            if (currentTabId === null) {
-                await setCallTabId(tabId);
-            }
-        }
-        const state = payload.hasState ? (payload.state ?? null) : null;
-        await setStoredCallState(state);
-        await sendCallStateToApp(state);
-    }
-
-    /**
-     * FIXME: The function is delayed because the subscription occurs at the start of rtc.joinCall(),
-     * which means the RPC is made and before `rtc.selfSession` and `rtc.channel` are set.
-     * This is technically incorrect as the tab will be subscribed even if the join fails,
-     * it should ideally be subscribed at the end of the joinCall function, if it is successful,
-     * and after selfSession and channel are set.
-     */
-    function delayedSubscribe(safeTabId: number) {
-        setTimeout(() => {
-            chrome.scripting
-                .executeScript({
-                    target: { tabId: safeTabId },
-                    world: "MAIN",
-                    func: () => {
-                        const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-                        const channel = store?.rtc?.channel as
-                            | { id: number; name: string }
-                            | undefined;
-                        return {
-                            channelId: channel?.id,
-                            channelName: channel?.name,
-                            origin: window.location.origin
-                        };
-                    }
-                })
-                .then((results) => {
-                    const result = results[0]?.result as
-                        | { channelId?: number; channelName?: string; origin?: string }
-                        | undefined;
-                    if (result?.channelId && result?.origin) {
-                        const { channelId, channelName, origin } = result;
-                        const url = new URL("/odoo/action-mail.action_discuss", origin);
-                        url.searchParams.set("active_id", `discuss.channel_${channelId}`);
-                        url.searchParams.set("call", "accept");
-                        const lastJoinedCall = {
-                            url: url.toString(),
-                            name: channelName || "last call"
-                        };
-                        chrome.storage.local.set({ lastJoinedCall });
-                        log("[BG] Captured call info", lastJoinedCall);
-                    }
-                    log("[BG] Captured call info", result);
-                })
-                .catch((e) => {
-                    log("Failed to capture call info", e);
-                });
-        }, 3000);
-    }
-
-    async function handleAppCommand(command: ParsedAppCommand): Promise<void> {
-        const action = resolveAppCommandAction(command.name, command.value, log);
-        if (!action) {
+        payload: { action?: CallAction; options?: CallActionOptions } | null,
+        sendResponse: (response?: unknown) => void
+    ) {
+        const action = payload?.action;
+        if (!action || !isCallAction(action)) {
+            sendResponse?.({ error: "invalid-action" });
             return;
         }
-        const { state } = await executeCallAction(action);
-        await sendCallStateToApp(state ?? null);
-    }
-
-    async function handleStatusState(rawState?: string | null): Promise<void> {
-        const command = parseAppCommand(rawState);
-        if (!command) {
-            return;
-        }
-        if (command.name === "focus-call-tab" || command.name === "go-to-call") {
+        if (payload?.options?.focusCallTab || requiresFocusCallTab(action)) {
             await focusCallTab();
-            await sendCallStateToApp();
-            return;
         }
-        if (command.name === "refresh-call-state") {
-            await refreshAndSendCallState();
-            return;
-        }
-        await handleAppCommand(command);
+        chrome.tabs.sendMessage(
+            tabId,
+            { type: "content-call-action", value: payload },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    sendResponse?.({ error: "message-failed" });
+                    return;
+                }
+                sendResponse?.(response);
+            }
+        );
+    }
+
+    async function forwardRefreshCallState(
+        tabId: number,
+        sendResponse: (response?: unknown) => void
+    ) {
+        chrome.tabs.sendMessage(tabId, { type: "content-refresh-call-state" }, (response) => {
+            if (chrome.runtime.lastError) {
+                sendResponse?.({ error: "message-failed" });
+                return;
+            }
+            sendResponse?.(response);
+        });
     }
 
     async function handleMessage(
@@ -411,7 +167,8 @@ export function createMessageHandlers({
             type !== "ask-version" &&
             type !== "call-action" &&
             type !== "refresh-call-state" &&
-            type !== "focus-call-tab"
+            type !== "focus-call-tab" &&
+            type !== "content-connection-state"
         ) {
             sendResponse?.({ error: "no-tab" });
             return;
@@ -420,42 +177,48 @@ export function createMessageHandlers({
         const safeTabId = tabId as number;
 
         switch (type) {
-            case "subscribe":
-                {
-                    const isTalkingByTabId = await getIsTalkingByTabId();
-                    isTalkingByTabId[safeTabId] = false;
-                    await chrome.storage.session.set({ isTalkingByTabId });
+            case "subscribe": {
+                const isTalkingByTabId = await getIsTalkingByTabId();
+                const previousOwner = await getCallTabId();
+                isTalkingByTabId[safeTabId] = false;
+                await setIsTalkingByTabId(isTalkingByTabId);
+                const nextOwner = await syncCallTabIdFromMap(isTalkingByTabId);
+                if (previousOwner !== nextOwner && nextOwner !== null && nextOwner !== safeTabId) {
+                    sendToContentTab(nextOwner, {
+                        type: "content-owner-update",
+                        value: { isOwner: true }
+                    });
+                }
+                sendToContentTab(safeTabId, {
+                    type: "content-subscribe",
+                    value: { isOwner: nextOwner === safeTabId }
+                });
+                sendResponse?.({ status: "ok" });
+                break;
+            }
+            case "unsubscribe": {
+                const isTalkingByTabId = await getIsTalkingByTabId();
+                const previousOwner = await getCallTabId();
+                delete isTalkingByTabId[safeTabId];
+                await setIsTalkingByTabId(isTalkingByTabId);
+                const nextOwner = await syncCallTabIdFromMap(isTalkingByTabId);
+                await notifyOwnerChange(previousOwner, nextOwner, isTalkingByTabId);
+                sendToContentTab(safeTabId, { type: "content-unsubscribe" });
+                await updateAppIcon();
+                sendResponse?.({ status: "ok" });
+                break;
+            }
+            case "is-talking": {
+                const isTalkingByTabId = await getIsTalkingByTabId();
+                isTalkingByTabId[safeTabId] = value as boolean;
+                await setIsTalkingByTabId(isTalkingByTabId);
+                if (value === true) {
                     await setActiveCallTab(safeTabId);
-                    await ensureCallStateObserver(safeTabId);
-                    delayedSubscribe(safeTabId);
-                    await sendCallStateToApp();
-                    scheduleCallStateRefresh();
-                    sendResponse?.({ status: "ok" });
                 }
+                await updateAppIcon();
+                sendResponse?.({ status: "ok" });
                 break;
-            case "unsubscribe":
-                {
-                    const isTalkingByTabId = await getIsTalkingByTabId();
-                    delete isTalkingByTabId[safeTabId];
-                    await chrome.storage.session.set({ isTalkingByTabId });
-                    await syncCallTabIdFromMap(isTalkingByTabId);
-                    await updateAppIcon();
-                    await sendCallStateToApp();
-                    sendResponse?.({ status: "ok" });
-                }
-                break;
-            case "is-talking":
-                {
-                    const isTalkingByTabId = await getIsTalkingByTabId();
-                    isTalkingByTabId[safeTabId] = value as boolean;
-                    await chrome.storage.session.set({ isTalkingByTabId });
-                    if (value === true) {
-                        await setActiveCallTab(safeTabId);
-                    }
-                    await updateAppIcon();
-                    sendResponse?.({ status: "ok" });
-                }
-                break;
+            }
             case "ask-is-enabled":
                 chrome.tabs.sendMessage(safeTabId, {
                     from: "discuss-push-to-talk",
@@ -466,60 +229,73 @@ export function createMessageHandlers({
             case "ask-version":
                 sendResponse(chrome.runtime.getManifest().version);
                 break;
-            case "call-action":
-                {
-                    const payload = value as {
-                        action?: CallAction;
-                        options?: CallActionOptions;
-                    } | null;
-                    const action = payload?.action;
-                    if (!action || !isCallAction(action)) {
-                        sendResponse?.({ error: "invalid-action" });
-                        break;
-                    }
-                    const focusCallTab = Boolean(payload?.options?.focusCallTab);
-                    const { didRun, state } = await executeCallAction(action, { focusCallTab });
-                    await sendCallStateToApp(state ?? null);
-                    sendResponse?.({ status: "ok", didRun, state });
-                }
-                break;
-            case "refresh-call-state":
-                {
-                    const state = await refreshCallState();
-                    await sendCallStateToApp(state ?? null);
-                    sendResponse?.({ status: "ok", state });
-                }
-                break;
-            case "focus-call-tab":
-                {
-                    const didFocus = await focusCallTab();
-                    await sendCallStateToApp();
-                    sendResponse?.({ status: "ok", didFocus });
-                }
-                break;
-            case "call-state-observer-update":
-                if (!tabId) {
-                    sendResponse?.({ error: "no-tab" });
+            case "call-action": {
+                const callTabId = await getCallTabId();
+                if (callTabId === null) {
+                    sendResponse?.({ error: "no-call-tab" });
                     break;
                 }
-                if (!isCallStateObserverPayload(value)) {
-                    sendResponse?.({ error: "invalid-state" });
+                void forwardCallAction(
+                    callTabId,
+                    value as { action?: CallAction; options?: CallActionOptions } | null,
+                    sendResponse
+                );
+                return true;
+            }
+            case "refresh-call-state": {
+                const callTabId = await getCallTabId();
+                if (callTabId === null) {
+                    sendResponse?.({ error: "no-call-tab" });
                     break;
                 }
-                await handleCallStateObserverUpdate(safeTabId, value);
+                void forwardRefreshCallState(callTabId, sendResponse);
+                return true;
+            }
+            case "focus-call-tab": {
+                const didFocus = await focusCallTab();
+                sendResponse?.({ status: "ok", didFocus });
+                break;
+            }
+            case "content-connection-state": {
+                const connected = Boolean(
+                    (value as { isConnected?: boolean } | undefined)?.isConnected
+                );
+                await setAppConnected(connected);
+                await updateAppIcon();
                 sendResponse?.({ status: "ok" });
                 break;
+            }
+            case "content-call-state-update": {
+                const state = (value as { state?: CallState | null } | undefined)?.state ?? null;
+                await setStoredCallState(state);
+                sendResponse?.({ status: "ok" });
+                break;
+            }
             default: {
-                const action = resolveAppCommandAction(type, value, log);
-                if (action) {
-                    const { didRun, state } = await executeCallAction(action);
-                    await sendCallStateToApp(state ?? null);
-                    sendResponse?.({ status: "ok", didRun, state });
-                    break;
-                }
                 sendResponse?.({ error: "unknown-type" });
             }
         }
+
+        return false;
+    }
+
+    async function focusCallTab(): Promise<boolean> {
+        const tabId = await getCallTabId();
+        if (tabId === null) {
+            return false;
+        }
+        try {
+            const tab = await chrome.tabs.get(tabId);
+            if (!tab) {
+                return false;
+            }
+            await chrome.tabs.update(tabId, { active: true });
+            await chrome.windows.update(tab.windowId, { focused: true });
+            return true;
+        } catch (error) {
+            log("Failed to focus tab", error);
+        }
+        return false;
     }
 
     async function onCommand(command: string) {
@@ -551,15 +327,19 @@ export function createMessageHandlers({
         }
     }
 
-    const throttledCommand = throttle(onCommand, 150);
-
-    async function handleTabRemoved(tabId: number) {
-        const isTalkingByTabId = await getIsTalkingByTabId();
-        delete isTalkingByTabId[tabId];
-        await chrome.storage.session.set({ isTalkingByTabId });
-        await syncCallTabIdFromMap(isTalkingByTabId);
-        await updateAppIcon();
-        await sendCallStateToApp();
+    function handleTabRemoved(tabId: number) {
+        return (async () => {
+            const isTalkingByTabId = await getIsTalkingByTabId();
+            const previousOwner = await getCallTabId();
+            delete isTalkingByTabId[tabId];
+            await setIsTalkingByTabId(isTalkingByTabId);
+            if (previousOwner === tabId) {
+                await setAppConnected(false);
+            }
+            const nextOwner = await syncCallTabIdFromMap(isTalkingByTabId);
+            await notifyOwnerChange(previousOwner, nextOwner, isTalkingByTabId);
+            await updateAppIcon();
+        })();
     }
 
     function handleActionClicked() {
@@ -571,22 +351,10 @@ export function createMessageHandlers({
         chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
     }
 
-    async function handleConnectionStateChange(connected: boolean) {
-        await updateAppIcon();
-        if (connected) {
-            const callTabId = await getCallTabId();
-            if (callTabId !== null) {
-                await ensureCallStateObserver(callTabId);
-            }
-            await sendCallStateToApp();
-            scheduleCallStateRefresh();
-        }
-    }
+    const throttledCommand = throttle(onCommand, 150);
 
     return {
         handleMessage,
-        handleStatusState,
-        handleConnectionStateChange,
         handleCommand: throttledCommand,
         handleCommandImmediate: onCommand,
         handleTabRemoved,

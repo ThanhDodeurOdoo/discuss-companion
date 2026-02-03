@@ -1,11 +1,12 @@
 import {
-    executeCallAction,
+    CallActionType,
     requiresUserGesture,
     type CallAction,
     type CallActionOptions,
     type CallActionResult
 } from "./call_actions";
-import type { CallState } from "./call_state";
+import type { CallState } from "./call_state_types";
+import { executeInCallTab } from "./utils";
 
 type CallActionResponse = { status: "ok"; didRun: boolean; state?: CallState } | { error: string };
 
@@ -35,12 +36,33 @@ function sendMessage<T>(message: { type: string; value?: unknown }): Promise<T |
     });
 }
 
+async function openPipInTab(): Promise<boolean> {
+    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"] as
+        | {
+              rtc?: {
+                  pipService?: unknown;
+                  openPip: (options: Record<string, unknown>) => Promise<void> | void;
+              };
+          }
+        | undefined;
+    if (!store?.rtc?.pipService) {
+        return false;
+    }
+    await store.rtc.openPip({});
+    return true;
+}
+
 export async function requestCallAction(
     action: CallAction,
     options: CallActionOptions = {}
 ): Promise<CallActionResult | null> {
-    if (requiresUserGesture(action) && canExecuteLocally()) {
-        return executeCallAction(action, options);
+    if (
+        requiresUserGesture(action) &&
+        canExecuteLocally() &&
+        action.type === CallActionType.OpenPip
+    ) {
+        const didRun = Boolean(await executeInCallTab(openPipInTab));
+        return { didRun };
     }
     const response = await sendMessage<CallActionResponse>({
         type: "call-action",

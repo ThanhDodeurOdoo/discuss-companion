@@ -16,6 +16,7 @@ export function mockChrome(storageInitial = {}) {
             onMessageExternal: { addListener: jest.fn() },
             sendMessage: jest.fn(),
             getManifest: () => ({ version: "1.0.0" }),
+            getURL: (path) => `chrome-extension://test-extension-id/${path}`,
             id: "test-extension-id",
             lastError: null
         },
@@ -23,6 +24,7 @@ export function mockChrome(storageInitial = {}) {
             onRemoved: { addListener: jest.fn() },
             sendMessage: jest.fn(),
             create: jest.fn(),
+            query: jest.fn().mockImplementation(() => Promise.resolve([{ id: 1, url: "https://odoo.com" }])),
             get: jest.fn().mockImplementation((tabId) => Promise.resolve({ id: tabId, windowId: 1 })),
             update: jest.fn().mockImplementation(() => Promise.resolve())
         },
