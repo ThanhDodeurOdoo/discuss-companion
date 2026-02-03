@@ -4,6 +4,24 @@
 
 import { resolveCallTabId } from "./call_state";
 
+const RESTRICTED_URL_PREFIXES = [
+    "chrome://",
+    "chrome-extension://",
+    "edge://",
+    "brave://",
+    "opera://",
+    "vivaldi://",
+    "about:",
+    "moz-extension://"
+];
+
+function isRestrictedUrl(url?: string | null): boolean {
+    if (!url) {
+        return true;
+    }
+    return RESTRICTED_URL_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
+
 /**
  * Executes code in the current tab's context (the tab where the extension is popped up)
  *
@@ -14,7 +32,7 @@ export async function executeInCurrentTab<T, A extends unknown[] = []>(
     args?: A
 ): Promise<T | undefined> {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab.id) {
+    if (!tab?.id || isRestrictedUrl(tab.url)) {
         return undefined;
     }
     try {

@@ -22,7 +22,9 @@ export default defineConfig(({ mode }) => {
             rollupOptions: {
                 input: {
                     service_worker: resolve(__dirname, "src/service_worker.ts"),
-                    main: resolve(__dirname, "src/popup/main.ts")
+                    main: resolve(__dirname, "src/popup/main.ts"),
+                    content_bundle: resolve(__dirname, "src/content.ts"),
+                    page_bridge: resolve(__dirname, "src/page_bridge.ts")
                 },
                 output: {
                     entryFileNames: "[name].js",

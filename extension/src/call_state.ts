@@ -1,39 +1,28 @@
-export type CallState = {
-    isMute: boolean;
-    isDeaf: boolean;
-    isCameraOn: boolean;
-    isScreenOn: boolean;
-};
+import type { CallState } from "./call_state_types";
+import {
+    getCallState,
+    setCallState,
+    getCallTabId as getStoredCallTabId,
+    setCallTabId as setStoredCallTabId,
+    getIsTalkingByTabId
+} from "./storage/session_state";
 
-const CALL_STATE_KEY = "callState";
-const CALL_TAB_ID_KEY = "callTabId";
-
-type SessionStorageSnapshot = {
-    callState?: CallState | null;
-    callTabId?: number | null;
-    isTalkingByTabId?: Record<string, boolean>;
-};
+export type { CallState };
 
 export async function getStoredCallState(): Promise<CallState | undefined> {
-    const { callState } = (await chrome.storage.session.get(
-        CALL_STATE_KEY
-    )) as SessionStorageSnapshot;
-    return callState ?? undefined;
+    return getCallState();
 }
 
 export async function setStoredCallState(state?: CallState | null): Promise<void> {
-    await chrome.storage.session.set({ callState: state ?? null });
+    await setCallState(state ?? null);
 }
 
 export async function getCallTabId(): Promise<number | null> {
-    const { callTabId } = (await chrome.storage.session.get(
-        CALL_TAB_ID_KEY
-    )) as SessionStorageSnapshot;
-    return typeof callTabId === "number" ? callTabId : null;
+    return getStoredCallTabId();
 }
 
 export async function setCallTabId(tabId?: number | null): Promise<void> {
-    await chrome.storage.session.set({ callTabId: typeof tabId === "number" ? tabId : null });
+    await setStoredCallTabId(tabId);
 }
 
 function pickFirstTabId(isTalkingByTabId: Record<string, boolean>): number | null {
@@ -50,9 +39,7 @@ export async function resolveCallTabId(): Promise<number | null> {
     if (storedTabId !== null) {
         return storedTabId;
     }
-    const { isTalkingByTabId = {} } = (await chrome.storage.session.get(
-        "isTalkingByTabId"
-    )) as SessionStorageSnapshot;
+    const isTalkingByTabId = await getIsTalkingByTabId();
     const tabId = pickFirstTabId(isTalkingByTabId);
     if (tabId !== null) {
         await setCallTabId(tabId);

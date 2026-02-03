@@ -1,34 +1,16 @@
-import { createConnectionManager } from "./service_worker_connection";
 import { createMessageHandlers, type MessageHandlers } from "./service_worker_messages";
 
 const mutedLog = (..._args: unknown[]) => {};
 let logTarget: (...args: unknown[]) => void = mutedLog;
 const log = (...args: unknown[]) => logTarget(...args);
 
-let messageHandlers: MessageHandlers;
-
-const connection = createConnectionManager({
-    log,
-    onPttPressed: () => messageHandlers.handleCommand("ptt-pressed"),
-    onPttReleased: () => messageHandlers.handleCommandImmediate("ptt-released"),
-    onStatusState: (state) => {
-        void messageHandlers.handleStatusState(state);
-    },
-    onConnectionStateChange: (isConnected) => {
-        void messageHandlers.handleConnectionStateChange(isConnected);
-    },
-    onLoggingChange: (isEnabled) => {
-        logTarget = isEnabled ? console.log : mutedLog;
-    }
+const messageHandlers: MessageHandlers = createMessageHandlers({
+    log
 });
 
-messageHandlers = createMessageHandlers({
-    log,
-    isConnected: connection.isConnected,
-    sendToApp: connection.sendMessage
+chrome.storage.local.get({ isLoggingEnabled: false }, (items) => {
+    logTarget = items.isLoggingEnabled ? console.log : mutedLog;
 });
-
-connection.init();
 
 chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
     log("[BG] onMessageExternal", request, sender);
@@ -49,8 +31,17 @@ chrome.action.onClicked.addListener(() => {
     messageHandlers.handleActionClicked();
 });
 
-chrome.alarms.onAlarm.addListener(connection.handleAlarm);
-
 chrome.commands.onCommand.addListener((command) => {
     messageHandlers.handleCommand(command);
+});
+
+void messageHandlers.updateAppIcon();
+
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local") {
+        return;
+    }
+    if (changes.isLoggingEnabled) {
+        logTarget = changes.isLoggingEnabled.newValue ? console.log : mutedLog;
+    }
 });

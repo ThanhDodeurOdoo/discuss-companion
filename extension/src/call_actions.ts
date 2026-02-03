@@ -1,20 +1,5 @@
-import { executeInCallTab } from "./utils";
-import { CallState, resolveCallTabId, setStoredCallState } from "./call_state";
-import { CALL_ACTIONS, openChannelInTab } from "./call_action_registry";
-
-function readCallStateInTab(): CallState | undefined {
-    const store = window.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
-    const selfSession = store?.rtc?.selfSession;
-    if (!selfSession) {
-        return undefined;
-    }
-    return {
-        isMute: selfSession.isMute,
-        isDeaf: selfSession.is_deaf,
-        isCameraOn: selfSession.is_camera_on,
-        isScreenOn: selfSession.is_screen_sharing_on
-    };
-}
+import type { CallState } from "./call_state_types";
+import { CALL_ACTION_DEFINITIONS } from "./call_action_definitions";
 
 const buildActionTypeMap = <T extends Record<string, { id: string }>>(actions: T) => {
     const result = {} as { [K in keyof T]: T[K]["id"] };
@@ -33,9 +18,9 @@ const buildActionsById = <T extends Record<string, { id: string }>>(actions: T) 
     return result as { [K in keyof T as T[K]["id"]]: T[K] };
 };
 
-export const CallActionType = buildActionTypeMap(CALL_ACTIONS);
+export const CallActionType = buildActionTypeMap(CALL_ACTION_DEFINITIONS);
 
-const CALL_ACTIONS_BY_ID = buildActionsById(CALL_ACTIONS);
+const CALL_ACTIONS_BY_ID = buildActionsById(CALL_ACTION_DEFINITIONS);
 
 type CallActionDefinitionMap = typeof CALL_ACTIONS_BY_ID;
 
@@ -105,62 +90,4 @@ export function requiresUserGesture(action: CallAction): boolean {
 export function requiresFocusCallTab(action: CallAction): boolean {
     const definition = CALL_ACTIONS_BY_ID[action.type] as { requiresFocusCallTab?: boolean };
     return definition.requiresFocusCallTab === true;
-}
-
-function hasActionValue(action: CallAction): action is Extract<CallAction, { value: boolean }> {
-    return "value" in action;
-}
-
-export async function refreshCallState(): Promise<CallState | undefined> {
-    const state = await executeInCallTab(readCallStateInTab);
-    await setStoredCallState(state);
-    return state;
-}
-
-export async function focusCallTab(): Promise<boolean> {
-    const tabId = await resolveCallTabId();
-    if (tabId === null) {
-        return false;
-    }
-    try {
-        const tab = await chrome.tabs.get(tabId);
-        if (!tab) {
-            return false;
-        }
-        await executeInCallTab(openChannelInTab);
-        await chrome.tabs.update(tabId, { active: true });
-        await chrome.windows.update(tab.windowId, { focused: true });
-        return true;
-    } catch (error) {
-        console.error("Failed to focus tab", error);
-    }
-    return false;
-}
-
-export async function executeCallAction(
-    action: CallAction,
-    options: CallActionOptions = {}
-): Promise<CallActionResult> {
-    if (options.focusCallTab || requiresFocusCallTab(action)) {
-        await focusCallTab();
-    }
-    const definition = CALL_ACTIONS_BY_ID[action.type];
-    let didRun = false;
-    if (definition.requiresValue) {
-        if (!hasActionValue(action)) {
-            return { didRun: false, state: await refreshCallState() };
-        }
-        didRun = Boolean(
-            await executeInCallTab(
-                definition.run as (value: boolean) => Promise<boolean> | boolean,
-                [action.value]
-            )
-        );
-    } else {
-        didRun = Boolean(
-            await executeInCallTab(definition.run as () => Promise<boolean> | boolean)
-        );
-    }
-    const state = await refreshCallState();
-    return { didRun, state: state ?? undefined };
 }

@@ -5,7 +5,6 @@
     "version": "0.6.0",
     "permissions": [
         "storage",
-        "alarms",
         "scripting",
         "activeTab"
     ],
@@ -29,6 +28,19 @@
                 "content.js"
             ],
             "run_at": "document_start"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "page_bridge.js",
+                "content_bundle.js",
+                "assets/*.js"
+            ],
+            "matches": [
+                "https://*/*",
+                "http://*/*"
+            ]
         }
     ],
     "externally_connectable": {
