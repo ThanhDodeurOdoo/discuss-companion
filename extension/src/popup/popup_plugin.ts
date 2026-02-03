@@ -3,8 +3,8 @@ import { executeInCurrentTab } from "../utils";
 import { CallActionType, type CallAction } from "../call_actions";
 import { requestCallAction, requestCallState, requestFocusCallTab } from "../command_api";
 import { CallState, getCallTabId, getStoredCallState } from "../call_state";
+import { IS_FIREFOX_BUILD } from "../env";
 
-const IS_FIREFOX = /Firefox/i.test(navigator.userAgent);
 const EXTENSION_VERSION = __EXTENSION_VERSION__;
 
 export enum StatusCode {
@@ -24,6 +24,7 @@ export class PopupPlugin extends Plugin {
     isCompanionEnabled = signal(false);
     hasCallTab = signal(false);
     extensionVersion = signal(EXTENSION_VERSION);
+    isFirefoxBuild = IS_FIREFOX_BUILD;
     isMute = signal(false);
     isDeaf = signal(false);
     isCameraOn = signal(false);
@@ -68,12 +69,10 @@ export class PopupPlugin extends Plugin {
     }
 
     openShortcuts() {
-        if (IS_FIREFOX) {
-            // @ts-expect-error browser is not defined
-            browser.commands.openShortcutSettings();
-        } else {
-            chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+        if (IS_FIREFOX_BUILD) {
+            return;
         }
+        chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
     }
 
     async onClickGoToCall() {

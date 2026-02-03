@@ -1,4 +1,6 @@
 import { createMessageHandlers, type MessageHandlers } from "./service_worker_messages";
+import { IS_FIREFOX_BUILD } from "./env";
+import { clearSessionState } from "./storage/session_state";
 
 const mutedLog = (..._args: unknown[]) => {};
 let logTarget: (...args: unknown[]) => void = mutedLog;
@@ -7,6 +9,15 @@ const log = (...args: unknown[]) => logTarget(...args);
 const messageHandlers: MessageHandlers = createMessageHandlers({
     log
 });
+
+if (IS_FIREFOX_BUILD) {
+    chrome.runtime.onStartup.addListener(() => {
+        void clearSessionState();
+    });
+    chrome.runtime.onInstalled.addListener(() => {
+        void clearSessionState();
+    });
+}
 
 chrome.storage.local.get({ isLoggingEnabled: false }, (items) => {
     logTarget = items.isLoggingEnabled ? console.log : mutedLog;
@@ -31,9 +42,11 @@ chrome.action.onClicked.addListener(() => {
     messageHandlers.handleActionClicked();
 });
 
-chrome.commands.onCommand.addListener((command) => {
-    messageHandlers.handleCommand(command);
-});
+if (!IS_FIREFOX_BUILD) {
+    chrome.commands.onCommand.addListener((command) => {
+        messageHandlers.handleCommand(command);
+    });
+}
 
 void messageHandlers.updateAppIcon();
 

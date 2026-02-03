@@ -14,7 +14,8 @@ export default defineConfig(({ mode }) => {
 
     return {
         define: {
-            __EXTENSION_VERSION__: JSON.stringify(manifest.version)
+            __EXTENSION_VERSION__: JSON.stringify(manifest.version),
+            __BROWSER_TARGET__: JSON.stringify(target)
         },
         build: {
             outDir,

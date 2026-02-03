@@ -8,6 +8,7 @@ declare module "*/compile_templates.mjs" {
 }
 
 declare const __EXTENSION_VERSION__: string;
+declare const __BROWSER_TARGET__: string;
 
 type Store = {
     rtc: {
