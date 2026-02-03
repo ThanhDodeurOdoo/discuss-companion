@@ -44,6 +44,14 @@ The frontend uses Owl v3 and is in `app/frontend`. The extension is in the `exte
 
 ## What do to when you modify something:
 
+### Dependencies
+
+You may run `npm install` and `cargo install` if you add new dependencies, which may update their respective package-lock and cargo-lock, but the commands must be done at the specified node/rust
+version.
+
+Othewise you should stick to `npm ci` and `cargo install --locked`
+for consistent dependencies.
+
 ### If you modify `protocol.fbs`, you must regenerate the code:
 
 1.  **Install flatc**:

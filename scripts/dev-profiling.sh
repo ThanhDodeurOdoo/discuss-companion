@@ -15,7 +15,7 @@ if ! command -v flamegraph >/dev/null 2>&1; then
   exit 1
 fi
 
-"$TAURI_BIN" dev --config "$ROOT_DIR/app/backend/tauri.conf.json" --release --features dhat-heap &
+"$TAURI_BIN" dev --config "$ROOT_DIR/app/backend/tauri.conf.json" --release --features dhat-heap -- --locked &
 TAURI_PID=$!
 
 cleanup() {
