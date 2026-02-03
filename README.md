@@ -38,12 +38,14 @@ Read [CONTRIBUTING.md](https://github.com/ThanhDodeurOdoo/discuss-companion/blob
 ### Prerequisites
 
 #### Dev:
-- For the App deployment and building the extension:
-    -  **Rust (v1.92+)** ([link](https://rustup.rs/))
+- General:
     -  **Node.js (v24.13.0+)** ([link](https://nodejs.org/en/download))
--  If you need to change the protocol schema:
-    -  **flatbuffers (latests)** ([link](https://flatbuffers.dev/flatc/))
-#### Main:
+- For building the app:
+    -  **Rust (v1.92+)** ([link](https://rustup.rs/))
+- For changing the protocol schema:
+    -  **flatc (v25.12.19+)** ([link](https://github.com/google/flatbuffers/releases/tag/v25.12.19))
+
+#### Users:
 -  **Browser**: Google Chrome or Mozilla Firefox required for the extension.
 -  **OS**: macOS or Linux (X11 only, Wayland not yet supported).
 
@@ -51,7 +53,7 @@ Read [CONTRIBUTING.md](https://github.com/ThanhDodeurOdoo/discuss-companion/blob
 ### Running Locally
 1.  **Install dependencies**:
     ```bash
-    npm install
+    npm ci  # it may not work if you are not using the specified node version
     ```
 2.  **Start the app in development mode (also builds the extension)**:
     ```bash
