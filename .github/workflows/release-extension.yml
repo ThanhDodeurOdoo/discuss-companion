@@ -1,0 +1,47 @@
+name: Release Extensions
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Packed Extensions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.13.0"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install zip
+        run: sudo apt-get update && sudo apt-get install -y zip
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build packed extensions
+        run: npm run build:extension
+
+      - name: Upload Chrome extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-chrome
+          path: extension/dist/chrome.zip
+          if-no-files-found: error
+
+      - name: Upload Firefox extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-firefox
+          path: extension/dist/firefox.zip
+          if-no-files-found: error

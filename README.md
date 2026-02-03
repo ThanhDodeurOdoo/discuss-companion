@@ -53,10 +53,10 @@ Read [CONTRIBUTING.md](https://github.com/ThanhDodeurOdoo/discuss-companion/blob
     ```bash
     npm install
     ```
-2.  **Start the app in development mode**:
+2.  **Start the app in development mode (also builds the extension)**:
     ```bash
-    npm run dev        # Will use your current OS
-    npm run dev:x11    # Linux (X11)
+    npm run dev        # Builds extension + runs the app for your current OS
+    npm run dev:x11    # Linux (X11) feature flag
     ```
 
 3.  **Permissions**:
@@ -81,6 +81,7 @@ To link the app with Odoo:
     npm run dev:extension
     ```
     This will generate `extension/dist/chrome` and `extension/dist/firefox`.
+    Running `npm run dev` also builds these directories.
 
 2.  **Load in Browser**:
     -   **Chrome**:
@@ -99,7 +100,13 @@ To link the app with Odoo:
 ## Deployment & Distribution
 
 ### Build for Production
-The output will be generated in `app/backend/target/release/bundle/`.
+```bash
+npm run build         # Packed extensions + app bundle
+npm run build:app     # App bundle only
+npm run build:extension # Packed extensions only
+```
+The app output will be generated in `app/backend/target/release/bundle/`.
+The packed extensions are generated at `extension/dist/chrome.zip` and `extension/dist/firefox.zip`.
 
 ### Choosing the Target OS
 The application automatically detects the target OS based on the build environment. If you want to build for a specific target manually using Cargo:

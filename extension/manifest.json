@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Discuss Companion Bridge",
     "description": "Bridge extension to connect to the Discuss Companion app",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "permissions": [
         "storage",
         "scripting",

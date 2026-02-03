@@ -4,7 +4,7 @@ description = "Odoo Discuss Companion"
 edition = "2024"
 name = "discuss-companion"
 rust-version = "1.92"
-version = "0.6.0"
+version = "0.7.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

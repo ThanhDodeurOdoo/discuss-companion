@@ -60,7 +60,14 @@ The frontend uses Owl v3 and is in `app/frontend`. The extension is in the `exte
 ### If you modify the extension
 
 ```bash
+# Unpacked builds (for loading in the browser)
 npm run dev:extension
+
+# Packed builds (zip archives)
+npm run build:extension
+
+# Full dev workflow also builds the extension
+npm run dev
 ```
 
 ### If you modify the app
@@ -84,10 +91,12 @@ npm run dev:extension
 Then:
 
 ```bash
-npm run dev # for development, compiling for your current OS
+npm run dev # builds the extension and runs the app for your current OS
 npm run dev:x11 # with the Linux X11 feature flag (will default to Wayland/XDG code otherwise)
 # OR
-npm run build:app # for deployment
+npm run dev:app # app only, no extension build
+npm run build:app # app bundle only
+npm run build # packed extensions + app bundle
 ```
 
 ## Profiling
