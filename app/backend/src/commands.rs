@@ -10,10 +10,10 @@ use tracing::info;
 
 use crate::{
     WsState,
+    call_controls_window::CALL_CONTROLS_WINDOW_LABEL,
     flatbuffers::ipc_protocol_generated::discuss::ipc_protocol::{
         PttBinding, SetRecordingMode, SetWsPort,
     },
-    menu::CALL_CONTROLS_WINDOW_LABEL,
     platform,
     platform::{check_accessibility_permission, get_binding, set_binding, set_recording},
     server,
@@ -150,8 +150,8 @@ pub fn update_ws_port(
             let _ = app_handle.emit(
                 "ws-server-status",
                 serde_json::json!({
-                     "status": "restarted",
-                     "port": port
+                    "status": "restarted",
+                    "port": port
                 }),
             );
             info!("WS server port unchanged, frontend notified.");
@@ -169,6 +169,7 @@ pub fn update_ws_port(
         // Create new shutdown channel
         let (tx, rx) = broadcast::channel(1);
         *shutdown_guard = tx;
+        drop(shutdown_guard);
 
         // Start new server
         info!("Starting new WS server on port {}...", port);
@@ -184,8 +185,8 @@ pub fn update_ws_port(
         let _ = app_handle.emit(
             "ws-server-status",
             serde_json::json!({
-                 "status": "restarted",
-                 "port": port
+                "status": "restarted",
+                "port": port
             }),
         );
         info!("WS server restart initiated, frontend notified.");

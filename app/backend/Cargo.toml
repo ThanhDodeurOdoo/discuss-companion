@@ -45,6 +45,9 @@ x11 = ["dep:x11"]
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = "0.10"
 core-graphics = "0.25"
+muda = "0.17.1"
+objc2 = "0.6.3"
+objc2-app-kit = { version = "0.3.2", features = ["NSApplication", "NSMenu", "NSResponder"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.180"
@@ -99,8 +102,12 @@ needless_pass_by_ref_mut = "warn"
 nonstandard_macro_braces = "warn"
 option_if_let_else = "warn"
 redundant_clone = "warn"
+significant_drop_tightening = "warn"
 single_option_map = "warn"
+trait_duplication_in_bounds = "warn"
 type_repetition_in_bounds = "warn"
 uninhabited_references = "warn"
 unnecessary_struct_initialization = "warn"
 use_self = "warn"
+useless_let_if_seq = "warn"
+while_float = "warn"

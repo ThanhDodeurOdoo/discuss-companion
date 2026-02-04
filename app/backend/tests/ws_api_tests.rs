@@ -1061,6 +1061,7 @@ mod tests {
             disconn_event.status(),
             ipc_protocol::ConnectionStatus::Disconnected
         );
+        drop(events);
 
         let _ = shutdown_tx.send(());
     }
@@ -1164,6 +1165,7 @@ mod tests {
         assert!(cached_state.has_call);
         assert!(cached_state.is_mute);
         assert!(cached_state.is_screen_on);
+        drop(cached);
 
         let _ = shutdown_tx.send(());
     }

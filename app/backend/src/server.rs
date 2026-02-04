@@ -17,11 +17,15 @@ use crate::{
     flatbuffers::{
         ipc_protocol_generated::discuss::ipc_protocol, ws_protocol_generated::discuss::ws_protocol,
     },
+    menu,
     state::{
         CallState, IncomingMessage, KeyBinding, Modifier, OutgoingMessage, current_timestamp,
         encode_call_state, encode_ws_connection,
     },
 };
+
+#[cfg(target_os = "macos")]
+use crate::dock_menu;
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 static CURRENT_SERVER_ID: AtomicU64 = AtomicU64::new(0);
@@ -122,13 +126,14 @@ async fn handle_connection<R: tauri::Runtime>(
         }
     };
     info!("New WebSocket connection from: {}", addr);
-    let mut counted = false;
-    if is_current_server(server_id) {
+    let counted = if is_current_server(server_id) {
         if CONNECTION_COUNT.fetch_add(1, Ordering::SeqCst) == 0 {
             let _ = conn_tx.send(true);
         }
-        counted = true;
-    }
+        true
+    } else {
+        false
+    };
 
     if is_current_server(server_id) {
         let payload = encode_ws_connection(ipc_protocol::ConnectionStatus::Connected);
@@ -206,6 +211,9 @@ async fn handle_connection<R: tauri::Runtime>(
                                                 }
                                                 let payload = encode_call_state(&state);
                                                 send_to_frontend(&app_handle, &payload);
+                                                let _ = menu::update_tray_menu(&app_handle, Some(state));
+                                                #[cfg(target_os = "macos")]
+                                                let _ = dock_menu::update_dock_menu(&app_handle, Some(state));
                                             }
                                         }
                                     }

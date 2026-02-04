@@ -29,7 +29,11 @@ use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info};
 
+pub mod call_controls_menu;
+pub mod call_controls_window;
 pub mod commands;
+#[cfg(target_os = "macos")]
+pub mod dock_menu;
 pub mod flatbuffers;
 pub mod menu;
 pub mod platform;
@@ -312,7 +316,20 @@ pub fn run() {
             let tray_icon = Image::from_bytes(ICON_INACTIVE_OFFLINE)?;
             menu::setup_tray(app, tray_icon)?;
 
+            #[cfg(target_os = "macos")]
+            dock_menu::setup_dock_menu(app.handle())?;
+
             Ok(())
+        })
+        .on_menu_event(|app, event| {
+            if !call_controls_menu::handle_menu_action(app, event.id().as_ref()) {
+                #[cfg(target_os = "macos")]
+                {
+                    if event.id() == dock_menu::DOCK_MENU_SHOW_CALL_CONTROLS_ID {
+                        call_controls_window::show_at_cursor(app);
+                    }
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_version,
@@ -329,22 +346,25 @@ pub fn run() {
             commands::update_ws_port,
             commands::establish_channel,
             commands::send_call_command,
-        ]);
-
-    // TODO: when the tray feature becomes available in Linux
-    // this behavior should also be extended.
-    #[cfg(target_os = "macos")]
-    let builder = builder.on_window_event(|window, event| {
-        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-            let _ = window.hide();
-            api.prevent_close();
-            if window.label() == "main" {
-                let _ = window
-                    .app_handle()
-                    .set_activation_policy(tauri::ActivationPolicy::Accessory);
+        ])
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                let _ = window.hide();
+                api.prevent_close();
+                #[cfg(target_os = "macos")]
+                if window.label() == "main" {
+                    let _ = window
+                        .app_handle()
+                        .set_activation_policy(tauri::ActivationPolicy::Accessory);
+                }
             }
-        }
-    });
+            tauri::WindowEvent::Focused(false) => {
+                if window.label() == call_controls_window::CALL_CONTROLS_WINDOW_LABEL {
+                    let _ = window.hide();
+                }
+            }
+            _ => {}
+        });
 
     if let Err(e) = builder.run(tauri::generate_context!()) {
         error!("error while running tauri application: {e}");

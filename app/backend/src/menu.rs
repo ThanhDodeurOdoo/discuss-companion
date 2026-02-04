@@ -1,35 +1,150 @@
-use std::path::PathBuf;
-
+#[cfg(target_os = "macos")]
+use tauri::menu::IconMenuItem;
 use tauri::{
-    AppHandle, LogicalSize, Manager, PhysicalPosition, Position, Runtime, WebviewUrl,
+    Manager, Runtime,
     image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
-use tracing::warn;
+
+use crate::{WsState, call_controls_menu, call_controls_window, state::CallState};
 
 pub const TRAY_ID: &str = "main-tray";
+const TRAY_OPEN_MAIN_WINDOW_ID: &str = "open-main-window";
 
-pub const CALL_CONTROLS_WINDOW_LABEL: &str = "call-controls";
-const CALL_CONTROLS_WINDOW_TITLE: &str = "Call Controls";
-const CALL_CONTROLS_WINDOW_WIDTH: f64 = 300.0;
-const CALL_CONTROLS_WINDOW_HEIGHT: f64 = 120.0;
-const CALL_CONTROLS_WINDOW_MARGIN: i32 = 8;
+fn show_main_window<R: Runtime>(app: &tauri::AppHandle<R>) {
+    #[cfg(target_os = "macos")]
+    let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
+
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+fn build_tray_menu<R: Runtime, M: Manager<R>>(
+    manager: &M,
+    call_state: Option<CallState>,
+) -> tauri::Result<Menu<R>> {
+    let menu = Menu::new(manager)?;
+
+    let open_item = MenuItem::with_id(
+        manager,
+        TRAY_OPEN_MAIN_WINDOW_ID,
+        "Open",
+        true,
+        None::<&str>,
+    )?;
+    menu.append(&open_item)?;
+
+    if let Some(state) = call_controls_menu::menu_state(call_state) {
+        #[cfg(target_os = "macos")]
+        {
+            let mute_item = IconMenuItem::with_id_and_native_icon(
+                manager,
+                call_controls_menu::CALL_MENU_TOGGLE_MUTE_ID,
+                call_controls_menu::mute_label(state.is_mute),
+                true,
+                Some(call_controls_menu::mute_icon(state.is_mute)),
+                None::<&str>,
+            )?;
+            menu.append(&mute_item)?;
+
+            let deaf_item = IconMenuItem::with_id_and_native_icon(
+                manager,
+                call_controls_menu::CALL_MENU_TOGGLE_DEAF_ID,
+                call_controls_menu::deaf_label(state.is_deaf),
+                true,
+                Some(call_controls_menu::deaf_icon(state.is_deaf)),
+                None::<&str>,
+            )?;
+            menu.append(&deaf_item)?;
+
+            let go_to_call = IconMenuItem::with_id_and_native_icon(
+                manager,
+                call_controls_menu::CALL_MENU_GO_TO_CALL_ID,
+                call_controls_menu::go_to_call_label(),
+                true,
+                Some(call_controls_menu::go_to_call_icon()),
+                None::<&str>,
+            )?;
+            menu.append(&go_to_call)?;
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            let mute_item = MenuItem::with_id(
+                manager,
+                call_controls_menu::CALL_MENU_TOGGLE_MUTE_ID,
+                call_controls_menu::mute_label(state.is_mute),
+                true,
+                None::<&str>,
+            )?;
+            menu.append(&mute_item)?;
+
+            let deaf_item = MenuItem::with_id(
+                manager,
+                call_controls_menu::CALL_MENU_TOGGLE_DEAF_ID,
+                call_controls_menu::deaf_label(state.is_deaf),
+                true,
+                None::<&str>,
+            )?;
+            menu.append(&deaf_item)?;
+
+            let go_to_call = MenuItem::with_id(
+                manager,
+                call_controls_menu::CALL_MENU_GO_TO_CALL_ID,
+                call_controls_menu::go_to_call_label(),
+                true,
+                None::<&str>,
+            )?;
+            menu.append(&go_to_call)?;
+        }
+    }
+
+    let quit_i = MenuItem::with_id(manager, "quit", "Quit", true, None::<&str>)?;
+    menu.append(&quit_i)?;
+
+    Ok(menu)
+}
+
+/// Updates the tray menu to reflect the latest call state.
+///
+/// # Errors
+/// Returns an error if the menu cannot be rebuilt or assigned to the tray icon.
+pub fn update_tray_menu<R: Runtime>(
+    app_handle: &tauri::AppHandle<R>,
+    call_state: Option<CallState>,
+) -> tauri::Result<()> {
+    let Some(tray) = app_handle.tray_by_id(TRAY_ID) else {
+        return Ok(());
+    };
+    let menu = build_tray_menu(app_handle, call_state)?;
+    tray.set_menu(Some(menu))?;
+    Ok(())
+}
 
 /// Sets up the tray icon. Clicking it toggles the call controls window.
 ///
 /// # Errors
 /// Returns an error if the tray icon cannot be created.
 pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) -> tauri::Result<()> {
-    let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&quit_i])?;
+    let call_state = app
+        .try_state::<WsState>()
+        .and_then(|state| state.call_state.read().ok().and_then(|guard| *guard));
+    let menu = build_tray_menu(app, call_state)?;
 
     let builder = TrayIconBuilder::<R>::with_id(TRAY_ID)
         .icon(tray_icon)
         .menu(&menu)
         .on_menu_event(|app, event| {
+            if event.id() == TRAY_OPEN_MAIN_WINDOW_ID {
+                show_main_window(app);
+            }
             if event.id() == "quit" {
-                if let Some(window) = app.get_webview_window(CALL_CONTROLS_WINDOW_LABEL) {
+                if let Some(window) =
+                    app.get_webview_window(call_controls_window::CALL_CONTROLS_WINDOW_LABEL)
+                {
                     let _ = window.hide();
                 }
                 crate::profiling_drop!();
@@ -44,7 +159,7 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) ->
                 ..
             } = event
             {
-                toggle_call_controls_window(tray.app_handle(), position.x, position.y);
+                call_controls_window::toggle_at_point(tray.app_handle(), position.x, position.y);
             }
         });
 
@@ -53,79 +168,4 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) ->
 
     builder.build(app)?;
     Ok(())
-}
-
-fn toggle_call_controls_window<R: Runtime>(
-    app_handle: &AppHandle<R>,
-    tray_center_x: f64,
-    tray_bottom_y: f64,
-) {
-    if let Some(window) = app_handle.get_webview_window(CALL_CONTROLS_WINDOW_LABEL) {
-        if window.is_visible().unwrap_or(false) {
-            let _ = window.hide();
-        } else {
-            position_call_controls_window(app_handle, &window, tray_center_x, tray_bottom_y);
-            let _ = window.show();
-            let _ = window.set_focus();
-        }
-        return;
-    }
-
-    let window = tauri::webview::WebviewWindowBuilder::new(
-        app_handle,
-        CALL_CONTROLS_WINDOW_LABEL,
-        WebviewUrl::App(PathBuf::from("index.html")),
-    )
-    .title(CALL_CONTROLS_WINDOW_TITLE)
-    .inner_size(CALL_CONTROLS_WINDOW_WIDTH, CALL_CONTROLS_WINDOW_HEIGHT)
-    .min_inner_size(CALL_CONTROLS_WINDOW_WIDTH, CALL_CONTROLS_WINDOW_HEIGHT)
-    .max_inner_size(CALL_CONTROLS_WINDOW_WIDTH, CALL_CONTROLS_WINDOW_HEIGHT)
-    .resizable(false)
-    .decorations(false)
-    .always_on_top(true)
-    .accept_first_mouse(true)
-    .skip_taskbar(true)
-    .visible(false)
-    .build();
-
-    match window {
-        Ok(window) => {
-            position_call_controls_window(app_handle, &window, tray_center_x, tray_bottom_y);
-            let _ = window.show();
-            let _ = window.set_focus();
-        }
-        Err(err) => {
-            warn!("Failed to open call controls window: {err}");
-        }
-    }
-}
-
-fn position_call_controls_window<R: Runtime>(
-    app_handle: &AppHandle<R>,
-    window: &tauri::WebviewWindow<R>,
-    click_x: f64,
-    click_y: f64,
-) {
-    let scale_factor = app_handle
-        .primary_monitor()
-        .ok()
-        .flatten()
-        .map_or(1.0, |m| m.scale_factor());
-    let logical_size = LogicalSize::new(CALL_CONTROLS_WINDOW_WIDTH, CALL_CONTROLS_WINDOW_HEIGHT);
-    let physical_size = logical_size.to_physical::<i32>(scale_factor);
-
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::as_conversions,
-        reason = "pixel coordinates fit in i32"
-    )]
-    let x = (click_x as i32) - physical_size.width / 2;
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::as_conversions,
-        reason = "pixel coordinates fit in i32"
-    )]
-    let y = (click_y as i32) + CALL_CONTROLS_WINDOW_MARGIN;
-
-    let _ = window.set_position(Position::Physical(PhysicalPosition::new(x, y)));
 }
