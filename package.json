@@ -11,7 +11,7 @@
     "dev": "npm run dev:extension && npm run dev:app",
     "verify": "npm run lint && npm run typecheck && npm run test",
 
-    "dev:x11": "npm run dev -- --features x11",
+    "dev:x11": "npm run dev:extension && npm run dev:app -- --features x11",
     "build:app": "tauri build --config app/backend/tauri.conf.json -- --locked",
     "build:extension": "npm run build:extension:chrome && npm run build:extension:firefox",
     "dev:app": "tauri dev --config app/backend/tauri.conf.json -- --locked",
