@@ -1,9 +1,8 @@
-use tauri::{AppHandle, Manager, Runtime};
-
 #[cfg(target_os = "macos")]
 use tauri::menu::NativeIcon;
+use tauri::{AppHandle, Manager, Runtime};
 
-use crate::{WsState, commands, state::CallState};
+use crate::{WsState, api::commands, protocol::CallState};
 
 pub const CALL_MENU_TOGGLE_MUTE_ID: &str = "call-controls-toggle-mute";
 pub const CALL_MENU_TOGGLE_DEAF_ID: &str = "call-controls-toggle-deaf";

@@ -9,14 +9,17 @@
 mod tests {
     use std::{
         path::PathBuf,
-        sync::{Mutex, RwLock, atomic::AtomicU16},
+        sync::{Arc, Mutex, RwLock, atomic::AtomicU16},
     };
 
-    use discuss_companion_lib::commands;
+    use discuss_companion_lib::{
+        api::commands, flatbuffers::ipc_protocol_generated::discuss::ipc_protocol,
+        protocol::CallState,
+    };
     use tauri::{
         Manager,
         http::HeaderMap,
-        ipc::{CallbackFn, InvokeBody},
+        ipc::{CallbackFn, Channel, InvokeBody, InvokeResponseBody},
         test::{INVOKE_KEY, assert_ipc_response, mock_builder, mock_context, noop_assets},
         webview::InvokeRequest,
     };
@@ -119,6 +122,104 @@ mod tests {
             },
             Ok(12345),
         );
+    }
+
+    #[tokio::test]
+    async fn test_establish_channel_sends_cached_call_state() {
+        let app = mock_builder()
+            .invoke_handler(tauri::generate_handler![commands::establish_channel])
+            .build(mock_context(noop_assets()))
+            .expect("failed to build app");
+
+        let (server_shutdown_tx, _) = broadcast::channel(1);
+        let (conn_tx, _) = crossbeam_channel::unbounded();
+        let call_state = CallState {
+            has_call: true,
+            has_state: true,
+            is_mute: false,
+            is_deaf: true,
+            is_camera_on: false,
+            is_screen_on: true,
+        };
+
+        let received: Arc<Mutex<Vec<Vec<u8>>>> = Arc::new(Mutex::new(Vec::new()));
+        let handler_received = Arc::clone(&received);
+        let channel = Channel::new(move |msg| {
+            if let InvokeResponseBody::Raw(data) = msg {
+                handler_received.lock().unwrap().push(data);
+            }
+            Ok(())
+        });
+
+        app.manage(discuss_companion_lib::WsState {
+            port: AtomicU16::new(12345),
+            ws_tx: broadcast::channel(1).0,
+            server_shutdown_tx: Mutex::new(server_shutdown_tx),
+            conn_tx,
+            event_channels: RwLock::new(Vec::new()),
+            call_state: RwLock::new(Some(call_state)),
+        });
+
+        commands::establish_channel(app.state::<discuss_companion_lib::WsState>(), channel);
+
+        let event = {
+            let events = received.lock().unwrap();
+            assert_eq!(events.len(), 1, "expected cached call state to be sent");
+            events
+                .first()
+                .expect("expected cached call state payload")
+                .clone()
+        };
+        let msg =
+            ipc_protocol::root_as_to_frontend_message(&event).expect("valid flatbuffer event");
+        assert_eq!(msg.event_type(), ipc_protocol::ToFrontend::CallState);
+        let payload = msg.event_as_call_state().expect("call state payload");
+        assert!(payload.has_call());
+        assert!(payload.has_state());
+        assert!(!payload.is_mute());
+        assert!(payload.is_deaf());
+        assert!(!payload.is_camera_on());
+        assert!(payload.is_screen_on());
+    }
+
+    #[tokio::test]
+    async fn test_establish_channel_registers_without_call_state() {
+        let app = mock_builder()
+            .invoke_handler(tauri::generate_handler![commands::establish_channel])
+            .build(mock_context(noop_assets()))
+            .expect("failed to build app");
+
+        let (server_shutdown_tx, _) = broadcast::channel(1);
+        let (conn_tx, _) = crossbeam_channel::unbounded();
+
+        let received: Arc<Mutex<Vec<Vec<u8>>>> = Arc::new(Mutex::new(Vec::new()));
+        let handler_received = Arc::clone(&received);
+        let channel = Channel::new(move |msg| {
+            if let InvokeResponseBody::Raw(data) = msg {
+                handler_received.lock().unwrap().push(data);
+            }
+            Ok(())
+        });
+
+        app.manage(discuss_companion_lib::WsState {
+            port: AtomicU16::new(12345),
+            ws_tx: broadcast::channel(1).0,
+            server_shutdown_tx: Mutex::new(server_shutdown_tx),
+            conn_tx,
+            event_channels: RwLock::new(Vec::new()),
+            call_state: RwLock::new(None),
+        });
+
+        commands::establish_channel(app.state::<discuss_companion_lib::WsState>(), channel);
+
+        let events_len = { received.lock().unwrap().len() };
+        assert_eq!(events_len, 0, "no cached call state expected");
+        let channels_len = {
+            let state = app.state::<discuss_companion_lib::WsState>();
+            let channels = state.event_channels.read().unwrap();
+            channels.len()
+        };
+        assert_eq!(channels_len, 1, "channel should be registered");
     }
 
     // Note: show_main_window and quit_app commands require AppHandle which
