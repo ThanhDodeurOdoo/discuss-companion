@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 
 use tauri::{
-    Emitter, Manager, State,
+    Emitter, Manager, Runtime, State,
     ipc::{Channel, InvokeBody},
 };
 use tauri_plugin_store::StoreExt;
@@ -10,17 +10,18 @@ use tracing::info;
 
 use crate::{
     WsState,
-    call_controls_window::CALL_CONTROLS_WINDOW_LABEL,
+    api::ws_server,
     flatbuffers::ipc_protocol_generated::discuss::ipc_protocol::{
         PttBinding, SetRecordingMode, SetWsPort,
     },
-    platform,
-    platform::{check_accessibility_permission, get_binding, set_binding, set_recording},
-    server,
-    state::{
+    interface::call_controls_window::CALL_CONTROLS_WINDOW_LABEL,
+    protocol::{
         FEATURES, Features, KeyBinding, OutgoingMessage, VERSION, current_timestamp,
         encode_call_state,
     },
+    ptt_engine,
+    ptt_engine::{check_accessibility_permission, get_binding, set_binding, set_recording},
+    runtime,
 };
 
 /// JUSTIFICATION: for all `clippy::needless_pass_by_value` below
@@ -87,17 +88,21 @@ pub fn is_accessibility_granted() -> bool {
 #[tauri::command]
 #[must_use]
 pub fn is_extension_connected() -> bool {
-    server::is_connected()
+    ws_server::is_connected()
 }
 
 #[tauri::command]
 pub fn force_ptt_up() {
-    platform::force_ptt_up();
+    ptt_engine::force_ptt_up();
 }
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 pub fn show_main_window(app_handle: tauri::AppHandle) {
+    show_main_window_with_handle(&app_handle);
+}
+
+pub(crate) fn show_main_window_with_handle<R: Runtime>(app_handle: &tauri::AppHandle<R>) {
     #[cfg(target_os = "macos")]
     let _ = app_handle.set_activation_policy(tauri::ActivationPolicy::Regular);
 
@@ -173,7 +178,7 @@ pub fn update_ws_port(
 
         // Start new server
         info!("Starting new WS server on port {}...", port);
-        crate::handle_ws_server(
+        runtime::handle_ws_server(
             app_handle.clone(),
             port,
             state.ws_tx.clone(),

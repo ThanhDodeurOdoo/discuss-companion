@@ -12,20 +12,19 @@ use tokio::{
 use tokio_tungstenite::tungstenite::{Message, handshake};
 use tracing::{error, info};
 
+#[cfg(target_os = "macos")]
+use crate::interface::dock_menu;
 use crate::{
     WsState,
     flatbuffers::{
         ipc_protocol_generated::discuss::ipc_protocol, ws_protocol_generated::discuss::ws_protocol,
     },
-    menu,
-    state::{
+    interface::tray,
+    protocol::{
         CallState, IncomingMessage, KeyBinding, Modifier, OutgoingMessage, current_timestamp,
         encode_call_state, encode_ws_connection,
     },
 };
-
-#[cfg(target_os = "macos")]
-use crate::dock_menu;
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 static CURRENT_SERVER_ID: AtomicU64 = AtomicU64::new(0);
@@ -211,7 +210,8 @@ async fn handle_connection<R: tauri::Runtime>(
                                                 }
                                                 let payload = encode_call_state(&state);
                                                 send_to_frontend(&app_handle, &payload);
-                                                let _ = menu::update_tray_menu(&app_handle, Some(state));
+                                                let _ =
+                                                    tray::update_tray_menu(&app_handle, Some(state));
                                                 #[cfg(target_os = "macos")]
                                                 let _ = dock_menu::update_dock_menu(&app_handle, Some(state));
                                             }

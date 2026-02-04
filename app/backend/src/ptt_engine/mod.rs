@@ -3,7 +3,7 @@ use std::sync::{Arc, atomic::AtomicBool};
 use anyhow::Result;
 use crossbeam_channel::Sender;
 
-use crate::state::{KeyBinding, OutgoingMessage};
+use crate::protocol::{KeyBinding, OutgoingMessage};
 
 #[cfg(all(target_os = "linux", feature = "x11"))]
 mod debian_x11;

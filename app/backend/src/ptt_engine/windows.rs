@@ -12,8 +12,8 @@ use crossbeam_channel::Sender;
 use tracing::warn;
 
 use crate::{
-    platform::PttEngine,
-    state::{KeyBinding, OutgoingMessage},
+    protocol::{KeyBinding, OutgoingMessage},
+    ptt_engine::PttEngine,
 };
 
 pub struct WindowsEngine;

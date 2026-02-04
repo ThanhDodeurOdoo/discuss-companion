@@ -18,7 +18,8 @@ use objc2_app_kit::{NSApplication, NSApplicationDelegate};
 use tauri::{AppHandle, Manager, Runtime};
 use tracing::warn;
 
-use crate::{WsState, call_controls_menu, state::CallState};
+use super::call_controls_menu;
+use crate::{WsState, protocol::CallState};
 
 pub const DOCK_MENU_SHOW_CALL_CONTROLS_ID: &str = "dock-call-controls";
 

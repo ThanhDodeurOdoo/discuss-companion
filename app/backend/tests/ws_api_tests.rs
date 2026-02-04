@@ -14,11 +14,11 @@ mod tests {
 
     use discuss_companion_lib::{
         WsState,
+        api::ws_server::{self, is_connected, start_ws_server},
         flatbuffers::{
             ipc_protocol_generated::discuss::ipc_protocol,
             ws_protocol_generated::discuss::ws_protocol,
         },
-        server::{self, is_connected, start_ws_server},
     };
     use flatbuffers::FlatBufferBuilder;
     use futures_util::{SinkExt, StreamExt};
@@ -95,14 +95,14 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_is_connected_initial() {
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         assert!(!is_connected());
     }
 
     #[tokio::test]
     #[serial]
     async fn test_multiple_connections() {
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
 
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
@@ -141,7 +141,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_broadcast_to_clients() {
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -214,7 +214,7 @@ mod tests {
             Message as FBMessage, MessageArgs, MessageBody, SetBinding, SetBindingArgs,
         };
 
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -299,7 +299,7 @@ mod tests {
     async fn test_shutdown_message_handling() {
         use ws_protocol::{Message as FBMessage, MessageArgs, MessageBody, Shutdown, ShutdownArgs};
 
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -373,7 +373,7 @@ mod tests {
             CallState, CallStateArgs, Message as FBMessage, MessageArgs, MessageBody,
         };
 
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -458,7 +458,7 @@ mod tests {
         use discuss_companion_lib::flatbuffers::ws_protocol_generated::discuss::ws_protocol::root_as_message;
         use ws_protocol::{Message as FBMessage, MessageArgs, MessageBody, Ping, PingArgs};
 
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -511,7 +511,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_restart_on_different_port() {
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
         let app_handle = app.handle().clone();
@@ -576,7 +576,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_restart_closes_existing_connections() {
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -606,7 +606,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_generation_reset_ignores_old_connections() {
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
         let app_handle = app.handle().clone();
@@ -660,7 +660,7 @@ mod tests {
             GetBinding, GetBindingArgs, Message as FBMessage, MessageArgs, MessageBody,
         };
 
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -732,7 +732,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_broadcast_reaches_all_clients() {
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -788,10 +788,10 @@ mod tests {
     async fn test_ptt_down_event_reaches_extension() {
         use discuss_companion_lib::{
             flatbuffers::ws_protocol_generated::discuss::ws_protocol::root_as_message,
-            state::{KeyBinding, Modifier, OutgoingMessage},
+            protocol::{KeyBinding, Modifier, OutgoingMessage},
         };
 
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -854,10 +854,10 @@ mod tests {
     async fn test_ptt_up_event_reaches_extension() {
         use discuss_companion_lib::{
             flatbuffers::ws_protocol_generated::discuss::ws_protocol::root_as_message,
-            state::{KeyBinding, Modifiers, OutgoingMessage},
+            protocol::{KeyBinding, Modifiers, OutgoingMessage},
         };
 
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -915,10 +915,10 @@ mod tests {
     async fn test_call_command_reaches_extension() {
         use discuss_companion_lib::{
             flatbuffers::ws_protocol_generated::discuss::ws_protocol::root_as_message,
-            state::{OutgoingMessage, VERSION, current_timestamp},
+            protocol::{OutgoingMessage, VERSION, current_timestamp},
         };
 
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -986,7 +986,7 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn test_connection_status_notifies_frontend() {
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();
@@ -1075,7 +1075,7 @@ mod tests {
             CallState as WsCallState, CallStateArgs, Message as FBMessage, MessageArgs, MessageBody,
         };
 
-        server::reset_connection_count();
+        ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
         let app = mock_builder().build(mock_context(noop_assets())).unwrap();

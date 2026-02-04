@@ -7,20 +7,11 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 
-use crate::{WsState, call_controls_menu, call_controls_window, state::CallState};
+use super::{call_controls_menu, call_controls_window};
+use crate::{WsState, api, protocol::CallState};
 
 pub const TRAY_ID: &str = "main-tray";
 const TRAY_OPEN_MAIN_WINDOW_ID: &str = "open-main-window";
-
-fn show_main_window<R: Runtime>(app: &tauri::AppHandle<R>) {
-    #[cfg(target_os = "macos")]
-    let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
-
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.set_focus();
-    }
-}
 
 fn build_tray_menu<R: Runtime, M: Manager<R>>(
     manager: &M,
@@ -139,7 +130,7 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) ->
         .menu(&menu)
         .on_menu_event(|app, event| {
             if event.id() == TRAY_OPEN_MAIN_WINDOW_ID {
-                show_main_window(app);
+                api::commands::show_main_window_with_handle(app);
             }
             if event.id() == "quit" {
                 if let Some(window) =

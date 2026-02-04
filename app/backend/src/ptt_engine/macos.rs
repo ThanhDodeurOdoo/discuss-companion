@@ -25,8 +25,10 @@ use crossbeam_channel::Sender;
 use tracing::{debug, error, info};
 
 use crate::{
-    platform::PttEngine,
-    state::{KEYCODE_SPACE, KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp},
+    protocol::{
+        KEYCODE_SPACE, KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
+    },
+    ptt_engine::PttEngine,
 };
 
 type CGEventRef = *mut c_void;
@@ -505,7 +507,7 @@ fn binding_from_packed(packed: u32) -> KeyBinding {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::Modifier;
+    use crate::protocol::Modifier;
 
     #[test]
     fn test_binding_storage() {

@@ -22,8 +22,10 @@ use x11::{
 };
 
 use crate::{
-    platform::PttEngine,
-    state::{KEYCODE_SPACE, KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp},
+    protocol::{
+        KEYCODE_SPACE, KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
+    },
+    ptt_engine::PttEngine,
 };
 
 static HELD: AtomicBool = AtomicBool::new(false);
