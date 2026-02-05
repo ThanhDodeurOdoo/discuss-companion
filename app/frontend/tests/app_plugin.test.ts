@@ -113,4 +113,13 @@ describe("AppPlugin", () => {
 
         expect(mockedInvoke).toHaveBeenCalledWith("quit_app");
     });
+
+    test("setAppVisibilityMode invokes set_app_visibility_mode and updates state", async () => {
+        mockedInvoke.mockResolvedValue(undefined as never);
+
+        await plugin.setAppVisibilityMode("dockOnly");
+
+        expect(mockedInvoke).toHaveBeenCalledWith("set_app_visibility_mode", { mode: "dockOnly" });
+        expect(plugin.appVisibilityMode()).toBe("dockOnly");
+    });
 });

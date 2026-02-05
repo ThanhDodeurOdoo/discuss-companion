@@ -30,6 +30,9 @@ describe("Root Integration Tests", () => {
             if (cmd === "get_features") {
                 return Promise.resolve({ ptt: true, callControlsTray: true });
             }
+            if (cmd === "get_app_visibility_mode") {
+                return Promise.resolve("trayAndDockWhenWindowOpen");
+            }
             if (cmd === "is_extension_connected") {
                 return Promise.resolve(false);
             }
@@ -71,6 +74,7 @@ describe("Root Integration Tests", () => {
     test("mounting initiates initialization calls", async () => {
         await mountApp();
         expect(invokeMock).toHaveBeenCalledWith("get_features");
+        expect(invokeMock).toHaveBeenCalledWith("get_app_visibility_mode");
         expect(invokeMock).toHaveBeenCalledWith("get_current_binding");
         expect(invokeMock).toHaveBeenCalledWith("get_ws_port");
         expect(invokeMock).toHaveBeenCalledWith("is_accessibility_granted");

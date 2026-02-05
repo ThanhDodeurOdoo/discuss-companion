@@ -9,12 +9,13 @@ use tokio::sync::broadcast;
 use tracing::info;
 
 use crate::{
-    WsState,
+    APP_VISIBILITY_MODE_KEY, AppSettings, WsState,
     api::ws_server,
     flatbuffers::ipc_protocol_generated::discuss::ipc_protocol::{
         PttBinding, SetRecordingMode, SetWsPort,
     },
     interface::call_controls_window::CALL_CONTROLS_WINDOW_LABEL,
+    protocol,
     protocol::{
         FEATURES, Features, KeyBinding, OutgoingMessage, VERSION, current_timestamp,
         encode_call_state,
@@ -39,6 +40,40 @@ pub fn get_version() -> String {
 #[must_use]
 pub fn get_features() -> Features {
     FEATURES
+}
+
+#[tauri::command]
+#[must_use]
+#[allow(clippy::needless_pass_by_value, reason = "tauri API")]
+pub fn get_app_visibility_mode(state: State<'_, AppSettings>) -> protocol::AppVisibilityMode {
+    state
+        .app_visibility_mode
+        .read()
+        .ok()
+        .map(|guard| *guard)
+        .unwrap_or_default()
+}
+
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "tauri API")]
+pub fn set_app_visibility_mode(
+    app_handle: tauri::AppHandle,
+    state: State<'_, AppSettings>,
+    mode: protocol::AppVisibilityMode,
+) {
+    if let Ok(mut guard) = state.app_visibility_mode.write() {
+        *guard = mode;
+    }
+
+    if let Ok(store) = app_handle.store("settings.json") {
+        store.set(
+            APP_VISIBILITY_MODE_KEY,
+            serde_json::to_value(mode).unwrap_or_default(),
+        );
+        let _ = store.save();
+    }
+
+    runtime::apply_app_visibility_mode(&app_handle, mode);
 }
 
 #[tauri::command]

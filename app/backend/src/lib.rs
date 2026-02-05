@@ -31,6 +31,11 @@ pub mod ptt_engine;
 pub mod runtime;
 
 pub const DEFAULT_PORT: u16 = 49152;
+pub const APP_VISIBILITY_MODE_KEY: &str = "app_visibility_mode";
+
+pub struct AppSettings {
+    pub app_visibility_mode: RwLock<protocol::AppVisibilityMode>,
+}
 
 pub struct WsState {
     pub port: AtomicU16,
@@ -89,9 +94,23 @@ pub fn run() {
     let (ws_shutdown_tx, ws_shutdown_rx) = broadcast::channel::<()>(1);
     let builder = runtime::build_app(&shutdown, ws_tx, &ws_shutdown_tx, ws_shutdown_rx);
 
-    if let Err(e) = builder.run(tauri::generate_context!()) {
-        error!("error while running tauri application: {e}");
-    }
+    let app = match builder.build(tauri::generate_context!()) {
+        Ok(app) => app,
+        Err(e) => {
+            error!("error while running tauri application: {e}");
+            return;
+        }
+    };
+
+    #[cfg(target_os = "macos")]
+    app.run(|app_handle, event| {
+        if let tauri::RunEvent::Reopen { .. } = event {
+            api::commands::show_main_window_with_handle(app_handle);
+        }
+    });
+
+    #[cfg(not(target_os = "macos"))]
+    app.run(|_, _| {});
 
     crate::profiling_drop!();
 

@@ -259,6 +259,15 @@ pub struct CallState {
     pub is_screen_on: bool,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum AppVisibilityMode {
+    #[default]
+    TrayAndDockWhenWindowOpen,
+    TrayAndDockAlways,
+    DockOnly,
+}
+
 impl From<ws_protocol::CallState<'_>> for CallState {
     fn from(state: ws_protocol::CallState<'_>) -> Self {
         Self {
@@ -319,5 +328,14 @@ mod tests {
         let json = serde_json::to_string(&FEATURES).expect("serialize features");
         let decoded: Features = serde_json::from_str(&json).expect("deserialize features");
         assert_eq!(decoded, FEATURES);
+    }
+
+    #[test]
+    fn test_app_visibility_mode_serde_roundtrip() {
+        let json = serde_json::to_string(&AppVisibilityMode::DockOnly)
+            .expect("serialize app visibility mode");
+        let decoded: AppVisibilityMode =
+            serde_json::from_str(&json).expect("deserialize app visibility mode");
+        assert_eq!(decoded, AppVisibilityMode::DockOnly);
     }
 }
