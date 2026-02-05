@@ -9,7 +9,7 @@ use tokio::sync::broadcast;
 use tracing::info;
 
 use crate::{
-    APP_VISIBILITY_MODE_KEY, AppSettings, WsState,
+    AppSettings, WsState,
     api::ws_server,
     flatbuffers::ipc_protocol_generated::discuss::ipc_protocol::{
         PttBinding, SetRecordingMode, SetWsPort,
@@ -22,7 +22,7 @@ use crate::{
     },
     ptt_engine,
     ptt_engine::{check_accessibility_permission, get_binding, set_binding, set_recording},
-    runtime,
+    runtime, store_keys,
 };
 
 /// JUSTIFICATION: for all `clippy::needless_pass_by_value` below
@@ -65,9 +65,9 @@ pub fn set_app_visibility_mode(
         *guard = mode;
     }
 
-    if let Ok(store) = app_handle.store("settings.json") {
+    if let Ok(store) = app_handle.store(store_keys::STORE_FILENAME) {
         store.set(
-            APP_VISIBILITY_MODE_KEY,
+            store_keys::APP_VISIBILITY_MODE,
             serde_json::to_value(mode).unwrap_or_default(),
         );
         let _ = store.save();
@@ -87,9 +87,9 @@ pub fn update_binding(app_handle: tauri::AppHandle, request: tauri::ipc::Request
         set_binding(key_binding);
 
         // Save to store
-        if let Ok(store) = app_handle.store("settings.json") {
+        if let Ok(store) = app_handle.store(store_keys::STORE_FILENAME) {
             store.set(
-                "ptt_binding",
+                store_keys::PTT_BINDING,
                 serde_json::to_value(key_binding).unwrap_or_default(),
             );
             let _ = store.save();
@@ -180,8 +180,8 @@ pub fn update_ws_port(
         info!("Updating WS port to: {}", port);
 
         // Save to store
-        if let Ok(store) = app_handle.store("settings.json") {
-            store.set("ws_port", serde_json::json!(port));
+        if let Ok(store) = app_handle.store(store_keys::STORE_FILENAME) {
+            store.set(store_keys::WS_PORT, serde_json::json!(port));
             let _ = store.save();
         }
 
