@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use tauri::{AppHandle, LogicalSize, Manager, PhysicalPosition, Position, Runtime, WebviewUrl};
+use tauri::{
+    AppHandle, LogicalSize, Manager, Monitor, PhysicalPosition, Position, Runtime, WebviewUrl,
+};
 use tracing::warn;
 
 pub const CALL_CONTROLS_WINDOW_LABEL: &str = "call-controls";
@@ -10,6 +12,15 @@ const CALL_CONTROLS_WINDOW_HEIGHT: f64 = 120.0;
 const CALL_CONTROLS_WINDOW_MARGIN: i32 = 8;
 
 pub fn toggle_at_point<R: Runtime>(app_handle: &AppHandle<R>, anchor_x: f64, anchor_y: f64) {
+    toggle_at_point_on_monitor(app_handle, anchor_x, anchor_y, None);
+}
+
+pub fn toggle_at_point_on_monitor<R: Runtime>(
+    app_handle: &AppHandle<R>,
+    anchor_x: f64,
+    anchor_y: f64,
+    monitor_hint: Option<Monitor>,
+) {
     if let Some(window) = app_handle.get_webview_window(CALL_CONTROLS_WINDOW_LABEL)
         && window.is_visible().unwrap_or(false)
     {
@@ -17,15 +28,24 @@ pub fn toggle_at_point<R: Runtime>(app_handle: &AppHandle<R>, anchor_x: f64, anc
         return;
     }
 
-    show_at_point(app_handle, anchor_x, anchor_y);
+    show_at_point_on_monitor(app_handle, anchor_x, anchor_y, monitor_hint);
 }
 
 pub fn show_at_point<R: Runtime>(app_handle: &AppHandle<R>, anchor_x: f64, anchor_y: f64) {
+    show_at_point_on_monitor(app_handle, anchor_x, anchor_y, None);
+}
+
+pub fn show_at_point_on_monitor<R: Runtime>(
+    app_handle: &AppHandle<R>,
+    anchor_x: f64,
+    anchor_y: f64,
+    monitor_hint: Option<Monitor>,
+) {
     let Some(window) = ensure_call_controls_window(app_handle) else {
         return;
     };
 
-    position_call_controls_window(app_handle, &window, anchor_x, anchor_y);
+    position_call_controls_window(app_handle, &window, anchor_x, anchor_y, monitor_hint);
     let _ = window.show();
     let _ = window.set_focus();
 }
@@ -85,11 +105,15 @@ fn position_call_controls_window<R: Runtime>(
     window: &tauri::WebviewWindow<R>,
     anchor_x: f64,
     anchor_y: f64,
+    monitor_hint: Option<Monitor>,
 ) {
-    let monitor = app_handle
-        .monitor_from_point(anchor_x, anchor_y)
-        .ok()
-        .flatten()
+    let monitor = monitor_hint
+        .or_else(|| {
+            app_handle
+                .monitor_from_point(anchor_x, anchor_y)
+                .ok()
+                .flatten()
+        })
         .or_else(|| app_handle.primary_monitor().ok().flatten());
     let scale_factor = monitor.as_ref().map_or(1.0, tauri::Monitor::scale_factor);
     let logical_size = LogicalSize::new(CALL_CONTROLS_WINDOW_WIDTH, CALL_CONTROLS_WINDOW_HEIGHT);
