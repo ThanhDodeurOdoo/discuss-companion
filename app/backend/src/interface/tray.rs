@@ -1,7 +1,7 @@
 #[cfg(target_os = "macos")]
 use tauri::menu::IconMenuItem;
 use tauri::{
-    Manager, Runtime,
+    AppHandle, Manager, Monitor, PhysicalPosition, Position, Rect, Runtime, Size,
     image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -12,6 +12,147 @@ use crate::{WsState, api, protocol::CallState};
 
 pub const TRAY_ID: &str = "main-tray";
 const TRAY_OPEN_MAIN_WINDOW_ID: &str = "open-main-window";
+
+fn tray_anchor_from_rect<R: Runtime>(
+    app_handle: &AppHandle<R>,
+    position: PhysicalPosition<f64>,
+    rect: Rect,
+) -> (f64, f64, Option<Monitor>) {
+    let Ok(mut monitors) = app_handle.available_monitors() else {
+        return (
+            position.x,
+            position.y,
+            app_handle.primary_monitor().ok().flatten(),
+        );
+    };
+
+    if monitors.is_empty() {
+        return (
+            position.x,
+            position.y,
+            app_handle.primary_monitor().ok().flatten(),
+        );
+    }
+
+    let mut best_rect_index = None;
+    let mut best_rect_overlap = -1.0;
+    let mut best_rect_distance = f64::INFINITY;
+
+    let mut best_point_index = None;
+    let mut best_point_distance = f64::INFINITY;
+
+    for (index, monitor) in monitors.iter().enumerate() {
+        let (monitor_min_x, monitor_min_y, monitor_max_x, monitor_max_y) = monitor_bounds(monitor);
+
+        let point_distance = distance_to_bounds(
+            position.x,
+            position.y,
+            monitor_min_x,
+            monitor_min_y,
+            monitor_max_x,
+            monitor_max_y,
+        );
+        if point_distance < best_point_distance {
+            best_point_distance = point_distance;
+            best_point_index = Some(index);
+        }
+
+        let (rect_position, rect_size) = rect_physical_for_monitor(rect, monitor);
+        if rect_size.width <= 0.0 || rect_size.height <= 0.0 {
+            continue;
+        }
+
+        let rect_max_x = rect_position.x + rect_size.width;
+        let rect_max_y = rect_position.y + rect_size.height;
+        let overlap_width =
+            (monitor_max_x.min(rect_max_x) - monitor_min_x.max(rect_position.x)).max(0.0);
+        let overlap_height =
+            (monitor_max_y.min(rect_max_y) - monitor_min_y.max(rect_position.y)).max(0.0);
+        let overlap_area = overlap_width * overlap_height;
+
+        let rect_center_x = rect_position.x + rect_size.width / 2.0;
+        let rect_center_y = rect_position.y + rect_size.height / 2.0;
+        let rect_distance = distance_to_bounds(
+            rect_center_x,
+            rect_center_y,
+            monitor_min_x,
+            monitor_min_y,
+            monitor_max_x,
+            monitor_max_y,
+        );
+
+        if overlap_area > best_rect_overlap
+            || (overlap_area - best_rect_overlap).abs() < f64::EPSILON
+                && rect_distance < best_rect_distance
+        {
+            best_rect_overlap = overlap_area;
+            best_rect_distance = rect_distance;
+            best_rect_index = Some(index);
+        }
+    }
+
+    if let Some(index) = best_rect_index {
+        let monitor = monitors.swap_remove(index);
+        let (rect_position, rect_size) = rect_physical_for_monitor(rect, &monitor);
+        let anchor_x = rect_position.x + rect_size.width / 2.0;
+        let anchor_y = rect_position.y + rect_size.height;
+        return (anchor_x, anchor_y, Some(monitor));
+    }
+
+    if let Some(index) = best_point_index {
+        let monitor = monitors.swap_remove(index);
+        return (position.x, position.y, Some(monitor));
+    }
+
+    (
+        position.x,
+        position.y,
+        app_handle.primary_monitor().ok().flatten(),
+    )
+}
+
+fn rect_physical_for_monitor(
+    rect: Rect,
+    monitor: &Monitor,
+) -> (PhysicalPosition<f64>, tauri::PhysicalSize<f64>) {
+    if let (Position::Physical(position), Size::Physical(size)) = (rect.position, rect.size) {
+        return (position.cast::<f64>(), size.cast::<f64>());
+    }
+
+    let scale_factor = monitor.scale_factor();
+    (
+        rect.position.to_physical::<f64>(scale_factor),
+        rect.size.to_physical::<f64>(scale_factor),
+    )
+}
+
+fn monitor_bounds(monitor: &Monitor) -> (f64, f64, f64, f64) {
+    let position = monitor.position();
+    let size = monitor.size();
+    let min_x = f64::from(position.x);
+    let min_y = f64::from(position.y);
+    let max_x = min_x + f64::from(size.width);
+    let max_y = min_y + f64::from(size.height);
+    (min_x, min_y, max_x, max_y)
+}
+
+fn distance_to_bounds(x: f64, y: f64, min_x: f64, min_y: f64, max_x: f64, max_y: f64) -> f64 {
+    let dx = if x < min_x {
+        min_x - x
+    } else if x > max_x {
+        x - max_x
+    } else {
+        0.0
+    };
+    let dy = if y < min_y {
+        min_y - y
+    } else if y > max_y {
+        y - max_y
+    } else {
+        0.0
+    };
+    dx * dx + dy * dy
+}
 
 fn build_tray_menu<R: Runtime, M: Manager<R>>(
     manager: &M,
@@ -147,10 +288,19 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) ->
                 button: MouseButton::Left,
                 button_state: MouseButtonState::Up,
                 position,
+                rect,
                 ..
             } = event
             {
-                call_controls_window::toggle_at_point(tray.app_handle(), position.x, position.y);
+                let rect = tray.rect().ok().flatten().unwrap_or(rect);
+                let (anchor_x, anchor_y, monitor_hint) =
+                    tray_anchor_from_rect(tray.app_handle(), position, rect);
+                call_controls_window::toggle_at_point_on_monitor(
+                    tray.app_handle(),
+                    anchor_x,
+                    anchor_y,
+                    monitor_hint,
+                );
             }
         });
 
