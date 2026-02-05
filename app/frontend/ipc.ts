@@ -18,6 +18,9 @@ import {
     // IncomingShutdown
 } from "./flatbuffers/discuss/ipc-protocol";
 import type { CallCommand } from "./call_commands";
+import { ChannelEventType, type ChannelEvent, type CallStatePayload } from "./ipc_types";
+
+export { ChannelEventType, type ChannelEvent, type CallStatePayload };
 
 export async function updateBinding(code: number, modifiers: number[]) {
     const builder = new Builder(1024);
@@ -69,24 +72,6 @@ export async function sendCallCommand(command: CallCommand, value?: boolean): Pr
     return invoke<boolean>("send_call_command", { command, value });
 }
 
-export type CallStatePayload = {
-    hasCall: boolean;
-    hasState: boolean;
-    isMute: boolean;
-    isDeaf: boolean;
-    isCameraOn: boolean;
-    isScreenOn: boolean;
-};
-
-// Define types closer to what app_plugin expects
-export type ChannelEvent =
-    | { type: "ptt-event"; payload: unknown }
-    | { type: "ws-connection" }
-    | { type: "ws-disconnection" }
-    | { type: "error"; payload: string }
-    | { type: "ws-message"; payload: unknown }
-    | { type: "call-state"; payload: CallStatePayload };
-
 export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
     const channel = new Channel<ArrayBuffer | number[]>();
     channel.onmessage = (message: ArrayBuffer | number[]) => {
@@ -108,7 +93,7 @@ export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
             case ToFrontend.PttState: {
                 const state = msg.event(new PttState()) as PttState;
                 onEvent({
-                    type: "ptt-event",
+                    type: ChannelEventType.PttEvent,
                     payload: {
                         type: state.isActive() ? "ptt_down" : "ptt_up",
                         ts: Date.now(),
@@ -125,21 +110,24 @@ export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
                 const conn = msg.event(new WsConnection()) as WsConnection;
                 const status = conn.status();
                 if (status === ConnectionStatus.Connected) {
-                    onEvent({ type: "ws-connection" });
+                    onEvent({ type: ChannelEventType.WsConnection });
                 } else {
-                    onEvent({ type: "ws-disconnection" });
+                    onEvent({ type: ChannelEventType.WsDisconnection });
                 }
                 break;
             }
             case ToFrontend.BackendError: {
                 const err = msg.event(new BackendError()) as BackendError;
-                onEvent({ type: "error", payload: err.message() || "Unknown backend error" });
+                onEvent({
+                    type: ChannelEventType.Error,
+                    payload: err.message() || "Unknown backend error"
+                });
                 break;
             }
             case ToFrontend.CallState: {
                 const state = msg.event(new CallState()) as CallState;
                 onEvent({
-                    type: "call-state",
+                    type: ChannelEventType.CallState,
                     payload: {
                         hasCall: state.hasCall(),
                         hasState: state.hasState(),
@@ -163,7 +151,7 @@ export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
                         const binding = bindingMsg.binding();
                         if (binding) {
                             onEvent({
-                                type: "ws-message",
+                                type: ChannelEventType.WsMessage,
                                 payload: {
                                     SetBinding: {
                                         binding: {
@@ -177,11 +165,11 @@ export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
                         break;
                     }
                     case IncomingMessageUnion.IncomingGetBinding: {
-                        onEvent({ type: "ws-message", payload: { GetBinding: {} } });
+                        onEvent({ type: ChannelEventType.WsMessage, payload: { GetBinding: {} } });
                         break;
                     }
                     case IncomingMessageUnion.IncomingShutdown: {
-                        onEvent({ type: "ws-message", payload: { Shutdown: {} } });
+                        onEvent({ type: ChannelEventType.WsMessage, payload: { Shutdown: {} } });
                         break;
                     }
                 }
