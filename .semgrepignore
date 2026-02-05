@@ -1,0 +1,14 @@
+# Vendored
+vendor/owl/**
+
+
+app/backend/src/flatbuffers/*_generated.rs
+app/frontend/flatbuffers/**
+extension/src/discuss/ws-protocol.ts
+extension/src/discuss/ws-protocol/**
+
+
+app/backend/gen/**
+app/backend/target/**
+dist/**
+node_modules/**
