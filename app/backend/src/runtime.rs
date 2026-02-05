@@ -14,7 +14,7 @@ use tracing::{debug, error};
 #[cfg(target_os = "macos")]
 use crate::interface::dock_menu;
 use crate::{
-    DEFAULT_PORT, WsState, api,
+    APP_VISIBILITY_MODE_KEY, AppSettings, DEFAULT_PORT, WsState, api,
     interface::{call_controls_menu, call_controls_window, tray},
     protocol, ptt_engine,
 };
@@ -44,11 +44,17 @@ pub fn build_app(
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(move |app| {
             let mut port = DEFAULT_PORT;
+            let mut app_visibility_mode = protocol::AppVisibilityMode::default();
             if let Ok(store) = app.app_handle().store("settings.json") {
                 if let Some(value) = store.get("ptt_binding")
                     && let Ok(binding) = serde_json::from_value(value)
                 {
                     ptt_engine::set_binding(binding);
+                }
+                if let Some(value) = store.get(APP_VISIBILITY_MODE_KEY)
+                    && let Ok(mode) = serde_json::from_value(value)
+                {
+                    app_visibility_mode = mode;
                 }
                 if let Some(value) = store.get("ws_port")
                     && let Some(p) = value.as_u64()
@@ -67,6 +73,9 @@ pub fn build_app(
                 conn_tx: conn_tx.clone(),
                 event_channels: RwLock::new(Vec::new()),
                 call_state: RwLock::new(None),
+            });
+            app.manage(AppSettings {
+                app_visibility_mode: RwLock::new(app_visibility_mode),
             });
 
             handle_ws_server(
@@ -95,6 +104,7 @@ pub fn build_app(
 
             let tray_icon = Image::from_bytes(ICON_INACTIVE_OFFLINE)?;
             tray::setup_tray(app, tray_icon)?;
+            apply_app_visibility_mode(app.handle(), app_visibility_mode);
 
             #[cfg(target_os = "macos")]
             dock_menu::setup_dock_menu(app.handle())?;
@@ -114,6 +124,8 @@ pub fn build_app(
         .invoke_handler(tauri::generate_handler![
             api::commands::get_version,
             api::commands::get_features,
+            api::commands::get_app_visibility_mode,
+            api::commands::set_app_visibility_mode,
             api::commands::update_binding,
             api::commands::set_recording_mode,
             api::commands::get_current_binding,
@@ -133,9 +145,18 @@ pub fn build_app(
                 api.prevent_close();
                 #[cfg(target_os = "macos")]
                 if window.label() == "main" {
-                    let _ = window
+                    let mode = window
                         .app_handle()
-                        .set_activation_policy(tauri::ActivationPolicy::Accessory);
+                        .try_state::<AppSettings>()
+                        .and_then(|settings| {
+                            settings.app_visibility_mode.read().ok().map(|guard| *guard)
+                        })
+                        .unwrap_or_default();
+                    if mode == protocol::AppVisibilityMode::TrayAndDockWhenWindowOpen {
+                        let _ = window
+                            .app_handle()
+                            .set_activation_policy(tauri::ActivationPolicy::Accessory);
+                    }
                 }
             }
             tauri::WindowEvent::Focused(false) => {
@@ -157,6 +178,40 @@ pub(crate) fn handle_ws_server(
     async_runtime::spawn(async move {
         api::ws_server::start_ws_server(port, ws_tx, ws_shutdown_rx, app_handle, conn_tx).await;
     });
+}
+
+#[cfg(target_os = "macos")]
+fn is_main_window_visible<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) -> bool {
+    app_handle
+        .get_webview_window("main")
+        .and_then(|window| window.is_visible().ok())
+        .unwrap_or(false)
+}
+
+pub(crate) fn apply_app_visibility_mode<R: tauri::Runtime>(
+    app_handle: &tauri::AppHandle<R>,
+    mode: protocol::AppVisibilityMode,
+) {
+    if let Some(tray_icon) = app_handle.tray_by_id(tray::TRAY_ID) {
+        let show_tray = mode != protocol::AppVisibilityMode::DockOnly;
+        let _ = tray_icon.set_visible(show_tray);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let policy = match mode {
+            protocol::AppVisibilityMode::TrayAndDockWhenWindowOpen => {
+                if is_main_window_visible(app_handle) {
+                    tauri::ActivationPolicy::Regular
+                } else {
+                    tauri::ActivationPolicy::Accessory
+                }
+            }
+            protocol::AppVisibilityMode::TrayAndDockAlways
+            | protocol::AppVisibilityMode::DockOnly => tauri::ActivationPolicy::Regular,
+        };
+        let _ = app_handle.set_activation_policy(policy);
+    }
 }
 
 struct PttHandler {

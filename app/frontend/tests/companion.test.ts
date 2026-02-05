@@ -51,6 +51,9 @@ describe("Companion Component Interactions", () => {
             if (cmd === "get_features") {
                 return Promise.resolve({ ptt: true, callControlsTray: true });
             }
+            if (cmd === "get_app_visibility_mode") {
+                return Promise.resolve("trayAndDockWhenWindowOpen");
+            }
             if (cmd === "is_extension_connected") {
                 return Promise.resolve(false);
             }
@@ -102,6 +105,9 @@ describe("Companion Component Interactions", () => {
         invokeMock.mockImplementation((cmd) => {
             if (cmd === "get_features") {
                 return Promise.resolve({ ptt: false, callControlsTray: false });
+            }
+            if (cmd === "get_app_visibility_mode") {
+                return Promise.resolve("trayAndDockWhenWindowOpen");
             }
             if (cmd === "is_extension_connected") {
                 return Promise.resolve(false);

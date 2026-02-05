@@ -15,6 +15,17 @@ import { CallCommand } from "./call_commands";
 
 const DEFAULT_PORT = 49152;
 const FEATURES_COMMAND = "get_features";
+const APP_VISIBILITY_COMMAND_GET = "get_app_visibility_mode";
+const APP_VISIBILITY_COMMAND_SET = "set_app_visibility_mode";
+
+const APP_VISIBILITY_MODE = {
+    TrayAndDockWhenWindowOpen: "trayAndDockWhenWindowOpen",
+    TrayAndDockAlways: "trayAndDockAlways",
+    DockOnly: "dockOnly"
+} as const;
+
+type AppVisibilityMode = (typeof APP_VISIBILITY_MODE)[keyof typeof APP_VISIBILITY_MODE];
+const DEFAULT_APP_VISIBILITY_MODE = APP_VISIBILITY_MODE.TrayAndDockWhenWindowOpen;
 
 type LogEntry = {
     id: number;
@@ -44,12 +55,14 @@ const MODIFIER_ORDER: Record<string, number> = { Cmd: 0, Ctrl: 1, Option: 2, Shi
 export class AppPlugin extends Plugin {
     static id = "AppPlugin";
 
+    appVisibilityModes = APP_VISIBILITY_MODE;
     isRecording = signal(false);
     isPressed = signal(false);
     showSymbols = signal(true);
     permissionGranted = signal(false);
     extensionConnected = signal(false);
     features = signal<CompanionFeatures>(DEFAULT_FEATURES);
+    appVisibilityMode = signal<AppVisibilityMode>(DEFAULT_APP_VISIBILITY_MODE);
     currentBinding = signal<PttBinding>({ code: 0, modifiers: [] });
     isForcingRelease = false;
     logs = signal.Array<LogEntry>([]);
@@ -79,6 +92,9 @@ export class AppPlugin extends Plugin {
     async init() {
         this.addLog("SYSTEM", "Ready");
         await this.fetchFeatures();
+        if (this.features().callControlsTray) {
+            await this.fetchAppVisibilityMode();
+        }
         await this.fetchCurrentBinding();
         await this.fetchWsPort();
         await this.checkPermission();
@@ -192,6 +208,33 @@ export class AppPlugin extends Plugin {
         } catch (error) {
             this.features.set(DEFAULT_FEATURES);
             this.addLog("ERROR", `Failed to load features: ${String(error)}`);
+        }
+    }
+
+    async fetchAppVisibilityMode() {
+        try {
+            const mode = await invoke<AppVisibilityMode>(APP_VISIBILITY_COMMAND_GET);
+            if (mode) {
+                this.appVisibilityMode.set(mode);
+            }
+        } catch (error) {
+            this.appVisibilityMode.set(DEFAULT_APP_VISIBILITY_MODE);
+            this.addLog("ERROR", `Failed to load app visibility: ${String(error)}`);
+        }
+    }
+
+    async setAppVisibilityMode(mode: AppVisibilityMode) {
+        if (this.appVisibilityMode() === mode) {
+            return;
+        }
+        const previous = this.appVisibilityMode();
+        this.appVisibilityMode.set(mode);
+        try {
+            await invoke(APP_VISIBILITY_COMMAND_SET, { mode });
+            this.addLog("SYSTEM", `App visibility set to ${mode}`);
+        } catch (error) {
+            this.appVisibilityMode.set(previous);
+            this.addLog("ERROR", `Failed to update app visibility: ${String(error)}`);
         }
     }
 
