@@ -14,9 +14,9 @@ use tracing::{debug, error};
 #[cfg(target_os = "macos")]
 use crate::interface::dock_menu;
 use crate::{
-    APP_VISIBILITY_MODE_KEY, AppSettings, DEFAULT_PORT, WsState, api,
+    AppSettings, DEFAULT_PORT, WsState, api,
     interface::{call_controls_menu, call_controls_window, tray},
-    protocol, ptt_engine,
+    protocol, ptt_engine, store_keys,
 };
 
 const ICON_ACTIVE_ONLINE: &[u8] = include_bytes!("../../../assets/icons/active_online_icon.png");
@@ -45,18 +45,18 @@ pub fn build_app(
         .setup(move |app| {
             let mut port = DEFAULT_PORT;
             let mut app_visibility_mode = protocol::AppVisibilityMode::default();
-            if let Ok(store) = app.app_handle().store("settings.json") {
-                if let Some(value) = store.get("ptt_binding")
+            if let Ok(store) = app.app_handle().store(store_keys::STORE_FILENAME) {
+                if let Some(value) = store.get(store_keys::PTT_BINDING)
                     && let Ok(binding) = serde_json::from_value(value)
                 {
                     ptt_engine::set_binding(binding);
                 }
-                if let Some(value) = store.get(APP_VISIBILITY_MODE_KEY)
+                if let Some(value) = store.get(store_keys::APP_VISIBILITY_MODE)
                     && let Ok(mode) = serde_json::from_value(value)
                 {
                     app_visibility_mode = mode;
                 }
-                if let Some(value) = store.get("ws_port")
+                if let Some(value) = store.get(store_keys::WS_PORT)
                     && let Some(p) = value.as_u64()
                     && let Ok(p_u16) = u16::try_from(p)
                 {
