@@ -7,10 +7,9 @@ import {
     updateBinding,
     updateWsPort,
     setupChannel,
-    sendCallCommand,
-    type ChannelEvent,
-    type CallStatePayload
+    sendCallCommand
 } from "./ipc";
+import { ChannelEventType, type ChannelEvent, type CallStatePayload } from "./ipc_types";
 import { CallCommand } from "./call_commands";
 
 const DEFAULT_PORT = 49152;
@@ -107,7 +106,7 @@ export class AppPlugin extends Plugin {
 
         await setupChannel(async (event: ChannelEvent) => {
             switch (event.type) {
-                case "ptt-event": {
+                case ChannelEventType.PttEvent: {
                     const payload = event.payload as {
                         type: string;
                         ts: number;
@@ -154,28 +153,28 @@ export class AppPlugin extends Plugin {
                     );
                     break;
                 }
-                case "error": {
+                case ChannelEventType.Error: {
                     this.addLog("ERROR", event.payload as string);
                     break;
                 }
-                case "ws-connection": {
+                case ChannelEventType.WsConnection: {
                     this.extensionConnected.set(true);
                     this.addLog("WS", "websocket connected");
                     break;
                 }
-                case "ws-disconnection": {
+                case ChannelEventType.WsDisconnection: {
                     this.extensionConnected.set(false);
                     this.clearCallState();
                     this.addLog("WS", "websocket disconnected");
                     break;
                 }
-                case "call-state": {
+                case ChannelEventType.CallState: {
                     const payload = event.payload as CallStatePayload;
                     this.addLog("CALL-STATE", this.formatCallStateLog(payload));
                     this.applyCallState(payload);
                     break;
                 }
-                case "ws-message": {
+                case ChannelEventType.WsMessage: {
                     this.addLog("WS-MSG", JSON.stringify(event.payload));
                     break;
                 }
