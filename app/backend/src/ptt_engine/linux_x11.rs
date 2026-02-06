@@ -79,16 +79,20 @@ impl PttEngine for DebianX11Engine {
         #[allow(
             unsafe_code,
             reason = "
-            SAFETY: XOpenDisplay/XCloseDisplay are Xlib FFI calls.
-            We pass NULL to request the default DISPLAY, verify the returned pointer for null,
-            and only pass a non-null Display* to XCloseDisplay."
+            SAFETY: XOpenDisplay is an Xlib FFI call. We pass NULL to request the default DISPLAY
+            and verify the returned pointer for null before use."
+        )]
+        let dpy = unsafe { XOpenDisplay(ptr::null()) };
+        if dpy.is_null() {
+            warn!("XOpenDisplay failed in permission check");
+            return false;
+        }
+        #[allow(
+            unsafe_code,
+            reason = "
+            SAFETY: dpy was returned from XOpenDisplay and checked for null."
         )]
         unsafe {
-            let dpy = XOpenDisplay(ptr::null());
-            if dpy.is_null() {
-                warn!("XOpenDisplay failed in permission check");
-                return false;
-            }
             XCloseDisplay(dpy);
         }
         true
@@ -158,6 +162,17 @@ fn binding_from_packed(packed: u32) -> KeyBinding {
     }
 }
 
+fn free_record_data(raw_datum: *mut xrecord::XRecordInterceptData) {
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: raw_datum is a non-null pointer provided by XRecord that must be released."
+    )]
+    unsafe {
+        XRecordFreeData(raw_datum);
+    }
+}
+
 #[allow(
     unsafe_code,
     reason = "
@@ -169,81 +184,74 @@ unsafe extern "C" fn record_callback(
     _null_closure: *mut c_char,
     raw_datum: *mut xrecord::XRecordInterceptData,
 ) {
-    #[allow(
-        unsafe_code,
-        reason = "
-        SAFETY: `raw_datum` comes from the XRecord callback.
-        We check for null before dereferencing, bound the byte length from `data_len`,
-        read only within that slice, and free non-null data with XRecordFreeData."
-    )]
-    unsafe {
-        if raw_datum.is_null() {
-            return;
-        }
-
-        let datum = *raw_datum;
-        debug!(
-            "XRecord callback: category={}, len={}",
-            datum.category, datum.data_len
-        );
-
-        if datum.category != XRecordFromServer {
-            XRecordFreeData(raw_datum);
-            return;
-        }
-
-        // data_len is in 4-byte units (8 units = 32 bytes)
-        if datum.data_len >= 8 {
-            let Ok(len_bytes) = usize::try_from(datum.data_len * 4) else {
-                XRecordFreeData(raw_datum);
-                return;
-            };
-
-            #[allow(
-                clippy::absolute_paths,
-                reason = "slice::from_raw_parts requires explicit path or import, std is fine"
-            )]
-            let data = std::slice::from_raw_parts(datum.data.cast_const().cast::<u8>(), len_bytes);
-
-            let Some(&type_code) = data.first() else {
-                XRecordFreeData(raw_datum);
-                return;
-            };
-
-            // KeyPress=2, KeyRelease=3
-            if type_code == 2 || type_code == 3 {
-                let Some(&keycode) = data.get(1) else {
-                    XRecordFreeData(raw_datum);
-                    return;
-                };
-
-                // State is at offset 28 (u16)
-                let (Some(&byte28), Some(&byte29)) = (data.get(28), data.get(29)) else {
-                    XRecordFreeData(raw_datum);
-                    return;
-                };
-                let state = u16::from_ne_bytes([byte28, byte29]);
-
-                debug!(
-                    "XRecord Parsed: type={}, keycode={}, state={}",
-                    type_code, keycode, state
-                );
-
-                handle_key_event(i32::from(type_code), keycode, u32::from(state));
-            }
-        }
-
-        XRecordFreeData(raw_datum);
+    if raw_datum.is_null() {
+        return;
     }
+
+    // SAFETY: raw_datum is non-null and provided by XRecord for the callback lifetime.
+    let datum = unsafe { *raw_datum };
+    debug!(
+        "XRecord callback: category={}, len={}",
+        datum.category, datum.data_len
+    );
+
+    if datum.category != XRecordFromServer {
+        free_record_data(raw_datum);
+        return;
+    }
+
+    // data_len is in 4-byte units (8 units = 32 bytes)
+    if datum.data_len >= 8 {
+        let Ok(len_bytes) = usize::try_from(datum.data_len * 4) else {
+            free_record_data(raw_datum);
+            return;
+        };
+
+        if datum.data.is_null() {
+            free_record_data(raw_datum);
+            return;
+        }
+
+        #[allow(
+            clippy::absolute_paths,
+            reason = "slice::from_raw_parts requires explicit path or import, std is fine"
+        )]
+        // SAFETY: datum.data is non-null and len_bytes is derived from the XRecord payload size.
+        let data =
+            unsafe { std::slice::from_raw_parts(datum.data.cast_const().cast::<u8>(), len_bytes) };
+
+        let Some(&type_code) = data.first() else {
+            free_record_data(raw_datum);
+            return;
+        };
+
+        // KeyPress=2, KeyRelease=3
+        if type_code == 2 || type_code == 3 {
+            let Some(&keycode) = data.get(1) else {
+                free_record_data(raw_datum);
+                return;
+            };
+
+            // State is at offset 28 (u16)
+            let (Some(&byte28), Some(&byte29)) = (data.get(28), data.get(29)) else {
+                free_record_data(raw_datum);
+                return;
+            };
+            let state = u16::from_ne_bytes([byte28, byte29]);
+
+            debug!(
+                "XRecord Parsed: type={}, keycode={}, state={}",
+                type_code, keycode, state
+            );
+
+            handle_key_event(i32::from(type_code), keycode, u32::from(state));
+        }
+    }
+
+    free_record_data(raw_datum);
 }
 
-#[allow(
-    unsafe_code,
-    reason = "
-    SAFETY: This helper is only called after the XRecord payload has been validated
-    (type, length, and keycode bytes), so inputs are derived from checked X11 data."
-)]
-unsafe fn handle_key_event(type_code: i32, keycode: u8, state: u32) {
+fn handle_key_event(type_code: i32, keycode: u8, state: u32) {
     let x11_keycode = keycode;
     let keycode = x11_to_macos_keycode(u16::from(x11_keycode));
 
@@ -442,52 +450,93 @@ fn modifiers_from_mask(mask: u8) -> Modifiers {
     Modifiers::from_bits(mask)
 }
 
-fn run_xrecord_loop(shutdown: &Arc<AtomicBool>) -> Result<()> {
+fn open_display(label: &str) -> Result<*mut Display> {
     #[allow(
         unsafe_code,
         reason = "
-        SAFETY: This block performs X11/XRecord FFI calls.
-        We validate all returned pointers (Display*, XRecordRange) before dereferencing,
-        and we release resources with XFree/XRecordFreeContext/XCloseDisplay on all exit paths."
+        SAFETY: XOpenDisplay is an Xlib FFI call. We pass NULL to request the default DISPLAY
+        and validate the returned pointer."
+    )]
+    let dpy = unsafe { XOpenDisplay(ptr::null()) };
+    if dpy.is_null() {
+        return Err(anyhow::anyhow!("Failed to open X display for {label}"));
+    }
+    Ok(dpy)
+}
+
+fn close_display(dpy: *mut Display) {
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: dpy was returned by XOpenDisplay and must be closed exactly once."
     )]
     unsafe {
-        let dpy_data = XOpenDisplay(ptr::null());
-        if dpy_data.is_null() {
-            return Err(anyhow::anyhow!("Failed to open X display for data"));
-        }
+        XCloseDisplay(dpy);
+    }
+}
 
-        // Separate control connection needed: XRecordEnableContext blocks, so we
-        // call XRecordDisableContext from another connection to unblock it.
-        let dpy_ctrl = XOpenDisplay(ptr::null());
-        if dpy_ctrl.is_null() {
-            XCloseDisplay(dpy_data);
-            return Err(anyhow::anyhow!("Failed to open X display for control"));
-        }
+fn close_displays(dpy_data: *mut Display, dpy_ctrl: *mut Display) {
+    close_display(dpy_data);
+    close_display(dpy_ctrl);
+}
 
-        let mut major = 0;
-        let mut minor = 0;
-        #[allow(
-            clippy::borrow_as_ptr,
-            reason = "FFI requires passing raw pointers to mutable stack variables"
-        )]
-        if XRecordQueryVersion(dpy_data, &mut major, &mut minor) == 0 {
-            XCloseDisplay(dpy_data);
-            XCloseDisplay(dpy_ctrl);
-            return Err(anyhow::anyhow!("XRecord extension not available"));
-        }
+fn query_record_version(dpy: *mut Display) -> Result<()> {
+    let mut major = 0;
+    let mut minor = 0;
+    #[allow(
+        clippy::borrow_as_ptr,
+        reason = "FFI requires passing raw pointers to mutable stack variables"
+    )]
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: XRecordQueryVersion is an XRecord FFI call; dpy is a valid Display*."
+    )]
+    let has_record = unsafe { XRecordQueryVersion(dpy, &mut major, &mut minor) };
+    if has_record == 0 {
+        return Err(anyhow::anyhow!("XRecord extension not available"));
+    }
+    Ok(())
+}
 
-        let mut record_range = XRecordAllocRange();
-        if record_range.is_null() {
-            XCloseDisplay(dpy_data);
-            XCloseDisplay(dpy_ctrl);
-            return Err(anyhow::anyhow!("Failed to alloc XRecordRange"));
-        }
+fn alloc_record_range() -> Result<*mut xrecord::XRecordRange> {
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: XRecordAllocRange is an XRecord FFI call; we check for null."
+    )]
+    let record_range = unsafe { XRecordAllocRange() };
+    if record_range.is_null() {
+        return Err(anyhow::anyhow!("Failed to alloc XRecordRange"));
+    }
+    Ok(record_range)
+}
 
-        (*record_range).device_events.first = u8::try_from(KeyPress)?;
-        (*record_range).device_events.last = u8::try_from(KeyRelease)?;
+fn init_record_range(record_range: *mut xrecord::XRecordRange, first: u8, last: u8) {
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: record_range is non-null from XRecordAllocRange."
+    )]
+    unsafe {
+        (*record_range).device_events.first = first;
+        (*record_range).device_events.last = last;
+    }
+}
 
-        let context = XRecordCreateContext(
-            dpy_data,
+fn create_record_context(
+    dpy: *mut Display,
+    record_range: *mut xrecord::XRecordRange,
+) -> xrecord::XRecordContext {
+    let mut record_range = record_range;
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: XRecordCreateContext is an XRecord FFI call with valid pointers."
+    )]
+    unsafe {
+        XRecordCreateContext(
+            dpy,
             0,
             &mut XRecordClientSpec::from(xrecord::XRecordAllClients),
             1,
@@ -497,53 +546,140 @@ fn run_xrecord_loop(shutdown: &Arc<AtomicBool>) -> Result<()> {
             )]
             &mut record_range,
             1,
-        );
+        )
+    }
+}
+
+fn free_record_range(record_range: *mut xrecord::XRecordRange) {
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: record_range was allocated by XRecordAllocRange and must be freed."
+    )]
+    unsafe {
         XFree(record_range.cast());
+    }
+}
 
-        if context == 0 {
-            XCloseDisplay(dpy_data);
-            XCloseDisplay(dpy_ctrl);
-            return Err(anyhow::anyhow!("Failed to create XRecordContext"));
-        }
+fn sync_display(dpy: *mut Display) {
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: XSync is an Xlib FFI call; dpy is valid."
+    )]
+    unsafe {
+        xlib::XSync(dpy, 0);
+    }
+}
 
-        xlib::XSync(dpy_data, 0);
+fn spawn_shutdown_thread(
+    dpy_ctrl: *mut Display,
+    shutdown: Arc<AtomicBool>,
+    context: xrecord::XRecordContext,
+) {
+    // SAFETY: dpy_ctrl passed as usize because *mut Display is !Send.
+    // The pointer remains valid because XRecordEnableContext blocks until
+    // the shutdown thread calls XRecordDisableContext, after which we clean up.
+    #[allow(
+        clippy::as_conversions,
+        reason = "usize to pointer cast required for FFI thread boundary"
+    )]
+    let dpy_ctrl_usize = dpy_ctrl as usize;
 
-        let shutdown_check = Arc::clone(shutdown);
-        let context_handle = context;
-
-        // SAFETY: dpy_ctrl passed as usize because *mut Display is !Send.
-        // The pointer remains valid because XRecordEnableContext blocks until
-        // the shutdown thread calls XRecordDisableContext, after which we clean up.
+    thread::spawn(move || {
         #[allow(
             clippy::as_conversions,
-            reason = "usize to pointer cast required for FFI thread boundary"
+            reason = "Restoring pointer from usize for FFI"
         )]
-        let dpy_ctrl_usize = dpy_ctrl as usize;
-
-        thread::spawn(move || {
-            #[allow(
-                clippy::as_conversions,
-                reason = "Restoring pointer from usize for FFI"
-            )]
-            let dpy = dpy_ctrl_usize as *mut Display;
-            while !shutdown_check.load(Ordering::SeqCst) {
-                thread::sleep(Duration::from_millis(500));
-            }
-            debug!("Shutting down XRecord context");
-            XRecordDisableContext(dpy, context_handle);
-            xlib::XSync(dpy, 0);
-        });
-
-        debug!("Starting XRecord loop");
-        if XRecordEnableContext(dpy_data, context, Some(record_callback), ptr::null_mut()) == 0 {
-            error!("XRecordEnableContext returned 0 (error)");
+        let dpy = dpy_ctrl_usize as *mut Display;
+        while !shutdown.load(Ordering::SeqCst) {
+            thread::sleep(Duration::from_millis(500));
         }
+        debug!("Shutting down XRecord context");
+        #[allow(
+            unsafe_code,
+            reason = "
+            SAFETY: dpy is the control Display* and context is a valid XRecordContext."
+        )]
+        unsafe {
+            XRecordDisableContext(dpy, context);
+        }
+        sync_display(dpy);
+    });
+}
 
-        debug!("XRecord loop exited");
-
-        XRecordFreeContext(dpy_data, context);
-        XCloseDisplay(dpy_data);
-        XCloseDisplay(dpy_ctrl);
+fn enable_record_context(dpy: *mut Display, context: xrecord::XRecordContext) -> i32 {
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: XRecordEnableContext is an XRecord FFI call with valid pointers."
+    )]
+    unsafe {
+        XRecordEnableContext(dpy, context, Some(record_callback), ptr::null_mut())
     }
+}
+
+fn free_record_context(dpy: *mut Display, context: xrecord::XRecordContext) {
+    #[allow(
+        unsafe_code,
+        reason = "
+        SAFETY: context was created successfully and must be released."
+    )]
+    unsafe {
+        XRecordFreeContext(dpy, context);
+    }
+}
+
+fn run_xrecord_loop(shutdown: &Arc<AtomicBool>) -> Result<()> {
+    let dpy_data = open_display("data")?;
+
+    // Separate control connection needed: XRecordEnableContext blocks, so we
+    // call XRecordDisableContext from another connection to unblock it.
+    let dpy_ctrl = match open_display("control") {
+        Ok(dpy_ctrl) => dpy_ctrl,
+        Err(err) => {
+            close_display(dpy_data);
+            return Err(err);
+        }
+    };
+
+    if let Err(err) = query_record_version(dpy_data) {
+        close_displays(dpy_data, dpy_ctrl);
+        return Err(err);
+    }
+
+    let record_range = match alloc_record_range() {
+        Ok(record_range) => record_range,
+        Err(err) => {
+            close_displays(dpy_data, dpy_ctrl);
+            return Err(err);
+        }
+    };
+
+    let first = u8::try_from(KeyPress)?;
+    let last = u8::try_from(KeyRelease)?;
+    init_record_range(record_range, first, last);
+
+    let context = create_record_context(dpy_data, record_range);
+    free_record_range(record_range);
+
+    if context == 0 {
+        close_displays(dpy_data, dpy_ctrl);
+        return Err(anyhow::anyhow!("Failed to create XRecordContext"));
+    }
+
+    sync_display(dpy_data);
+    spawn_shutdown_thread(dpy_ctrl, Arc::clone(shutdown), context);
+
+    debug!("Starting XRecord loop");
+    let enable_ok = enable_record_context(dpy_data, context);
+    if enable_ok == 0 {
+        error!("XRecordEnableContext returned 0 (error)");
+    }
+
+    debug!("XRecord loop exited");
+
+    free_record_context(dpy_data, context);
+    close_displays(dpy_data, dpy_ctrl);
     Ok(())
 }
