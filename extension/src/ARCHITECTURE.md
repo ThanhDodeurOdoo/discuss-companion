@@ -109,26 +109,6 @@ To avoid this, the extension uses a small, Firefox-only fallback parser for WS f
 
 This keeps the wire format unchanged and avoids runtime exceptions in Firefox while preserving behavior.
 
-## Internal message types
-
-### Page → Extension
-- `ask-is-enabled`
-- `subscribe`
-- `unsubscribe`
-- `is-talking`
-- `ask-version`
-
-### Service Worker → Content
-- `content-subscribe`
-- `content-unsubscribe`
-- `content-owner-update`
-- `content-call-action`
-- `content-refresh-call-state`
-
-### Content → Service Worker
-- `content-connection-state`
-- `content-call-state-update`
-
 ## Security and permissions
 
 - `page_bridge.js` is injected as a module script into the page context.

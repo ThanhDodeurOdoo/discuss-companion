@@ -7,13 +7,6 @@
   - [Core Components](#core-components)
     - [Backend (Rust)](#backend-rust)
     - [Frontend (Owl)](#frontend-owl)
-  - [Communication \& Data Flow](#communication--data-flow)
-    - [Internal Communication (IPC)](#internal-communication-ipc)
-    - [External Communication (WebSocket)](#external-communication-websocket)
-  - [Key Workflows](#key-workflows)
-    - [Push-to-Talk Activation](#push-to-talk-activation)
-    - [Key Binding Configuration](#key-binding-configuration)
-
 
 ## Architecture Overview
 
@@ -57,15 +50,15 @@ The system consists of three main layers:
 ### Backend (Rust)
 Located in `app/backend`, it is responsible for input handling, runtime wiring, and the WebSocket server.
 
-| Module                                         | Description                                                                                                                                  |
-| :--------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`lib.rs`](backend/src/lib.rs)                 | Entry point. Initializes logging/profiling and delegates app composition to the runtime module.                                               |
-| [`runtime.rs`](backend/src/runtime.rs)         | **Runtime wiring**: builds the Tauri `Builder`, sets up the WS server, tray, menus, and starts the PTT engine and event loop.                |
-| [`api/commands.rs`](backend/src/api/commands.rs) | Tauri command handlers (IPC from frontend). Includes binding updates, WS port changes, app/window commands, and state queries.              |
-| [`api/ws_server.rs`](backend/src/api/ws_server.rs) | WebSocket server for the browser extension. Accepts connections and broadcasts PTT + call state via FlatBuffers.                           |
-| [`protocol/`](backend/src/protocol)            | Domain types and serialization. `types.rs` defines `KeyBinding`, `CallState`, etc. `messages.rs` builds FlatBuffers payloads.                |
-| [`ptt_engine/`](backend/src/ptt_engine)        | OS-specific global keyboard hooks (CoreGraphics on macOS, X11 on Linux). Emits PTT events to the runtime.                                    |
-| [`interface/`](backend/src/interface)          | UI integration for system surfaces: tray, call controls window, and menu handling.                                                          |
+| Module                                             | Description                                                                                                                    |
+| :------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
+| [`lib.rs`](backend/src/lib.rs)                     | Entry point. Initializes logging/profiling and delegates app composition to the runtime module.                                |
+| [`runtime.rs`](backend/src/runtime.rs)             | **Runtime wiring**: builds the Tauri `Builder`, sets up the WS server, tray, menus, and starts the PTT engine and event loop.  |
+| [`api/commands.rs`](backend/src/api/commands.rs)   | Tauri command handlers (IPC from frontend). Includes binding updates, WS port changes, app/window commands, and state queries. |
+| [`api/ws_server.rs`](backend/src/api/ws_server.rs) | WebSocket server for the browser extension. Accepts connections and broadcasts PTT + call state via FlatBuffers.               |
+| [`protocol/`](backend/src/protocol)                | Domain types and serialization. `types.rs` defines `KeyBinding`, `CallState`, etc. `messages.rs` builds FlatBuffers payloads.  |
+| [`ptt_engine/`](backend/src/ptt_engine)            | OS-specific global keyboard hooks (CoreGraphics on macOS, X11 on Linux). Emits PTT events to the runtime.                      |
+| [`interface/`](backend/src/interface)              | UI integration for system surfaces: tray, call controls window, and menu handling.                                             |
 
 ### Frontend (Owl)
 Located in `app/frontend`, the UI is built using the **Owl Framework**.
@@ -76,139 +69,3 @@ Located in `app/frontend`, the UI is built using the **Owl Framework**.
 | [`app_plugin.ts`](frontend/app_plugin.ts)       | The core controller. Manages global state (recording mode, logs, connection status, current binding) using signals. It listens for backend events and invokes commands. |
 | [`companion.ts`](frontend/companion.ts)         | The main layout component hosting the sub-pages.                                                                                                                        |
 | [`control_page.xml`](frontend/control_page.xml) | The interface for viewing status and recording new keybindings.                                                                                                         |
-
----
-
-## Communication & Data Flow
-
-### Internal Communication (IPC)
-Communication between the Rust Backend and the Owl Frontend uses Tauri commands plus a binary channel for FlatBuffers payloads.
-
--   **Commands (JS -> Rust)**:
-    -   `invoke("set_recording_mode")`: Tells the backend to stop intercepting PTT for activation and instead capture the next keypress as the new binding.
-    -   `invoke("update_binding")`: Saves the new keybinding to persistent storage.
-    -   `invoke("establish_channel")`: Establishes a binary channel for FlatBuffers events.
--   **Channel events (Rust -> JS, via FlatBuffers)**:
-    -   `ptt-event`: Emitted when PTT is pressed/released (derived from `PttState`).
-    -   `ws-connection` / `ws-disconnection`: Extension connection status (from `WsConnection`).
-    -   `call-state`: Call status updates (from `CallState`).
-    -   `error`: Backend error events (from `BackendError`).
-    -   `ws-message`: Incoming WS control messages forwarded to the UI.
--   **Tauri events (Rust -> JS)**:
-    -   `ws-server-status`: Sent on WS server restarts (port + status).
-
-### External Communication (WebSocket)
-The application runs a local WebSocket server to communicate with Odoo.
-
-**Protocol**: [FlatBuffers](https://google.github.io/flatbuffers/)
-**Schemas**:
--   `ws_protocol.fbs`: Extension <-> backend WebSocket messages.
--   `ipc_protocol.fbs`: Backend <-> frontend IPC messages (via Tauri channels).
-
-**WS message types (`ws_protocol.fbs`)**:
--   **Messages**: Binary payloads optimized for low latency.
--   **Types**:
-    -   `PttDown`: Sent when the PTT key is pressed.
-    -   `PttUp`: Sent when the PTT key is released.
-    -   `Status`: Periodic or requested status updates.
-    -   `CallState`: Call state updates from the web client.
-    -   `BindingInfo`: Current key binding info.
-    -   `Ping` / `Pong`: Heartbeat to maintain connection.
-    -   `SetBinding`: Allows the remote client to configure the binding.
-    -   `GetBinding`: Request current binding.
-    -   `Shutdown`: Request backend shutdown.
-    -   `Error`: Error payloads from the backend.
-
-**Why use FlatBuffers?**
-FlatBuffers allows us to send binary data directly without parsing/unpacking overhead, ensuring minimal latency and CPU usage.
-
----
-
-## Key Workflows
-
-### Push-to-Talk Activation
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant OS as OS / Platform Hook
-    participant Rust as Rust Backend
-    participant WS as WebSocket Server
-    participant UI as Frontend UI
-    participant Odoo as Odoo Client
-
-    User->>OS: Holds PTT Key (e.g. Space)
-    OS->>Rust: Intercepts KeyDown Event
-    Rust->>Rust: Verify Binding Match
-    
-    par Broadcast
-        Rust->>WS: Broadcast PttDown (FlatBuffers)
-        WS->>Odoo: PttDown Message
-        Odoo->>Odoo: Unmute Microphone
-    and Feedback
-        Rust->>UI: Emit "ptt-event"
-        UI->>User: Show Active Icon (Green)
-    end
-
-    User->>OS: Releases PTT Key
-    OS->>Rust: Intercepts KeyUp Event
-    
-    par Broadcast
-        Rust->>WS: Broadcast PttUp
-        WS->>Odoo: PttUp Message
-        Odoo->>Odoo: Mute Microphone
-    and Feedback
-        Rust->>UI: Emit "ptt-event"
-        UI->>User: Show Idle Icon (Gray)
-    end
-```
-
-1.  **User holds the global shortcut key** (e.g., Spacebar).
-2.  **PTT Engine** (`backend/src/ptt_engine`) intercepts the OS event.
-3.  **PTT Engine** checks if the key matches the configured binding.
-4.  **Runtime** (`backend/src/runtime.rs`) receives the event via `PttHandler`.
-5.  **If Match**:
-    -   Updates internal state `is_active = true`.
-    -   Changes Tray Icon to "Active" (Green).
-    -   **Broadcasts** `PttDown` message to all connected WebSocket clients.
-    -   Emits `ptt-event` to the frontend UI (for visual feedback).
-6.  **Odoo Client** receives `PttDown` and unmutes the microphone.
-7.  **User releases the key**.
-8.  Reverse process occurs (`PttUp` sent), and Odoo mutes the microphone.
-
-### Key Binding Configuration
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant UI as Frontend UI
-    participant Rust as Rust Backend
-    participant OS as OS / Platform Hook
-
-    User->>UI: Clicks "Record" Button
-    UI->>Rust: invoke("set_recording_mode", true)
-    Rust->>Rust: Enable Recording Flag
-    
-    User->>OS: Presses New Key Combination
-    OS->>Rust: Intercepts Key Event
-    Rust->>Rust: Check Recording Flag == true
-    Rust->>UI: Emit "ptt-event" (with new key info)
-    
-    UI->>UI: Update Local State (currentBinding)
-    UI->>Rust: invoke("set_recording_mode", false)
-    UI->>Rust: invoke("update_binding", newKey)
-    Rust->>Rust: Persist to Store
-    UI->>User: Display New Binding
-```
-
-1.  User clicks the **"Record"** button in the UI.
-2.  Frontend calls `set_recording_mode(true)`.
-3.  Backend enables "recording mode" flag.
-4.  User presses a new key combination.
-5.  Backend captures this specific event.
-6.  Backend emits `ptt-event` with the new key details to Frontend.
-7.  Frontend:
-    -   Updates local state (`currentBinding`).
-    -   Calls `set_recording_mode(false)`.
-    -   Calls `update_binding(...)` to persist the change.
-    -   Displays the new binding in the UI.

@@ -18,9 +18,10 @@ The extension is derived from Odoo's own extension for Push-to-Talk.
 
 ### When running alonside the app:
 
-- System-wide Push-to-Talk via Tauri Desktop Agent
-- WebSocket communication (no Native Messaging hurdles)
-- Automatic discovery for Odoo instances
+- System-wide Push-to-Talk
+- Systray "talking" indicator
+- Mute/Unmute/camera/share-screen/leave-call in systray
+
 
 ## How it works
-This extension connects to a WebSocket server running locally on port `49152` (provided by the Discuss Companion Tauri app). It acts as a bridge between the system-wide key events captured by the desktop app and the Odoo web interface.
+This extension connects to a WebSocket server running locally (provided by the Discuss Companion app). It acts as a bridge between the system-wide key events captured by the desktop app and Odoo (web).

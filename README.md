@@ -127,18 +127,18 @@ npm run build:app # Builds for the current OS
 
 ### Continuous Integration
 The project includes three main GitHub Actions suites that run on every push and pull request to `main` and `master`:
-- **UI**: Handles frontend linting (ESLint) and app-specific testing. Tests only run if linting passes.
-- **Extension**: Handles testing for the Chrome extension components.
-- **Systems**: Handles backend (Rust) linting (fmt, clippy) and testing. Tests only run if linting passes.
-- **API Tests**: Handles integration testing for both IPC and WebSocket APIs.
+- **UI**: app front-end lint + tests
+- **Extension**: extension lint + test
+- **API Tests**: integration testing for both IPC and WebSocket APIs.
+And full baclkend tests that run on specific platforms (macOS, Debian X11 and Ubuntu Wayland).
 
 ---
 
 ## Usage
 1.  Launch the **Discuss Companion**.
-2.  Ensure the status indicator says **"Accessibility Granted"**.
-3.  In Odoo Discuss, enter a voice call.
-4.  The agent will automatically detect your PTT key (Default: **Space**) and activate your microphone in Odoo.
+2.  Ensure the status indicator says **"Accessibility Granted"** (on macOS you need to give both "Accessibility" and "Input Monitoring" permissions).
+3.  On the extension, press the gear iconn and check "use discuss companion"
+4.  In Odoo Discuss, enter a voice call.
 5.  Use the **System Tray** icon (top right of your macOS bar) to Show/Hide the monitoring window or Quit the app.
 
 ---
@@ -146,23 +146,13 @@ The project includes three main GitHub Actions suites that run on every push and
 ## Configuration
 The WebSocket port (default: 49152) can be configured if needed (e.g. to avoid conflicts):
 -   **App**: Change it directly in the main interface and click "Reload".
--   **Extension**: Right-click the extension icon -> Options to set the matching port.
+-   **Extension**: click the extension icon -> Options -> when "use discuss companion" is checked, an option to change the posrt is available.
 
 ---
 
 ## Security & Privacy
 -   The "Event Tap" only listens for the specific key codes configured for PTT.
 -   The WebSocket server runs on `localhost` (configurable) and does not accept external connections.
-
----
-
-## Safety Features
-The application includes several mechanisms to ensure the microphone does not get stuck in the "active" state:
-1.  **Robust Key Tracking**: The system tracks the specific key states to prevent stuck keys on partial release.
-2.  **Safety Release Button**: A small "force release" button in the main window immediately forces a "PTT Up" signal, resetting the internal state.
-3.  **Auto-Release on Quit**: When the application quits (Command-Q or Menu Exit), it automatically sends a "PTT Up" signal to ensure your Odoo microphone is muted before the process terminates.
-
----
 
 ## Contributing
 Interested in contributing? Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on code style, testing, and more.
