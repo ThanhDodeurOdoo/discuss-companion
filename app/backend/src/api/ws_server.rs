@@ -30,13 +30,13 @@ static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 static CURRENT_SERVER_ID: AtomicU64 = AtomicU64::new(0);
 
 pub fn is_connected() -> bool {
-    CONNECTION_COUNT.load(Ordering::SeqCst) > 0
+    CONNECTION_COUNT.load(Ordering::Acquire) > 0
 }
 
 // Helper for testing
 pub fn reset_connection_count() {
-    CONNECTION_COUNT.store(0, Ordering::SeqCst);
-    CURRENT_SERVER_ID.store(0, Ordering::SeqCst);
+    CONNECTION_COUNT.store(0, Ordering::Release);
+    CURRENT_SERVER_ID.store(0, Ordering::Release);
 }
 
 pub async fn start_ws_server<R: tauri::Runtime>(
@@ -46,8 +46,8 @@ pub async fn start_ws_server<R: tauri::Runtime>(
     app_handle: tauri::AppHandle<R>,
     conn_tx: crossbeam_channel::Sender<bool>,
 ) {
-    let server_id = CURRENT_SERVER_ID.fetch_add(1, Ordering::SeqCst) + 1;
-    CONNECTION_COUNT.store(0, Ordering::SeqCst);
+    let server_id = CURRENT_SERVER_ID.fetch_add(1, Ordering::AcqRel) + 1;
+    CONNECTION_COUNT.store(0, Ordering::Release);
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = match TcpListener::bind(&addr).await {
         Ok(l) => l,
@@ -108,7 +108,7 @@ async fn handle_connection<R: tauri::Runtime>(
     mut shutdown_rx: broadcast::Receiver<()>,
     server_id: u64,
 ) {
-    let is_current_server = |id| CURRENT_SERVER_ID.load(Ordering::SeqCst) == id;
+    let is_current_server = |id| CURRENT_SERVER_ID.load(Ordering::Acquire) == id;
     let callback = |request: &handshake::server::Request, response: handshake::server::Response| {
         info!("Received handshake request from: {:?}", addr);
         for (name, value) in request.headers() {
@@ -126,7 +126,7 @@ async fn handle_connection<R: tauri::Runtime>(
     };
     info!("New WebSocket connection from: {}", addr);
     let counted = if is_current_server(server_id) {
-        if CONNECTION_COUNT.fetch_add(1, Ordering::SeqCst) == 0 {
+        if CONNECTION_COUNT.fetch_add(1, Ordering::AcqRel) == 0 {
             let _ = conn_tx.send(true);
         }
         true
@@ -241,7 +241,7 @@ async fn handle_connection<R: tauri::Runtime>(
     }
     if counted
         && is_current_server(server_id)
-        && CONNECTION_COUNT.fetch_sub(1, Ordering::SeqCst) == 1
+        && CONNECTION_COUNT.fetch_sub(1, Ordering::AcqRel) == 1
     {
         let _ = conn_tx.send(false);
         let payload = encode_ws_connection(ipc_protocol::ConnectionStatus::Disconnected);

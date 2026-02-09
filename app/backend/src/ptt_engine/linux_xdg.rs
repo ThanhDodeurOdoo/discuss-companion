@@ -45,7 +45,7 @@ impl PttEngine for LinuxXdgEngine {
         shutdown: &Arc<AtomicBool>,
     ) -> Result<()> {
         warn!("start_engine not implemented for Linux. Waiting for shutdown.");
-        while !shutdown.load(Ordering::SeqCst) {
+        while !shutdown.load(Ordering::Relaxed) {
             thread::sleep(Duration::from_millis(100));
         }
         Ok(())

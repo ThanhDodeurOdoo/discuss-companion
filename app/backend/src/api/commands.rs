@@ -161,7 +161,7 @@ pub fn quit_app(app_handle: tauri::AppHandle) {
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 #[must_use]
 pub fn get_ws_port(state: State<'_, WsState>) -> u16 {
-    state.port.load(Ordering::SeqCst)
+    state.port.load(Ordering::Relaxed)
 }
 
 #[tauri::command]
@@ -185,7 +185,7 @@ pub fn update_ws_port(
             let _ = store.save();
         }
 
-        let current_port = state.port.load(Ordering::SeqCst);
+        let current_port = state.port.load(Ordering::Relaxed);
         if current_port == port {
             let _ = app_handle.emit(
                 "ws-server-status",
@@ -197,7 +197,7 @@ pub fn update_ws_port(
             info!("WS server port unchanged, frontend notified.");
             return;
         }
-        state.port.store(port, Ordering::SeqCst);
+        state.port.store(port, Ordering::Relaxed);
 
         // Shutdown previous server
         // SAFETY: Mutex poisoning is fatal/unrecoverable in this context
