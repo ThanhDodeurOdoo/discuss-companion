@@ -16,9 +16,9 @@ use crate::{
     ptt_engine::PttEngine,
 };
 
-pub struct LinuxEngine;
+pub struct LinuxXdgEngine;
 
-impl PttEngine for LinuxEngine {
+impl PttEngine for LinuxXdgEngine {
     fn set_binding(&self, _binding: KeyBinding) {
         warn!("set_binding not implemented for Linux");
     }
@@ -52,7 +52,7 @@ impl PttEngine for LinuxEngine {
     }
 }
 
-pub fn get_engine() -> &'static LinuxEngine {
-    static ENGINE: LinuxEngine = LinuxEngine;
+pub fn get_engine() -> &'static LinuxXdgEngine {
+    static ENGINE: LinuxXdgEngine = LinuxXdgEngine;
     &ENGINE
 }

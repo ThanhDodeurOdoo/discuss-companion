@@ -53,10 +53,10 @@ pub trait PttEngine: Send + Sync {
 pub type Engine = macos::MacosEngine;
 
 #[cfg(all(target_os = "linux", feature = "x11"))]
-pub type Engine = linux_x11::DebianX11Engine;
+pub type Engine = linux_x11::LinuxX11Engine;
 
 #[cfg(all(target_os = "linux", not(feature = "x11")))]
-pub type Engine = linux_xdg::LinuxEngine;
+pub type Engine = linux_xdg::LinuxXdgEngine;
 
 #[cfg(target_os = "windows")]
 pub type Engine = windows::WindowsEngine;

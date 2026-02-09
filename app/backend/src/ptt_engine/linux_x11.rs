@@ -34,7 +34,7 @@ static BINDING_PACKED: AtomicU32 = AtomicU32::new(DEFAULT_BINDING_PACKED);
 static EVENT_SENDER: OnceLock<Sender<OutgoingMessage>> = OnceLock::new();
 
 #[derive(Clone, Copy)]
-pub struct DebianX11Engine;
+pub struct LinuxX11Engine;
 
 #[allow(
     clippy::as_conversions,
@@ -52,7 +52,7 @@ const _MOD3_MASK: u32 = 1 << 5;
 const MOD4_MASK: u32 = 1 << 6; // Meta / Super
 const _MOD5_MASK: u32 = 1 << 7;
 
-impl PttEngine for DebianX11Engine {
+impl PttEngine for LinuxX11Engine {
     fn set_binding(&self, binding: KeyBinding) {
         let packed = pack_binding(binding);
         debug!("Setting binding: {:?} (packed: {})", binding, packed);
@@ -119,8 +119,8 @@ impl PttEngine for DebianX11Engine {
     }
 }
 
-pub fn get_engine() -> &'static DebianX11Engine {
-    static ENGINE: DebianX11Engine = DebianX11Engine;
+pub fn get_engine() -> &'static LinuxX11Engine {
+    static ENGINE: LinuxX11Engine = LinuxX11Engine;
     &ENGINE
 }
 
