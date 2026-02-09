@@ -56,15 +56,15 @@ impl PttEngine for LinuxX11Engine {
     fn set_binding(&self, binding: KeyBinding) {
         let packed = pack_binding(binding);
         debug!("Setting binding: {:?} (packed: {})", binding, packed);
-        BINDING_PACKED.store(packed, Ordering::SeqCst);
+        BINDING_PACKED.store(packed, Ordering::Release);
     }
 
     fn set_recording(&self, recording: bool) {
-        IS_RECORDING.store(recording, Ordering::SeqCst);
+        IS_RECORDING.store(recording, Ordering::Release);
     }
 
     fn get_binding(&self) -> KeyBinding {
-        binding_from_packed(BINDING_PACKED.load(Ordering::SeqCst))
+        binding_from_packed(BINDING_PACKED.load(Ordering::Acquire))
     }
 
     fn force_ptt_up(&self) {
@@ -125,11 +125,11 @@ pub fn get_engine() -> &'static LinuxX11Engine {
 }
 
 fn set_ptt_held(held: bool) {
-    HELD.store(held, Ordering::SeqCst);
+    HELD.store(held, Ordering::Release);
 }
 
 fn get_ptt_state() -> PttState {
-    if HELD.load(Ordering::SeqCst) {
+    if HELD.load(Ordering::Acquire) {
         PttState::Held
     } else {
         PttState::Idle
@@ -271,9 +271,9 @@ fn handle_key_event(type_code: i32, keycode: u8, state: u32) {
         x11_keycode, keycode, state, modifiers_mask, modifiers
     );
 
-    let packed_binding = BINDING_PACKED.load(Ordering::SeqCst);
+    let packed_binding = BINDING_PACKED.load(Ordering::Acquire);
     let (binding_code, binding_mask) = unpack_binding(packed_binding);
-    let recording = IS_RECORDING.load(Ordering::SeqCst);
+    let recording = IS_RECORDING.load(Ordering::Acquire);
 
     let ts = current_timestamp();
 
@@ -592,7 +592,7 @@ fn spawn_shutdown_thread(
             reason = "Restoring pointer from usize for FFI"
         )]
         let dpy = dpy_ctrl_usize as *mut Display;
-        while !shutdown.load(Ordering::SeqCst) {
+        while !shutdown.load(Ordering::Relaxed) {
             thread::sleep(Duration::from_millis(500));
         }
         debug!("Shutting down XRecord context");

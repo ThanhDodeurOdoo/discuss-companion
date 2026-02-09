@@ -111,21 +111,21 @@ pub struct MacosEngine;
 
 impl PttEngine for MacosEngine {
     fn set_binding(&self, binding: KeyBinding) {
-        BINDING_PACKED.store(pack_binding(binding), Ordering::SeqCst);
+        BINDING_PACKED.store(pack_binding(binding), Ordering::Release);
     }
 
     fn set_recording(&self, recording: bool) {
-        IS_RECORDING.store(recording, Ordering::SeqCst);
+        IS_RECORDING.store(recording, Ordering::Release);
     }
 
     fn get_binding(&self) -> KeyBinding {
-        binding_from_packed(BINDING_PACKED.load(Ordering::SeqCst))
+        binding_from_packed(BINDING_PACKED.load(Ordering::Acquire))
     }
 
     fn force_ptt_up(&self) {
         info!("Forcing PTT UP (Safety Release)");
         set_ptt_held(false);
-        PRIMARY_KEY_HELD.store(false, Ordering::SeqCst);
+        PRIMARY_KEY_HELD.store(false, Ordering::Release);
 
         let binding = self.get_binding();
         let ts = current_timestamp();
@@ -193,7 +193,7 @@ impl PttEngine for MacosEngine {
             )
         };
 
-        GLOBAL_TAP.store(tap.cast::<c_void>(), Ordering::SeqCst);
+        GLOBAL_TAP.store(tap.cast::<c_void>(), Ordering::Release);
 
         if tap.is_null() {
             error!("Failed to create event tap - NULL return");
@@ -240,7 +240,7 @@ impl PttEngine for MacosEngine {
 
         info!("Event tap started, listening for PTT key events");
 
-        while !shutdown.load(Ordering::SeqCst) {
+        while !shutdown.load(Ordering::Relaxed) {
             #[allow(
                 unsafe_code,
                 reason = "
@@ -262,7 +262,7 @@ pub fn get_engine() -> &'static MacosEngine {
 }
 
 fn get_ptt_state() -> PttState {
-    if HELD.load(Ordering::SeqCst) {
+    if HELD.load(Ordering::Acquire) {
         PttState::Held
     } else {
         PttState::Idle
@@ -270,7 +270,7 @@ fn get_ptt_state() -> PttState {
 }
 
 fn set_ptt_held(held: bool) {
-    HELD.store(held, Ordering::SeqCst);
+    HELD.store(held, Ordering::Release);
 }
 
 fn send_event(msg: OutgoingMessage) {
@@ -296,7 +296,7 @@ extern "C" fn event_callback(
     if event_type == K_CG_EVENT_TAP_DISABLED_BY_TIMEOUT
         || event_type == K_CG_EVENT_TAP_DISABLED_BY_USER_INTEREST
     {
-        let tap = GLOBAL_TAP.load(Ordering::SeqCst);
+        let tap = GLOBAL_TAP.load(Ordering::Acquire);
         if !tap.is_null() {
             info!(
                 "Event tap disabled by system (type={}), re-enabling...",
@@ -360,15 +360,15 @@ extern "C" fn event_callback(
     // 1. Binding changes are rare (user-initiated configuration)
     // 2. The worst case is a single PTT event firing slightly early or late
     // 3. The next event will use consistent state
-    let packed_binding = BINDING_PACKED.load(Ordering::SeqCst);
+    let packed_binding = BINDING_PACKED.load(Ordering::Acquire);
     let (binding_code, binding_mask) = unpack_binding(packed_binding);
-    let recording = IS_RECORDING.load(Ordering::SeqCst);
+    let recording = IS_RECORDING.load(Ordering::Acquire);
     let mut is_repeat = false;
 
     // Track primary key state
     if event_type == K_CG_EVENT_KEY_DOWN {
         if keycode == binding_code {
-            PRIMARY_KEY_HELD.store(true, Ordering::SeqCst);
+            PRIMARY_KEY_HELD.store(true, Ordering::Release);
         }
         #[allow(
             unsafe_code,
@@ -381,10 +381,10 @@ extern "C" fn event_callback(
             is_repeat = CGEventGetIntegerValueField(event, K_CG_KEYBOARD_EVENT_AUTOREPEAT) != 0;
         }
     } else if event_type == K_CG_EVENT_KEY_UP && keycode == binding_code {
-        PRIMARY_KEY_HELD.store(false, Ordering::SeqCst);
+        PRIMARY_KEY_HELD.store(false, Ordering::Release);
     }
 
-    let primary_held = PRIMARY_KEY_HELD.load(Ordering::SeqCst);
+    let primary_held = PRIMARY_KEY_HELD.load(Ordering::Acquire);
     let current_ptt_state = get_ptt_state();
     debug!(
         "State: primary_held={} target={} recording={}",
@@ -527,9 +527,9 @@ mod tests {
     fn test_recording_toggle() {
         let engine = MacosEngine;
         engine.set_recording(true);
-        assert!(IS_RECORDING.load(Ordering::SeqCst));
+        assert!(IS_RECORDING.load(Ordering::Acquire));
         engine.set_recording(false);
-        assert!(!IS_RECORDING.load(Ordering::SeqCst));
+        assert!(!IS_RECORDING.load(Ordering::Acquire));
     }
 
     #[test]

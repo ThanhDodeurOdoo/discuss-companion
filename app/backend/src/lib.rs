@@ -126,5 +126,5 @@ pub fn run() {
 
     // Cleanup: Send shutdown to WS server if still running
     let _ = ws_shutdown_tx.send(());
-    shutdown.store(true, Ordering::SeqCst);
+    shutdown.store(true, Ordering::Release);
 }
