@@ -13,6 +13,7 @@ await import("../src/service_worker.ts");
 const capturedHandleMessage = chrome.runtime.onMessage.addListener.mock.calls[0][0];
 const capturedOnRemoved = chrome.tabs.onRemoved.addListener.mock.calls[0][0];
 const capturedOnClicked = chrome.action.onClicked.addListener.mock.calls[0][0];
+const capturedOnCommand = chrome.commands.onCommand.addListener.mock.calls[0][0];
 
 const { CallActionType } = await import("../src/call_actions.ts");
 
@@ -38,7 +39,7 @@ describe("Extension Service Worker", () => {
         expect(sendResponse).toHaveBeenCalledWith({ status: "ok" });
     });
 
-    test("handles subscribe for non-owner tab", async () => {
+    test("subscribe transfers ownership to the subscribing tab", async () => {
         mockStorage.isTalkingByTabId[111] = false;
         mockStorage.callTabId = 111;
         const sendResponse = jest.fn();
@@ -46,9 +47,14 @@ describe("Extension Service Worker", () => {
         capturedHandleMessage({ type: "subscribe" }, { tab: { id: 222 } }, sendResponse);
         await flushPromises();
 
+        expect(mockStorage.callTabId).toBe(222);
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(111, {
+            type: "content-owner-update",
+            value: { isOwner: false }
+        });
         expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(222, {
             type: "content-subscribe",
-            value: { isOwner: false }
+            value: { isOwner: true }
         });
     });
 
@@ -76,30 +82,10 @@ describe("Extension Service Worker", () => {
         });
     });
 
-    test("handles ask-is-enabled message", async () => {
-        const sendResponse = jest.fn();
-        capturedHandleMessage({ type: "ask-is-enabled" }, { tab: { id: 123 } }, sendResponse);
-        await flushPromises();
-
-        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(123, {
-            from: "discuss-push-to-talk",
-            type: "answer-is-enabled"
-        });
-        expect(sendResponse).toHaveBeenCalledWith({ status: "ok" });
-    });
-
-    test("handles ask-version message", async () => {
-        const sendResponse = jest.fn();
-        capturedHandleMessage({ type: "ask-version" }, {}, sendResponse);
-        await flushPromises();
-
-        expect(sendResponse).toHaveBeenCalledWith("1.0.0");
-    });
-
     test("forwards call-action to content script", async () => {
         mockStorage.callTabId = 123;
-        chrome.tabs.sendMessage.mockImplementation((_tabId, _message, callback) => {
-            callback({ status: "ok", didRun: true, state: { isMute: true } });
+        chrome.tabs.sendMessage.mockImplementationOnce((_tabId, _message, callback) => {
+            callback?.({ status: "ok", didRun: true, state: { isMute: true } });
         });
         const sendResponse = jest.fn();
 
@@ -120,8 +106,8 @@ describe("Extension Service Worker", () => {
 
     test("forwards refresh-call-state to content script", async () => {
         mockStorage.callTabId = 123;
-        chrome.tabs.sendMessage.mockImplementation((_tabId, _message, callback) => {
-            callback({ status: "ok", state: { isMute: false } });
+        chrome.tabs.sendMessage.mockImplementationOnce((_tabId, _message, callback) => {
+            callback?.({ status: "ok", state: { isMute: false } });
         });
         const sendResponse = jest.fn();
 
@@ -178,6 +164,18 @@ describe("Extension Service Worker", () => {
 
         expect(mockStorage.callState).toEqual(state);
         expect(sendResponse).toHaveBeenCalledWith({ status: "ok" });
+    });
+
+    test("routes keyboard commands to content-ptt-command", async () => {
+        mockStorage.isTalkingByTabId[123] = false;
+
+        capturedOnCommand("ptt-pressed");
+        await flushPromises();
+
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(123, {
+            type: "content-ptt-command",
+            value: { command: "ptt-down" }
+        });
     });
 
     test("removes tab from storage on tab removal", async () => {

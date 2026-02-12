@@ -24,12 +24,18 @@ export type ContentRefreshCallStateMessage = {
     type: "content-refresh-call-state";
 };
 
+export type ContentPttCommandMessage = {
+    type: "content-ptt-command";
+    value: { command: "ptt-down" | "ptt-up" | "toggle-voice" };
+};
+
 export type SwToContentMessage =
     | ContentSubscribeMessage
     | ContentUnsubscribeMessage
     | ContentOwnerUpdateMessage
     | ContentCallActionMessage
-    | ContentRefreshCallStateMessage;
+    | ContentRefreshCallStateMessage
+    | ContentPttCommandMessage;
 
 export type ContentConnectionStateMessage = {
     type: "content-connection-state";
@@ -48,7 +54,8 @@ const CONTENT_MESSAGE_TYPES = new Set([
     "content-unsubscribe",
     "content-owner-update",
     "content-call-action",
-    "content-refresh-call-state"
+    "content-refresh-call-state",
+    "content-ptt-command"
 ]);
 
 export function isSwToContentMessage(value: unknown): value is SwToContentMessage {

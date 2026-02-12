@@ -165,7 +165,6 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
 
         if (
             !tabId &&
-            type !== "ask-version" &&
             type !== "call-action" &&
             type !== "refresh-call-state" &&
             type !== "focus-call-tab" &&
@@ -183,16 +182,20 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 const previousOwner = await getCallTabId();
                 isTalkingByTabId[safeTabId] = false;
                 await setIsTalkingByTabId(isTalkingByTabId);
-                const nextOwner = await syncCallTabIdFromMap(isTalkingByTabId);
-                if (previousOwner !== nextOwner && nextOwner !== null && nextOwner !== safeTabId) {
-                    sendToContentTab(nextOwner, {
+                await setActiveCallTab(safeTabId);
+                if (
+                    previousOwner !== null &&
+                    previousOwner !== safeTabId &&
+                    isTalkingByTabId[previousOwner] !== undefined
+                ) {
+                    sendToContentTab(previousOwner, {
                         type: "content-owner-update",
-                        value: { isOwner: true }
+                        value: { isOwner: false }
                     });
                 }
                 sendToContentTab(safeTabId, {
                     type: "content-subscribe",
-                    value: { isOwner: nextOwner === safeTabId }
+                    value: { isOwner: true }
                 });
                 sendResponse?.({ status: "ok" });
                 break;
@@ -220,16 +223,6 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 sendResponse?.({ status: "ok" });
                 break;
             }
-            case "ask-is-enabled":
-                chrome.tabs.sendMessage(safeTabId, {
-                    from: "discuss-push-to-talk",
-                    type: "answer-is-enabled"
-                });
-                sendResponse?.({ status: "ok" });
-                break;
-            case "ask-version":
-                sendResponse(chrome.runtime.getManifest().version);
-                break;
             case "call-action": {
                 const callTabId = await getCallTabId();
                 if (callTabId === null) {
@@ -311,20 +304,20 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
             switch (command as Command) {
                 case "toggle-voice":
                     chrome.tabs.sendMessage(tabId, {
-                        from: "discuss-push-to-talk",
-                        type: "toggle-voice"
+                        type: "content-ptt-command",
+                        value: { command: "toggle-voice" }
                     });
                     break;
                 case "ptt-pressed":
                     chrome.tabs.sendMessage(tabId, {
-                        from: "discuss-push-to-talk",
-                        type: "push-to-talk-pressed"
+                        type: "content-ptt-command",
+                        value: { command: "ptt-down" }
                     });
                     break;
                 case "ptt-released":
                     chrome.tabs.sendMessage(tabId, {
-                        from: "discuss-push-to-talk",
-                        type: "push-to-talk-released"
+                        type: "content-ptt-command",
+                        value: { command: "ptt-up" }
                     });
                     break;
             }

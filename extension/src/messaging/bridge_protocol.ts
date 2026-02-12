@@ -3,11 +3,13 @@ export const BRIDGE_CHANNEL = "discuss-companion-bridge" as const;
 export type BridgeRequestType =
     | "call-action"
     | "read-call-state"
-    | "start-observer"
-    | "stop-observer"
-    | "get-call-info";
+    | "get-call-info"
+    | "probe-rtc"
+    | "start-store-watch"
+    | "stop-store-watch"
+    | "ptt-command";
 
-export type BridgeEventType = "call-state-update";
+export type BridgeEventType = "call-state-update" | "call-lifecycle-update";
 
 export type BridgeRequest = {
     channel: typeof BRIDGE_CHANNEL;

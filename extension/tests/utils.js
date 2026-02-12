@@ -13,7 +13,6 @@ export function mockChrome(storageInitial = {}) {
     global.chrome = {
         runtime: {
             onMessage: { addListener: jest.fn() },
-            onMessageExternal: { addListener: jest.fn() },
             sendMessage: jest.fn(),
             getManifest: () => ({ version: "1.0.0" }),
             getURL: (path) => `chrome-extension://test-extension-id/${path}`,

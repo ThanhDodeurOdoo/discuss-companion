@@ -23,11 +23,6 @@ chrome.storage.local.get({ isLoggingEnabled: false }, (items) => {
     logTarget = items.isLoggingEnabled ? console.log : mutedLog;
 });
 
-chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
-    log("[BG] onMessageExternal", request, sender);
-    void messageHandlers.handleMessage(request, sender, sendResponse);
-    return true;
-});
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     log("[BG] onMessage", request, sender);
     void messageHandlers.handleMessage(request, sender, sendResponse);

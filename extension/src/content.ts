@@ -1,9 +1,4 @@
 import { createBridgeClient } from "./messaging/bridge_client";
-import {
-    isExtensionToPageMessage,
-    listenToOdooPageMessages,
-    sendToOdooPage
-} from "./messaging/content_channel";
 import { isSwToContentMessage, sendToServiceWorker } from "./messaging/sw_channel";
 import {
     type CallAction,
@@ -14,7 +9,11 @@ import {
 } from "./call_actions";
 import { parseAppCommand, resolveAppCommandAction } from "./app_commands";
 import type { CallState } from "./call_state_types";
-import { isCallStateObserverPayload } from "./type_guards";
+import {
+    isCallLifecycleObserverPayload,
+    isCallStateObserverPayload,
+    isPttCommandPayload
+} from "./type_guards";
 import { readLocalSettings } from "./storage/local_settings";
 import { injectScriptOnce } from "./utils/dom_inject";
 import { createWsClient } from "./ws/ws_client";
@@ -26,8 +25,6 @@ import {
 } from "./ws/ws_codec";
 
 const BRIDGE_SCRIPT_ID = "__discuss_companion_page_bridge__";
-const CALL_STATE_OBSERVER_ACTIVE_DELAY = 1000;
-const CALL_STATE_OBSERVER_IDLE_DELAY = 5000;
 const CALL_INFO_CAPTURE_DELAY = 3000;
 
 const mutedLog = (..._args: unknown[]) => {};
@@ -38,7 +35,11 @@ let wsPort = 49152;
 let isCompanionEnabled = false;
 let isOwner = false;
 let isSubscribed = false;
+let hasHostedCall = false;
+let hasStartedStoreWatch = false;
+
 let bridgeReady: Promise<void> | null = null;
+let lifecycleQueue: Promise<void> = Promise.resolve();
 let cachedCallState: CallState | null = null;
 
 const bridge = createBridgeClient();
@@ -87,6 +88,15 @@ async function ensureBridgeReady(): Promise<void> {
     await bridgeReady;
 }
 
+async function maybeStartStoreWatch(): Promise<void> {
+    if (hasStartedStoreWatch) {
+        return;
+    }
+    await ensureBridgeReady();
+    const result = await bridge.request<{ running?: boolean }>("start-store-watch");
+    hasStartedStoreWatch = Boolean(result?.running);
+}
+
 function buildCallStateSnapshot(
     state: CallState | null | undefined,
     hasCall: boolean
@@ -110,8 +120,15 @@ async function sendCallStateToApp(state?: CallState | null): Promise<void> {
     wsClient.send(buildCallStateMessage(snapshot));
 }
 
-async function updateCachedCallState(state: CallState | null): Promise<void> {
+async function updateCachedCallState(
+    state: CallState | null,
+    options: { forcePersist?: boolean } = {}
+): Promise<void> {
     cachedCallState = state;
+    const shouldPersist = options.forcePersist || (isOwner && isSubscribed);
+    if (!shouldPersist) {
+        return;
+    }
     await sendToServiceWorker({
         type: "content-call-state-update",
         value: { state }
@@ -127,19 +144,6 @@ async function refreshAndSendCallState(): Promise<CallState | null> {
     }
     await sendCallStateToApp(state);
     return state;
-}
-
-async function startObserver(): Promise<void> {
-    await ensureBridgeReady();
-    await bridge.request("start-observer", {
-        activeDelay: CALL_STATE_OBSERVER_ACTIVE_DELAY,
-        idleDelay: CALL_STATE_OBSERVER_IDLE_DELAY
-    });
-}
-
-async function stopObserver(): Promise<void> {
-    await ensureBridgeReady();
-    await bridge.request("stop-observer");
 }
 
 function scheduleCallInfoCapture(): void {
@@ -189,6 +193,11 @@ async function runCallAction(
     return { didRun, state: state ?? undefined };
 }
 
+async function sendPttCommand(command: "ptt-down" | "ptt-up" | "toggle-voice"): Promise<void> {
+    await ensureBridgeReady();
+    await bridge.request("ptt-command", { command });
+}
+
 async function handleStatusState(rawState?: string | null): Promise<void> {
     const command = parseAppCommand(rawState);
     if (!command) {
@@ -217,16 +226,50 @@ function handleWsMessage(data: Uint8Array) {
     }
     switch (message.type) {
         case "ptt-down":
-            sendToOdooPage({ from: "discuss-push-to-talk", type: "push-to-talk-pressed" });
+            void sendPttCommand("ptt-down");
             break;
         case "ptt-up":
-            sendToOdooPage({ from: "discuss-push-to-talk", type: "push-to-talk-released" });
+            void sendPttCommand("ptt-up");
             break;
         case "status":
             void handleStatusState(message.state);
             break;
         case "pong":
             break;
+    }
+}
+
+function queueLifecycleUpdate(payload: unknown): void {
+    lifecycleQueue = lifecycleQueue
+        .then(() => applyLifecycleUpdate(payload))
+        .catch((error) => log("[Content] Failed to process lifecycle update", error));
+}
+
+async function applyLifecycleUpdate(payload: unknown): Promise<void> {
+    if (!isCallLifecycleObserverPayload(payload)) {
+        return;
+    }
+
+    const hadHostedCall = hasHostedCall;
+    hasHostedCall = payload.hasHostedCall;
+
+    if (hasHostedCall && !hadHostedCall) {
+        await sendToServiceWorker({ type: "subscribe" });
+        scheduleCallInfoCapture();
+    }
+
+    if (!hasHostedCall && hadHostedCall) {
+        await sendToServiceWorker({ type: "is-talking", value: false });
+        await sendToServiceWorker({ type: "unsubscribe" });
+        await updateCachedCallState(null, { forcePersist: true });
+    }
+
+    if (hasHostedCall) {
+        await sendToServiceWorker({ type: "is-talking", value: payload.isTalking });
+    }
+
+    if (!payload.hasRtcService && !payload.hasHostedCall) {
+        wsClient.disconnect();
     }
 }
 
@@ -238,6 +281,7 @@ function handleBridgeCallStateEvent(payload: unknown): void {
     void updateCachedCallState(state).then(() => sendCallStateToApp(state));
 }
 
+bridge.onEvent("call-lifecycle-update", queueLifecycleUpdate);
 bridge.onEvent("call-state-update", handleBridgeCallStateEvent);
 
 async function applySubscriptionChange(nextOwner: boolean, subscribed: boolean): Promise<void> {
@@ -248,8 +292,6 @@ async function applySubscriptionChange(nextOwner: boolean, subscribed: boolean):
 
     if (isOwner && isSubscribed) {
         await ensureBridgeReady();
-        await startObserver();
-        scheduleCallInfoCapture();
         refreshWsConnection();
         await refreshAndSendCallState();
         return;
@@ -257,17 +299,12 @@ async function applySubscriptionChange(nextOwner: boolean, subscribed: boolean):
 
     if (wasOwner && wasSubscribed) {
         await sendCallStateToApp(null);
-        await stopObserver();
+        await updateCachedCallState(null, { forcePersist: true });
     }
     wsClient.disconnect();
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (sender?.id === chrome.runtime.id && isExtensionToPageMessage(request)) {
-        sendToOdooPage(request);
-        return;
-    }
-
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     if (!isSwToContentMessage(request)) {
         return;
     }
@@ -278,7 +315,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             break;
         case "content-unsubscribe":
             void applySubscriptionChange(false, false).then(() => {
-                void updateCachedCallState(null);
+                void updateCachedCallState(null, { forcePersist: true });
             });
             break;
         case "content-owner-update":
@@ -298,28 +335,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse?.({ status: "ok", state });
             });
             return true;
+        case "content-ptt-command":
+            if (!isPttCommandPayload(request.value)) {
+                sendResponse?.({ error: "invalid-command" });
+                break;
+            }
+            void sendPttCommand(request.value.command).then(() => {
+                sendResponse?.({ status: "ok" });
+            });
+            return true;
     }
 
     return false;
-});
-
-listenToOdooPageMessages(({ type, value }) => {
-    chrome.runtime.sendMessage({ type, value }, (response) => {
-        if (chrome.runtime.lastError) {
-            console.warn(
-                "[PTT-Bridge] Error sending to service worker:",
-                chrome.runtime.lastError.message
-            );
-            return;
-        }
-        if (type === "ask-version" && response) {
-            sendToOdooPage({
-                from: "discuss-push-to-talk",
-                type: "answer-version",
-                value: response
-            });
-        }
-    });
 });
 
 void (async () => {
@@ -327,6 +354,23 @@ void (async () => {
     wsPort = settings.wsPort;
     isCompanionEnabled = settings.isCompanionEnabled;
     logTarget = settings.isLoggingEnabled ? console.log : mutedLog;
+
+    await maybeStartStoreWatch();
+    window.addEventListener(
+        "load",
+        () => {
+            void maybeStartStoreWatch();
+        },
+        { once: true }
+    );
+    window.addEventListener("focus", () => {
+        void maybeStartStoreWatch();
+    });
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+            void maybeStartStoreWatch();
+        }
+    });
 
     chrome.storage.onChanged.addListener((changes, area) => {
         if (area !== "local") {
