@@ -4,8 +4,9 @@
 
 main {
     flex: 1;
-    background: var(--color-border);
+    background: var(--color-border-strong);
     overflow: hidden;
+    transition: background var(--transition-slow);
 }
 
 main:not(.settings-view) {

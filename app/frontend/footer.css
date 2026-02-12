@@ -14,25 +14,29 @@
 }
 
 .text-btn {
-    background: none;
-    border: none;
+    background: var(--color-surface-overlay);
+    border: 1px solid transparent;
     color: var(--color-text-subtle);
     font-size: 0.8rem;
     cursor: pointer;
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-xs);
-    transition: all var(--transition-slow);
+    transition:
+        border-color var(--transition-base),
+        background var(--transition-base),
+        color var(--transition-base),
+        transform var(--transition-fast);
 }
 
 .text-btn.source-btn {
     color: var(--color-text-muted);
-    border: 1px solid transparent;
+    border-color: var(--color-border);
     margin-left: auto;
 }
 
 .text-btn.source-btn:hover {
     color: var(--color-accent);
-    border-color: var(--color-accent-muted);
+    border-color: var(--color-accent);
     background: var(--color-accent-muted);
 }
 
@@ -42,6 +46,7 @@
 
 .text-btn.safety-btn:hover {
     color: var(--color-danger);
+    border-color: var(--color-danger);
     background: var(--color-danger-muted);
 }
 

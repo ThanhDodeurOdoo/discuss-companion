@@ -13,7 +13,8 @@
 .settings-title {
     font-size: 1.5rem;
     font-weight: 600;
-    margin-bottom: 10px;
+    margin-bottom: var(--space-2);
+    color: var(--color-text);
 }
 
 .setting-item {
@@ -21,9 +22,13 @@
     align-items: center;
     justify-content: space-between;
     padding: var(--space-4);
-    background: var(--color-surface-muted);
+    background: var(--color-surface);
     border-radius: var(--radius-md);
     border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    transition:
+        border-color var(--transition-base),
+        background var(--transition-base);
 }
 
 .setting-item--stacked {
@@ -53,6 +58,7 @@
 .setting-desc {
     font-size: 0.8rem;
     color: var(--color-text-muted);
+    line-height: 1.45;
 }
 
 .setting-title {
@@ -80,6 +86,26 @@
     accent-color: var(--color-accent);
 }
 
+.setting-option--choice {
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-inset);
+    transition:
+        border-color var(--transition-base),
+        background var(--transition-base);
+}
+
+.setting-option--choice:hover {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface-muted);
+}
+
+.setting-option--choice.is-selected {
+    border-color: var(--color-accent);
+    background: var(--color-accent-muted);
+}
+
 .setting-option__text {
     display: flex;
     flex-direction: column;
@@ -103,7 +129,7 @@
 }
 
 .port-input {
-    background: var(--color-surface-muted);
+    background: var(--color-surface-inset);
     border: 1px solid var(--color-border);
     color: var(--color-text);
     padding: 6px var(--space-3);
@@ -116,10 +142,27 @@
 .port-input:focus {
     outline: none;
     border-color: var(--color-accent);
-    box-shadow: 0 0 0 1px var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .port-input:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.reload-btn {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-inset);
+    color: var(--color-text-muted);
+}
+
+.reload-btn:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+.reload-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
