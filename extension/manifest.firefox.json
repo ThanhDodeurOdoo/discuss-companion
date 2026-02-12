@@ -57,11 +57,6 @@
             ]
         }
     ],
-    "externally_connectable": {
-        "matches": [
-            "<all_urls>"
-        ]
-    },
     "host_permissions": [
         "ws://127.0.0.1/*",
         "http://*/*",

@@ -11,49 +11,57 @@ import {
 
 const BRIDGE_MARKER = "__DISCUSS_COMPANION_PAGE_BRIDGE_INSTALLED__";
 
-(() => {
-    type RtcSelfSession = {
-        isMute: boolean;
-        is_deaf: boolean;
-        is_camera_on: boolean;
-        is_screen_sharing_on: boolean;
-    };
+type PttCommand = "ptt-down" | "ptt-up" | "toggle-voice";
 
-    type RtcChannel = {
-        id: number;
-        name: string;
-        open: () => void;
-    };
+type RtcSession = {
+    localId?: string;
+    id?: number;
+    isTalking: boolean;
+    isMute: boolean;
+    is_deaf: boolean;
+    is_camera_on: boolean;
+    is_screen_sharing_on: boolean;
+};
 
-    type RtcService = {
-        selfSession?: RtcSelfSession;
-        channel?: RtcChannel;
-        pipService?: unknown;
-        toggleMicrophone: () => Promise<void> | void;
-        toggleDeafen: () => Promise<void> | void;
-        toggleVideo: (type: "camera" | "screen") => Promise<void> | void;
-        openPip: (options: Record<string, unknown>) => Promise<void> | void;
-        leaveCall: () => Promise<void> | void;
-    };
+type RtcChannel = {
+    id: number;
+    name: string;
+    open: () => void;
+};
 
-    type MailStore = {
-        rtc?: RtcService;
-    };
+type RtcService = {
+    localSession?: RtcSession;
+    channel?: RtcChannel;
+    pipService?: unknown;
+    onPushToTalk: () => void;
+    setPttReleaseTimeout: (duration?: number) => void;
+    toggleMicrophone: () => Promise<void> | void;
+    toggleDeafen: () => Promise<void> | void;
+    toggleVideo: (type: "camera" | "screen") => Promise<void> | void;
+    openPip: (options: Record<string, unknown>) => Promise<void> | void;
+    leaveCall: () => Promise<void> | void;
+};
 
-    type OdooWindow = Window & {
-        odoo?: {
-            __WOWL_DEBUG__?: {
-                root: {
-                    env: {
-                        services: {
-                            "mail.store"?: MailStore;
-                        };
+type MailStore = {
+    rtc?: RtcService;
+    onChange: (target: object, key: string | string[], cb: () => void) => (() => void) | void;
+};
+
+type OdooWindow = Window & {
+    odoo?: {
+        __WOWL_DEBUG__?: {
+            root: {
+                env: {
+                    services: {
+                        "mail.store"?: MailStore;
                     };
                 };
             };
         };
     };
+};
 
+(() => {
     const win = window as OdooWindow;
     const markerStore = win as unknown as Record<string, boolean | undefined>;
     if (markerStore[BRIDGE_MARKER]) {
@@ -61,131 +69,393 @@ const BRIDGE_MARKER = "__DISCUSS_COMPANION_PAGE_BRIDGE_INSTALLED__";
     }
     markerStore[BRIDGE_MARKER] = true;
 
+    let lastLifecycleSignature = "";
+    let lastCallStateSignature = "";
+
+    let stopRtcWatcher: (() => void) | null = null;
+    const stopSessionWatchers: Array<() => void> = [];
+    let stopBootstrapWatcher: (() => void) | null = null;
+
+    let storeWatchRunning = false;
+    let activeSessionToken = 0;
+    let activeSessionKey: string | null = null;
+    let voiceActivated = false;
+
     function getStore(): MailStore | undefined {
         return win.odoo?.__WOWL_DEBUG__?.root.env.services["mail.store"];
     }
 
+    function getRtc(): RtcService | undefined {
+        return getStore()?.rtc;
+    }
+
+    function getSessionKey(session?: RtcSession): string | null {
+        if (!session) {
+            return null;
+        }
+        if (typeof session.localId === "string" && session.localId.length > 0) {
+            return session.localId;
+        }
+        if (typeof session.id === "number") {
+            return `session-${session.id}`;
+        }
+        return null;
+    }
+
     function readCallState(): CallState | null {
-        const store = getStore();
-        const selfSession = store?.rtc?.selfSession;
-        if (!selfSession) {
+        const session = getRtc()?.localSession;
+        if (!session) {
             return null;
         }
         return {
-            isMute: Boolean(selfSession.isMute),
-            isDeaf: Boolean(selfSession.is_deaf),
-            isCameraOn: Boolean(selfSession.is_camera_on),
-            isScreenOn: Boolean(selfSession.is_screen_sharing_on)
+            isMute: Boolean(session.isMute),
+            isDeaf: Boolean(session.is_deaf),
+            isCameraOn: Boolean(session.is_camera_on),
+            isScreenOn: Boolean(session.is_screen_sharing_on)
         };
     }
 
-    function openChannelInTab(): boolean {
+    function emitBridgeEvent(type: BridgeEvent["type"], payload: unknown) {
+        const event: BridgeEvent = {
+            channel: BRIDGE_CHANNEL,
+            kind: "event",
+            type,
+            payload
+        };
+        window.postMessage(event, location.origin);
+    }
+
+    function emitLifecycle(payload: {
+        hasRtcService: boolean;
+        hasHostedCall: boolean;
+        isTalking: boolean;
+    }) {
+        const signature = JSON.stringify(payload);
+        if (signature === lastLifecycleSignature) {
+            return;
+        }
+        lastLifecycleSignature = signature;
+        emitBridgeEvent("call-lifecycle-update", payload);
+    }
+
+    function emitCallState(state: CallState | null) {
+        const payload = state ? { hasState: true, state } : { hasState: false };
+        const signature = JSON.stringify(payload);
+        if (signature === lastCallStateSignature) {
+            return;
+        }
+        lastCallStateSignature = signature;
+        emitBridgeEvent("call-state-update", payload);
+    }
+
+    function cleanupSessionWatchers() {
+        for (const stop of stopSessionWatchers.splice(0)) {
+            stop();
+        }
+    }
+
+    function addSessionWatcherStop(stop: (() => void) | void) {
+        if (typeof stop !== "function") {
+            return;
+        }
+        stopSessionWatchers.push(stop);
+    }
+
+    function cleanupBootstrapWatcher() {
+        if (!stopBootstrapWatcher) {
+            return;
+        }
+        stopBootstrapWatcher();
+        stopBootstrapWatcher = null;
+    }
+
+    function isCurrentSession(token: number, sessionKey: string | null): boolean {
+        return (
+            storeWatchRunning &&
+            token === activeSessionToken &&
+            sessionKey !== null &&
+            sessionKey === activeSessionKey
+        );
+    }
+
+    function bindSessionWatchers(store: MailStore, session: RtcSession) {
+        cleanupSessionWatchers();
+        voiceActivated = false;
+
+        const sessionKey = getSessionKey(session);
+        if (!sessionKey) {
+            activeSessionToken += 1;
+            activeSessionKey = null;
+            emitLifecycle({ hasRtcService: true, hasHostedCall: false, isTalking: false });
+            emitCallState(null);
+            return;
+        }
+
+        activeSessionToken += 1;
+        activeSessionKey = sessionKey;
+        const token = activeSessionToken;
+
+        const emitSessionLifecycle = () => {
+            if (!isCurrentSession(token, sessionKey)) {
+                return;
+            }
+            emitLifecycle({
+                hasRtcService: true,
+                hasHostedCall: true,
+                isTalking: Boolean(session.isTalking)
+            });
+        };
+
+        const emitSessionState = () => {
+            if (!isCurrentSession(token, sessionKey)) {
+                return;
+            }
+            emitCallState({
+                isMute: Boolean(session.isMute),
+                isDeaf: Boolean(session.is_deaf),
+                isCameraOn: Boolean(session.is_camera_on),
+                isScreenOn: Boolean(session.is_screen_sharing_on)
+            });
+        };
+
+        addSessionWatcherStop(store.onChange(session, "isTalking", emitSessionLifecycle));
+        addSessionWatcherStop(store.onChange(session, "is_muted", emitSessionState));
+        addSessionWatcherStop(store.onChange(session, "is_deaf", emitSessionState));
+        addSessionWatcherStop(store.onChange(session, "is_camera_on", emitSessionState));
+        addSessionWatcherStop(store.onChange(session, "is_screen_sharing_on", emitSessionState));
+
+        emitSessionLifecycle();
+        emitSessionState();
+    }
+
+    function handleLocalSessionChange() {
         const store = getStore();
-        if (!store?.rtc?.channel) {
+        const rtc = store?.rtc;
+        if (!store || !rtc) {
+            activeSessionToken += 1;
+            activeSessionKey = null;
+            voiceActivated = false;
+            cleanupSessionWatchers();
+            emitLifecycle({ hasRtcService: false, hasHostedCall: false, isTalking: false });
+            emitCallState(null);
+            return;
+        }
+
+        const localSession = rtc.localSession;
+        if (!localSession) {
+            activeSessionToken += 1;
+            activeSessionKey = null;
+            voiceActivated = false;
+            cleanupSessionWatchers();
+            emitLifecycle({ hasRtcService: true, hasHostedCall: false, isTalking: false });
+            emitCallState(null);
+            return;
+        }
+
+        if (getSessionKey(localSession) === activeSessionKey && stopSessionWatchers.length > 0) {
+            emitLifecycle({
+                hasRtcService: true,
+                hasHostedCall: true,
+                isTalking: Boolean(localSession.isTalking)
+            });
+            emitCallState({
+                isMute: Boolean(localSession.isMute),
+                isDeaf: Boolean(localSession.is_deaf),
+                isCameraOn: Boolean(localSession.is_camera_on),
+                isScreenOn: Boolean(localSession.is_screen_sharing_on)
+            });
+            return;
+        }
+
+        bindSessionWatchers(store, localSession);
+    }
+
+    function tryAttachStoreWatcher(): boolean {
+        if (stopRtcWatcher) {
+            return true;
+        }
+        const store = getStore();
+        if (!store?.rtc || typeof store.onChange !== "function") {
             return false;
         }
-        store.rtc.channel.open();
+        const stopWatcher = store.onChange(store.rtc, "localSession", handleLocalSessionChange);
+        if (typeof stopWatcher !== "function") {
+            return false;
+        }
+        stopRtcWatcher = stopWatcher;
+        handleLocalSessionChange();
+        return true;
+    }
+
+    function setupBootstrapWatcher() {
+        if (stopBootstrapWatcher) {
+            return;
+        }
+
+        const tryAttach = () => {
+            if (!storeWatchRunning) {
+                return;
+            }
+            if (!tryAttachStoreWatcher()) {
+                return;
+            }
+            cleanupBootstrapWatcher();
+        };
+
+        const onReadyStateChange = () => {
+            tryAttach();
+        };
+
+        const observer = new MutationObserver(() => {
+            tryAttach();
+        });
+        observer.observe(document.documentElement ?? document, { childList: true, subtree: true });
+        document.addEventListener("readystatechange", onReadyStateChange);
+
+        stopBootstrapWatcher = () => {
+            observer.disconnect();
+            document.removeEventListener("readystatechange", onReadyStateChange);
+        };
+
+        emitLifecycle({ hasRtcService: false, hasHostedCall: false, isTalking: false });
+        emitCallState(null);
+        tryAttach();
+    }
+
+    function startStoreWatch() {
+        storeWatchRunning = true;
+        if (!tryAttachStoreWatcher()) {
+            setupBootstrapWatcher();
+        }
+        return {
+            running: true,
+            hasRtcService: Boolean(getRtc())
+        };
+    }
+
+    function stopStoreWatch() {
+        storeWatchRunning = false;
+        voiceActivated = false;
+        cleanupBootstrapWatcher();
+        cleanupSessionWatchers();
+        if (stopRtcWatcher) {
+            stopRtcWatcher();
+            stopRtcWatcher = null;
+        }
+        activeSessionToken += 1;
+        activeSessionKey = null;
+        emitLifecycle({ hasRtcService: Boolean(getRtc()), hasHostedCall: false, isTalking: false });
+        emitCallState(null);
+        return { running: false };
+    }
+
+    function openChannelInTab(): boolean {
+        const rtc = getRtc();
+        if (!rtc?.channel) {
+            return false;
+        }
+        rtc.channel.open();
         return true;
     }
 
     async function toggleMicrophoneInTab(): Promise<boolean> {
-        const store = getStore();
-        if (!store?.rtc?.selfSession) {
+        const rtc = getRtc();
+        if (!rtc?.localSession) {
             return false;
         }
-        await store.rtc.toggleMicrophone();
+        await rtc.toggleMicrophone();
         return true;
     }
 
     async function toggleDeafenInTab(): Promise<boolean> {
-        const store = getStore();
-        if (!store?.rtc?.selfSession) {
+        const rtc = getRtc();
+        if (!rtc?.localSession) {
             return false;
         }
-        await store.rtc.toggleDeafen();
+        await rtc.toggleDeafen();
         return true;
     }
 
     async function toggleCameraInTab(): Promise<boolean> {
-        const store = getStore();
-        if (!store?.rtc?.selfSession) {
+        const rtc = getRtc();
+        if (!rtc?.localSession) {
             return false;
         }
-        await store.rtc.toggleVideo("camera");
+        await rtc.toggleVideo("camera");
         return true;
     }
 
     async function toggleScreenInTab(): Promise<boolean> {
-        const store = getStore();
-        if (!store?.rtc?.selfSession) {
+        const rtc = getRtc();
+        if (!rtc?.localSession) {
             return false;
         }
-        await store.rtc.toggleVideo("screen");
+        await rtc.toggleVideo("screen");
         return true;
     }
 
     async function openPipInTab(): Promise<boolean> {
-        const store = getStore();
-        if (!store?.rtc?.pipService) {
+        const rtc = getRtc();
+        if (!rtc?.localSession || !rtc.pipService) {
             return false;
         }
-        await store.rtc.openPip({});
+        await rtc.openPip({});
         return true;
     }
 
     async function leaveCallInTab(): Promise<boolean> {
-        const store = getStore();
-        if (!store?.rtc?.leaveCall) {
+        const rtc = getRtc();
+        if (!rtc?.localSession || !rtc.leaveCall) {
             return false;
         }
-        await store.rtc.leaveCall();
+        await rtc.leaveCall();
         return true;
     }
 
     async function setMuteInTab(value: boolean): Promise<boolean> {
-        const store = getStore();
-        const selfSession = store?.rtc?.selfSession;
-        if (!selfSession) {
+        const rtc = getRtc();
+        const localSession = rtc?.localSession;
+        if (!localSession) {
             return false;
         }
-        if (selfSession.isMute !== value) {
-            await store?.rtc?.toggleMicrophone();
+        if (localSession.isMute !== value) {
+            await rtc.toggleMicrophone();
         }
         return true;
     }
 
     async function setDeafInTab(value: boolean): Promise<boolean> {
-        const store = getStore();
-        const selfSession = store?.rtc?.selfSession;
-        if (!selfSession) {
+        const rtc = getRtc();
+        const localSession = rtc?.localSession;
+        if (!localSession) {
             return false;
         }
-        if (selfSession.is_deaf !== value) {
-            await store?.rtc?.toggleDeafen();
+        if (localSession.is_deaf !== value) {
+            await rtc.toggleDeafen();
         }
         return true;
     }
 
     async function setCameraInTab(value: boolean): Promise<boolean> {
-        const store = getStore();
-        const selfSession = store?.rtc?.selfSession;
-        if (!selfSession) {
+        const rtc = getRtc();
+        const localSession = rtc?.localSession;
+        if (!localSession) {
             return false;
         }
-        if (selfSession.is_camera_on !== value) {
-            await store?.rtc?.toggleVideo("camera");
+        if (localSession.is_camera_on !== value) {
+            await rtc.toggleVideo("camera");
         }
         return true;
     }
 
     async function setScreenInTab(value: boolean): Promise<boolean> {
-        const store = getStore();
-        const selfSession = store?.rtc?.selfSession;
-        if (!selfSession) {
+        const rtc = getRtc();
+        const localSession = rtc?.localSession;
+        if (!localSession) {
             return false;
         }
-        if (selfSession.is_screen_sharing_on !== value) {
-            await store?.rtc?.toggleVideo("screen");
+        if (localSession.is_screen_sharing_on !== value) {
+            await rtc.toggleVideo("screen");
         }
         return true;
     }
@@ -219,59 +489,36 @@ const BRIDGE_MARKER = "__DISCUSS_COMPANION_PAGE_BRIDGE_INSTALLED__";
         }
     }
 
-    let observerTimeoutId: number | null = null;
-    let observerActiveDelay = 1000;
-    let observerIdleDelay = 5000;
-    let observerRunning = false;
-    let lastSignature = "";
-
-    function emitCallState(state: CallState | null) {
-        const payload = state ? { hasState: true, state } : { hasState: false };
-        const signature = JSON.stringify(payload);
-        if (signature === lastSignature) {
-            return;
+    function runPttCommand(command: PttCommand): boolean {
+        const rtc = getRtc();
+        if (!rtc?.localSession) {
+            return false;
         }
-        lastSignature = signature;
-        const event: BridgeEvent = {
-            channel: BRIDGE_CHANNEL,
-            kind: "event",
-            type: "call-state-update",
-            payload
-        };
-        window.postMessage(event, location.origin);
-    }
-
-    function tickObserver() {
-        if (!observerRunning) {
-            return;
-        }
-        const state = readCallState();
-        emitCallState(state);
-        const delay = state ? observerActiveDelay : observerIdleDelay;
-        observerTimeoutId = window.setTimeout(tickObserver, delay);
-    }
-
-    function startObserver(activeDelay: number, idleDelay: number) {
-        observerActiveDelay = activeDelay;
-        observerIdleDelay = idleDelay;
-        if (observerRunning) {
-            return;
-        }
-        observerRunning = true;
-        tickObserver();
-    }
-
-    function stopObserver() {
-        observerRunning = false;
-        if (observerTimeoutId !== null) {
-            window.clearTimeout(observerTimeoutId);
-            observerTimeoutId = null;
+        switch (command) {
+            case "ptt-down":
+                voiceActivated = false;
+                rtc.onPushToTalk();
+                return true;
+            case "ptt-up":
+                if (!voiceActivated) {
+                    rtc.setPttReleaseTimeout();
+                }
+                return true;
+            case "toggle-voice":
+                if (voiceActivated) {
+                    rtc.setPttReleaseTimeout(0);
+                } else {
+                    rtc.onPushToTalk();
+                }
+                voiceActivated = !voiceActivated;
+                return true;
+            default:
+                return false;
         }
     }
 
     function getCallInfo() {
-        const store = getStore();
-        const channel = store?.rtc?.channel;
+        const channel = getRtc()?.channel;
         return {
             channelId: channel?.id,
             channelName: channel?.name,
@@ -305,17 +552,24 @@ const BRIDGE_MARKER = "__DISCUSS_COMPANION_PAGE_BRIDGE_INSTALLED__";
                 const state = readCallState();
                 return buildResponse(requestId, true, { state });
             }
-            case "start-observer": {
-                const delays = payload as { activeDelay?: number; idleDelay?: number } | undefined;
-                startObserver(
-                    delays?.activeDelay ?? observerActiveDelay,
-                    delays?.idleDelay ?? observerIdleDelay
-                );
-                return buildResponse(requestId, true, { running: true });
+            case "probe-rtc": {
+                const hasRtcService = Boolean(getRtc());
+                const hasOdoo = Boolean(win.odoo?.__WOWL_DEBUG__);
+                return buildResponse(requestId, true, { hasRtcService, hasOdoo });
             }
-            case "stop-observer": {
-                stopObserver();
-                return buildResponse(requestId, true, { running: false });
+            case "start-store-watch": {
+                return buildResponse(requestId, true, startStoreWatch());
+            }
+            case "stop-store-watch": {
+                return buildResponse(requestId, true, stopStoreWatch());
+            }
+            case "ptt-command": {
+                const command = (payload as { command?: PttCommand } | undefined)?.command;
+                if (!command) {
+                    return buildResponse(requestId, false, { error: "invalid-ptt-command" });
+                }
+                const didRun = runPttCommand(command);
+                return buildResponse(requestId, true, { didRun });
             }
             case "get-call-info": {
                 return buildResponse(requestId, true, getCallInfo());
