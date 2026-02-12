@@ -34,7 +34,7 @@ This document describes the current extension runtime after the hard cutover to 
   - `call-state-update`
 - Handles bridge requests:
   - `call-action`, `read-call-state`, `get-call-info`
-  - `probe-rtc`, `start-store-watch`, `stop-store-watch`
+  - `start-store-watch`, `stop-store-watch`
   - `ptt-command`
 
 ### Content script (`extension/src/content.ts`)
@@ -105,7 +105,6 @@ to ignore events coming from stale callbacks after a switch/end.
   - `call-action`
   - `read-call-state`
   - `get-call-info`
-  - `probe-rtc`
   - `start-store-watch`
   - `stop-store-watch`
   - `ptt-command`
@@ -151,7 +150,7 @@ to ignore events coming from stale callbacks after a switch/end.
 
 ### Shortcut-driven PTT
 
-1. Browser shortcut reaches SW (`ptt-pressed`, `ptt-released`, `toggle-voice`).
+1. Browser shortcut reaches SW (`ptt-pressed`, `toggle-voice`).
 2. SW forwards to subscribed tabs as `content-ptt-command`.
 3. Content forwards to bridge `ptt-command`.
 4. Bridge applies same RTC API path as app-driven PTT.

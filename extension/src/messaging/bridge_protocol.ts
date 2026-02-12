@@ -4,7 +4,6 @@ export type BridgeRequestType =
     | "call-action"
     | "read-call-state"
     | "get-call-info"
-    | "probe-rtc"
     | "start-store-watch"
     | "stop-store-watch"
     | "ptt-command";

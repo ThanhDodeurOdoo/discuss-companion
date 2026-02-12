@@ -5,6 +5,9 @@ const CALL_STATE_KEY = "callState";
 const CALL_TAB_ID_KEY = "callTabId";
 const IS_TALKING_KEY = "isTalkingByTabId";
 const APP_CONNECTED_KEY = "appConnected";
+export const SESSION_STATE_STORAGE_AREA: "local" | "session" = IS_FIREFOX_BUILD
+    ? "local"
+    : "session";
 
 type SessionStorageSnapshot = {
     callState?: CallState | null;
@@ -14,7 +17,7 @@ type SessionStorageSnapshot = {
 };
 
 function getSessionStorageArea(): chrome.storage.StorageArea {
-    return IS_FIREFOX_BUILD ? chrome.storage.local : chrome.storage.session;
+    return SESSION_STATE_STORAGE_AREA === "local" ? chrome.storage.local : chrome.storage.session;
 }
 
 export async function getCallState(): Promise<CallState | undefined> {

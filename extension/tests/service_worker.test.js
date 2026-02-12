@@ -146,6 +146,21 @@ describe("Extension Service Worker", () => {
         });
     });
 
+    test("ignores content-connection-state update from non-owner tab", async () => {
+        mockStorage.callTabId = 999;
+        mockStorage.appConnected = true;
+        const sendResponse = jest.fn();
+        capturedHandleMessage(
+            { type: "content-connection-state", value: { isConnected: false } },
+            { tab: { id: 123 } },
+            sendResponse
+        );
+        await flushPromises();
+
+        expect(mockStorage.appConnected).toBe(true);
+        expect(sendResponse).toHaveBeenCalledWith({ status: "ok", ignored: true });
+    });
+
     test("stores call state updates from content", async () => {
         const sendResponse = jest.fn();
         const state = {
@@ -166,6 +181,38 @@ describe("Extension Service Worker", () => {
         expect(sendResponse).toHaveBeenCalledWith({ status: "ok" });
     });
 
+    test("ignores call state updates from non-owner tab", async () => {
+        mockStorage.callTabId = 999;
+        mockStorage.callState = {
+            isMute: false,
+            isDeaf: false,
+            isCameraOn: false,
+            isScreenOn: false
+        };
+        const sendResponse = jest.fn();
+        const state = {
+            isMute: true,
+            isDeaf: true,
+            isCameraOn: true,
+            isScreenOn: true
+        };
+
+        capturedHandleMessage(
+            { type: "content-call-state-update", value: { state } },
+            { tab: { id: 123 } },
+            sendResponse
+        );
+        await flushPromises();
+
+        expect(mockStorage.callState).toEqual({
+            isMute: false,
+            isDeaf: false,
+            isCameraOn: false,
+            isScreenOn: false
+        });
+        expect(sendResponse).toHaveBeenCalledWith({ status: "ok", ignored: true });
+    });
+
     test("routes keyboard commands to content-ptt-command", async () => {
         mockStorage.isTalkingByTabId[123] = false;
 
@@ -176,6 +223,32 @@ describe("Extension Service Worker", () => {
             type: "content-ptt-command",
             value: { command: "ptt-down" }
         });
+    });
+
+    test("throttles repeated ptt-pressed commands", async () => {
+        mockStorage.isTalkingByTabId[123] = false;
+        const nowBase = Date.now() + 1000;
+        const dateNowSpy = jest
+            .spyOn(Date, "now")
+            .mockReturnValueOnce(nowBase)
+            .mockReturnValueOnce(nowBase + 10);
+
+        capturedOnCommand("ptt-pressed");
+        await flushPromises();
+        capturedOnCommand("ptt-pressed");
+        await flushPromises();
+
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledTimes(1);
+        dateNowSpy.mockRestore();
+    });
+
+    test("ignores unsupported keyboard commands", async () => {
+        mockStorage.isTalkingByTabId[123] = false;
+
+        capturedOnCommand("ptt-released");
+        await flushPromises();
+
+        expect(chrome.tabs.sendMessage).not.toHaveBeenCalled();
     });
 
     test("removes tab from storage on tab removal", async () => {

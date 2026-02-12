@@ -201,4 +201,43 @@ describe("Extension Content Script", () => {
 
         expect(global.mockSockets.length).toBe(0);
     });
+
+    test("does not clear persisted call state when ownership changes but subscription remains", async () => {
+        setupBridgeAutoResponses({ hasOdoo: true, hasRtcService: true });
+        loadBridgeScript();
+        await flushPromises();
+
+        onMessageCallback(
+            { type: "content-subscribe", value: { isOwner: true } },
+            { id: "test-extension-id" }
+        );
+        await flushPromises();
+
+        emitBridgeEvent("call-state-update", {
+            hasState: true,
+            state: {
+                isMute: false,
+                isDeaf: false,
+                isCameraOn: true,
+                isScreenOn: false
+            }
+        });
+        await flushPromises();
+
+        jest.clearAllMocks();
+        chrome.runtime.sendMessage.mockImplementation((_message, callback) => {
+            callback?.({ status: "ok" });
+        });
+
+        onMessageCallback(
+            { type: "content-owner-update", value: { isOwner: false } },
+            { id: "test-extension-id" }
+        );
+        await flushPromises();
+
+        const nullStateWrites = chrome.runtime.sendMessage.mock.calls.filter(([message]) => {
+            return message?.type === "content-call-state-update" && message.value?.state === null;
+        });
+        expect(nullStateWrites).toHaveLength(0);
+    });
 });
