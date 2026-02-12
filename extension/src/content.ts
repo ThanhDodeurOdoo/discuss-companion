@@ -10,6 +10,7 @@ import {
 import { parseAppCommand, resolveAppCommandAction } from "./app_commands";
 import type { CallState } from "./call_state_types";
 import {
+    type CallLifecycleObserverPayload,
     isCallLifecycleObserverPayload,
     isCallStateObserverPayload,
     isPttCommandPayload
@@ -26,6 +27,7 @@ import {
 
 const BRIDGE_SCRIPT_ID = "__discuss_companion_page_bridge__";
 const CALL_INFO_CAPTURE_DELAY = 3000;
+const LIFECYCLE_RESYNC_DELAY = 1000;
 
 const mutedLog = (..._args: unknown[]) => {};
 let logTarget: (...args: unknown[]) => void = mutedLog;
@@ -41,6 +43,10 @@ let hasStartedStoreWatch = false;
 let bridgeReady: Promise<void> | null = null;
 let lifecycleQueue: Promise<void> = Promise.resolve();
 let cachedCallState: CallState | null = null;
+let callInfoCaptureTimeoutId: number | null = null;
+let lifecycleResyncTimeoutId: number | null = null;
+let lastLifecyclePayload: CallLifecycleObserverPayload | null = null;
+let workerSubscriptionState: "unknown" | "subscribed" | "unsubscribed" = "unknown";
 
 const bridge = createBridgeClient();
 
@@ -97,6 +103,98 @@ async function maybeStartStoreWatch(): Promise<void> {
     hasStartedStoreWatch = Boolean(result?.running);
 }
 
+async function maybeStopStoreWatch(): Promise<void> {
+    if (!hasStartedStoreWatch) {
+        return;
+    }
+    await ensureBridgeReady();
+    const result = await bridge.request<{ running?: boolean }>("stop-store-watch");
+    hasStartedStoreWatch = Boolean(result?.running);
+}
+
+function isOkStatusResponse(response: unknown): response is {
+    status: "ok";
+} {
+    if (!response || typeof response !== "object") {
+        return false;
+    }
+    return (response as { status?: unknown }).status === "ok";
+}
+
+async function sendToServiceWorkerExpectOk(message: {
+    type: string;
+    value?: unknown;
+}): Promise<boolean> {
+    const response = await sendToServiceWorker(message);
+    return isOkStatusResponse(response);
+}
+
+function clearCallInfoCapture(): void {
+    if (callInfoCaptureTimeoutId === null) {
+        return;
+    }
+    window.clearTimeout(callInfoCaptureTimeoutId);
+    callInfoCaptureTimeoutId = null;
+}
+
+function clearLifecycleResync(): void {
+    if (lifecycleResyncTimeoutId === null) {
+        return;
+    }
+    window.clearTimeout(lifecycleResyncTimeoutId);
+    lifecycleResyncTimeoutId = null;
+}
+
+function scheduleLifecycleResync(delayMs: number = LIFECYCLE_RESYNC_DELAY): void {
+    if (lifecycleResyncTimeoutId !== null) {
+        return;
+    }
+    lifecycleResyncTimeoutId = window.setTimeout(() => {
+        lifecycleResyncTimeoutId = null;
+        if (!lastLifecyclePayload) {
+            return;
+        }
+        queueLifecycleUpdate(lastLifecyclePayload);
+    }, delayMs);
+}
+
+async function synchronizeLifecycleWithServiceWorker(
+    payload: CallLifecycleObserverPayload
+): Promise<boolean> {
+    let ok = true;
+    if (payload.hasHostedCall) {
+        if (workerSubscriptionState !== "subscribed") {
+            const subscribed = await sendToServiceWorkerExpectOk({ type: "subscribe" });
+            ok = subscribed && ok;
+            if (subscribed) {
+                workerSubscriptionState = "subscribed";
+            }
+        }
+        const talkingUpdated = await sendToServiceWorkerExpectOk({
+            type: "is-talking",
+            value: payload.isTalking
+        });
+        ok = talkingUpdated && ok;
+    } else {
+        const talkingCleared = await sendToServiceWorkerExpectOk({
+            type: "is-talking",
+            value: false
+        });
+        ok = talkingCleared && ok;
+        if (workerSubscriptionState !== "unsubscribed") {
+            const unsubscribed = await sendToServiceWorkerExpectOk({ type: "unsubscribe" });
+            ok = unsubscribed && ok;
+            if (unsubscribed) {
+                workerSubscriptionState = "unsubscribed";
+            }
+        }
+    }
+    if (!ok) {
+        workerSubscriptionState = "unknown";
+    }
+    return ok;
+}
+
 function buildCallStateSnapshot(
     state: CallState | null | undefined,
     hasCall: boolean
@@ -147,7 +245,12 @@ async function refreshAndSendCallState(): Promise<CallState | null> {
 }
 
 function scheduleCallInfoCapture(): void {
-    window.setTimeout(async () => {
+    clearCallInfoCapture();
+    callInfoCaptureTimeoutId = window.setTimeout(async () => {
+        callInfoCaptureTimeoutId = null;
+        if (!hasHostedCall) {
+            return;
+        }
         try {
             await ensureBridgeReady();
             const info = await bridge.request<{
@@ -249,23 +352,28 @@ async function applyLifecycleUpdate(payload: unknown): Promise<void> {
     if (!isCallLifecycleObserverPayload(payload)) {
         return;
     }
+    lastLifecyclePayload = payload;
 
     const hadHostedCall = hasHostedCall;
     hasHostedCall = payload.hasHostedCall;
 
     if (hasHostedCall && !hadHostedCall) {
-        await sendToServiceWorker({ type: "subscribe" });
         scheduleCallInfoCapture();
     }
 
     if (!hasHostedCall && hadHostedCall) {
-        await sendToServiceWorker({ type: "is-talking", value: false });
-        await sendToServiceWorker({ type: "unsubscribe" });
+        clearCallInfoCapture();
         await updateCachedCallState(null, { forcePersist: true });
     }
+    if (!hasHostedCall) {
+        clearCallInfoCapture();
+    }
 
-    if (hasHostedCall) {
-        await sendToServiceWorker({ type: "is-talking", value: payload.isTalking });
+    const isLifecycleSynchronized = await synchronizeLifecycleWithServiceWorker(payload);
+    if (!isLifecycleSynchronized) {
+        scheduleLifecycleResync();
+    } else {
+        clearLifecycleResync();
     }
 
     if (!payload.hasRtcService && !payload.hasHostedCall) {
@@ -287,8 +395,12 @@ bridge.onEvent("call-state-update", handleBridgeCallStateEvent);
 async function applySubscriptionChange(nextOwner: boolean, subscribed: boolean): Promise<void> {
     const wasOwner = isOwner;
     const wasSubscribed = isSubscribed;
+    if (wasOwner === nextOwner && wasSubscribed === subscribed) {
+        return;
+    }
     isOwner = nextOwner;
     isSubscribed = subscribed;
+    workerSubscriptionState = subscribed ? "subscribed" : "unsubscribed";
 
     if (isOwner && isSubscribed) {
         await ensureBridgeReady();
@@ -297,9 +409,12 @@ async function applySubscriptionChange(nextOwner: boolean, subscribed: boolean):
         return;
     }
 
-    if (wasOwner && wasSubscribed) {
+    if (wasOwner && wasSubscribed && !subscribed) {
         await sendCallStateToApp(null);
         await updateCachedCallState(null, { forcePersist: true });
+    }
+    if (!subscribed) {
+        clearCallInfoCapture();
     }
     wsClient.disconnect();
 }
@@ -315,7 +430,9 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
             break;
         case "content-unsubscribe":
             void applySubscriptionChange(false, false).then(() => {
-                void updateCachedCallState(null, { forcePersist: true });
+                if (hasHostedCall && lastLifecyclePayload) {
+                    scheduleLifecycleResync(0);
+                }
             });
             break;
         case "content-owner-update":
@@ -370,6 +487,9 @@ void (async () => {
         if (!document.hidden) {
             void maybeStartStoreWatch();
         }
+    });
+    window.addEventListener("beforeunload", () => {
+        void maybeStopStoreWatch();
     });
 
     chrome.storage.onChanged.addListener((changes, area) => {

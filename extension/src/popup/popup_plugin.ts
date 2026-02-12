@@ -4,6 +4,7 @@ import { CallActionType, type CallAction } from "../call_actions";
 import { requestCallAction, requestCallState, requestFocusCallTab } from "../command_api";
 import { CallState, getCallTabId, getStoredCallState } from "../call_state";
 import { IS_FIREFOX_BUILD } from "../env";
+import { SESSION_STATE_STORAGE_AREA } from "../storage/session_state";
 
 const EXTENSION_VERSION = __EXTENSION_VERSION__;
 
@@ -55,7 +56,7 @@ export class PopupPlugin extends Plugin {
         this.collectCurrentTabData();
         this.collectCallTabData();
         chrome.storage.onChanged.addListener((changes, area) => {
-            if (area !== "session") {
+            if (area !== SESSION_STATE_STORAGE_AREA) {
                 return;
             }
             if (changes.callState) {

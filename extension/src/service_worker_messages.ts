@@ -15,12 +15,12 @@ import {
     setIsTalkingByTabId
 } from "./storage/session_state";
 import { type SwToContentMessage } from "./messaging/sw_channel";
-import { throttle } from "./utils";
 import { IS_FIREFOX_BUILD } from "./env";
 
 const ACTIVE_ONLINE_ICON = "/assets/icons/active_online_icon.png";
 const INACTIVE_ONLINE_ICON = "/assets/icons/inactive_online_icon.png";
 const INACTIVE_OFFLINE_ICON = "/assets/icons/inactive_offline_icon.png";
+const PTT_PRESSED_THROTTLE_MS = 150;
 
 interface ExtensionMessage {
     type: string;
@@ -31,7 +31,7 @@ type MessageHandlerDeps = {
     log: (...args: unknown[]) => void;
 };
 
-type Command = "ptt-pressed" | "ptt-released" | "toggle-voice";
+type Command = "ptt-pressed" | "toggle-voice";
 
 export type MessageHandlers = {
     handleMessage: (
@@ -40,13 +40,14 @@ export type MessageHandlers = {
         sendResponse: (response?: unknown) => void
     ) => void;
     handleCommand: (command: string) => void;
-    handleCommandImmediate: (command: string) => void;
     handleTabRemoved: (tabId: number) => void;
     handleActionClicked: () => void;
     updateAppIcon: () => Promise<void>;
 };
 
 export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandlers {
+    let lastPttPressedAt = -PTT_PRESSED_THROTTLE_MS;
+
     function pickFirstTabId(isTalkingByTabId: Record<string, boolean>): number | null {
         const tabIds = Object.keys(isTalkingByTabId);
         if (tabIds.length === 0) {
@@ -63,6 +64,14 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         }
         await setCallTabId(tabId);
         await setStoredCallState(null);
+    }
+
+    async function isOwnerTab(tabId: number): Promise<boolean> {
+        const ownerTabId = await getCallTabId();
+        if (ownerTabId === null) {
+            return true;
+        }
+        return ownerTabId === tabId;
     }
 
     async function syncCallTabIdFromMap(
@@ -167,8 +176,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
             !tabId &&
             type !== "call-action" &&
             type !== "refresh-call-state" &&
-            type !== "focus-call-tab" &&
-            type !== "content-connection-state"
+            type !== "focus-call-tab"
         ) {
             sendResponse?.({ error: "no-tab" });
             return;
@@ -206,6 +214,9 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 delete isTalkingByTabId[safeTabId];
                 await setIsTalkingByTabId(isTalkingByTabId);
                 const nextOwner = await syncCallTabIdFromMap(isTalkingByTabId);
+                if (previousOwner === safeTabId && nextOwner === null) {
+                    await setAppConnected(false);
+                }
                 await notifyOwnerChange(previousOwner, nextOwner, isTalkingByTabId);
                 sendToContentTab(safeTabId, { type: "content-unsubscribe" });
                 await updateAppIcon();
@@ -251,6 +262,10 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 break;
             }
             case "content-connection-state": {
+                if (!tabId || !(await isOwnerTab(safeTabId))) {
+                    sendResponse?.({ status: "ok", ignored: true });
+                    break;
+                }
                 const connected = Boolean(
                     (value as { isConnected?: boolean } | undefined)?.isConnected
                 );
@@ -260,6 +275,10 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 break;
             }
             case "content-call-state-update": {
+                if (!tabId || !(await isOwnerTab(safeTabId))) {
+                    sendResponse?.({ status: "ok", ignored: true });
+                    break;
+                }
                 const state = (value as { state?: CallState | null } | undefined)?.state ?? null;
                 await setStoredCallState(state);
                 sendResponse?.({ status: "ok" });
@@ -296,6 +315,16 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         if (IS_FIREFOX_BUILD) {
             return;
         }
+        if (command !== "ptt-pressed" && command !== "toggle-voice") {
+            return;
+        }
+        if (command === "ptt-pressed") {
+            const now = Date.now();
+            if (now - lastPttPressedAt < PTT_PRESSED_THROTTLE_MS) {
+                return;
+            }
+            lastPttPressedAt = now;
+        }
         log("[BG] onCommand", command);
         const isTalkingByTabId = await getIsTalkingByTabId();
         const tabIds = Object.keys(isTalkingByTabId);
@@ -312,12 +341,6 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                     chrome.tabs.sendMessage(tabId, {
                         type: "content-ptt-command",
                         value: { command: "ptt-down" }
-                    });
-                    break;
-                case "ptt-released":
-                    chrome.tabs.sendMessage(tabId, {
-                        type: "content-ptt-command",
-                        value: { command: "ptt-up" }
                     });
                     break;
             }
@@ -346,12 +369,9 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
     }
 
-    const throttledCommand = throttle(onCommand, 150);
-
     return {
         handleMessage,
-        handleCommand: throttledCommand,
-        handleCommandImmediate: onCommand,
+        handleCommand: onCommand,
         handleTabRemoved,
         handleActionClicked,
         updateAppIcon

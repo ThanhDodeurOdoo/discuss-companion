@@ -552,11 +552,6 @@ type OdooWindow = Window & {
                 const state = readCallState();
                 return buildResponse(requestId, true, { state });
             }
-            case "probe-rtc": {
-                const hasRtcService = Boolean(getRtc());
-                const hasOdoo = Boolean(win.odoo?.__WOWL_DEBUG__);
-                return buildResponse(requestId, true, { hasRtcService, hasOdoo });
-            }
             case "start-store-watch": {
                 return buildResponse(requestId, true, startStoreWatch());
             }
