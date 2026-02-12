@@ -27,6 +27,19 @@ h1, h2, h3, h4, h5, h6, p {
     margin: 0;
 }
 
+.std-btn {
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.std-btn:hover {
+    transform: scale(1.02);
+}
+
+.std-btn:active {
+    transform: scale(0.98);
+}
+
 /* Form elements inherit font */
 input, button, textarea, select {
     font: inherit;
