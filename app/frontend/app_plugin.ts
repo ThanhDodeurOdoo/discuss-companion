@@ -16,15 +16,22 @@ const DEFAULT_PORT = 49152;
 const FEATURES_COMMAND = "get_features";
 const APP_VISIBILITY_COMMAND_GET = "get_app_visibility_mode";
 const APP_VISIBILITY_COMMAND_SET = "set_app_visibility_mode";
+const THEME_STORAGE_KEY = "discuss-companion.theme";
 
 const APP_VISIBILITY_MODE = {
     TrayAndDockWhenWindowOpen: "trayAndDockWhenWindowOpen",
     TrayAndDockAlways: "trayAndDockAlways",
     DockOnly: "dockOnly"
 } as const;
+const THEME_MODE = {
+    Dark: "dark",
+    Light: "light"
+} as const;
 
 type AppVisibilityMode = (typeof APP_VISIBILITY_MODE)[keyof typeof APP_VISIBILITY_MODE];
 const DEFAULT_APP_VISIBILITY_MODE = APP_VISIBILITY_MODE.TrayAndDockWhenWindowOpen;
+type ThemeMode = (typeof THEME_MODE)[keyof typeof THEME_MODE];
+const DEFAULT_THEME_MODE = THEME_MODE.Dark;
 
 type LogEntry = {
     id: number;
@@ -55,9 +62,11 @@ export class AppPlugin extends Plugin {
     static id = "AppPlugin";
 
     appVisibilityModes = APP_VISIBILITY_MODE;
+    themeModes = THEME_MODE;
     isRecording = signal(false);
     isPressed = signal(false);
     showSymbols = signal(true);
+    themeMode = signal<ThemeMode>(DEFAULT_THEME_MODE);
     permissionGranted = signal(false);
     extensionConnected = signal(false);
     features = signal<CompanionFeatures>(DEFAULT_FEATURES);
@@ -82,10 +91,55 @@ export class AppPlugin extends Plugin {
     permissionInterval: number | null = null;
 
     setup() {
+        this.initThemeMode();
         this.init();
         onWillDestroy(() => {
             this.unlistenFns.forEach((fn) => fn());
         });
+    }
+
+    initThemeMode() {
+        const storedMode = this.getStoredThemeMode();
+        this.themeMode.set(storedMode);
+        this.applyThemeMode(storedMode);
+    }
+
+    getStoredThemeMode(): ThemeMode {
+        if (typeof window === "undefined") {
+            return DEFAULT_THEME_MODE;
+        }
+        try {
+            const mode = window.localStorage.getItem(THEME_STORAGE_KEY);
+            if (mode === THEME_MODE.Dark || mode === THEME_MODE.Light) {
+                return mode;
+            }
+        } catch {
+            // Keep default theme when storage is unavailable.
+        }
+        return DEFAULT_THEME_MODE;
+    }
+
+    applyThemeMode(mode: ThemeMode) {
+        if (typeof document === "undefined") {
+            return;
+        }
+        document.documentElement.setAttribute("data-theme", mode);
+    }
+
+    setThemeMode(mode: ThemeMode) {
+        if (this.themeMode() === mode) {
+            return;
+        }
+        this.themeMode.set(mode);
+        this.applyThemeMode(mode);
+        if (typeof window === "undefined") {
+            return;
+        }
+        try {
+            window.localStorage.setItem(THEME_STORAGE_KEY, mode);
+        } catch {
+            // Ignore persistence errors and keep runtime theme.
+        }
     }
 
     async init() {

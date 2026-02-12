@@ -9,6 +9,43 @@
         <input type="checkbox" id="show-symbols" t-model="this.app.showSymbols"/>
     </div>
 
+    <div class="setting-item setting-item--stacked">
+        <div class="setting-label">
+            <span class="setting-title prevent-select">Appearance</span>
+            <span class="setting-desc">Choose a light or dark interface theme</span>
+        </div>
+        <div class="setting-options setting-options--theme">
+            <label
+                class="setting-option setting-option--choice"
+                t-att-class="{ 'is-selected': this.app.themeMode() === this.app.themeModes.Dark }">
+                <input
+                    type="radio"
+                    name="theme-mode"
+                    t-att-checked="this.app.themeMode() === this.app.themeModes.Dark"
+                    t-on-change="() => this.app.setThemeMode(this.app.themeModes.Dark)"
+                />
+                <div class="setting-option__text">
+                    <span class="setting-option__label">Dark</span>
+                    <span class="setting-option__desc">Low-glare theme for focused call control.</span>
+                </div>
+            </label>
+            <label
+                class="setting-option setting-option--choice"
+                t-att-class="{ 'is-selected': this.app.themeMode() === this.app.themeModes.Light }">
+                <input
+                    type="radio"
+                    name="theme-mode"
+                    t-att-checked="this.app.themeMode() === this.app.themeModes.Light"
+                    t-on-change="() => this.app.setThemeMode(this.app.themeModes.Light)"
+                />
+                <div class="setting-option__text">
+                    <span class="setting-option__label">Light</span>
+                    <span class="setting-option__desc">Daylight-friendlly theme with higher canvas contrast.</span>
+                </div>
+            </label>
+        </div>
+    </div>
+
     <div class="setting-item setting-item--stacked" t-if="this.app.features()?.callControlsTray">
         <div class="setting-label">
             <span class="setting-title prevent-select">App visibility</span>

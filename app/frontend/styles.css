@@ -1,47 +1,82 @@
 /**
  * App Frontend Styles
- * Imports shared styles with dark theme
+ * Imports shared styles and defines app theme tokens
  */
 
 @import "../../common/index.css";
-@import "../../common/theme-dark.css";
 
-/* Apply dark theme to root */
 :root {
     color-scheme: dark;
 
-    /* Backgrounds */
-    --color-bg: #0d1117;
-    --color-surface: #161b22;
-    --color-surface-muted: #21262d;
-    --color-surface-hover: #292e36;
+    --color-bg: #0f1620;
+    --color-surface: #151e2a;
+    --color-surface-muted: #1c2734;
+    --color-surface-hover: #243345;
+    --color-surface-inset: #111925;
+    --color-surface-overlay: rgba(15, 22, 32, 0.86);
 
-    /* Borders */
-    --color-border: #30363d;
-    --color-border-strong: #484f58;
+    --color-border: rgba(161, 184, 215, 0.22);
+    --color-border-strong: rgba(161, 184, 215, 0.4);
 
-    /* Text */
-    --color-text: #e6edf3;
-    --color-text-muted: #8b949e;
-    --color-text-subtle: #6e7681;
+    --color-text: #e7eef9;
+    --color-text-muted: #a9b8cc;
+    --color-text-subtle: #7f90a8;
 
-    /* Accent */
-    --color-accent: #2f81f7;
-    --color-accent-strong: #58a6ff;
-    --color-accent-muted: rgba(47, 129, 247, 0.15);
+    --color-accent: #4f8fff;
+    --color-accent-strong: #79aaff;
+    --color-accent-muted: rgba(79, 143, 255, 0.18);
+    --color-focus-ring: rgba(109, 163, 255, 0.35);
 
-    /* Semantic */
-    --color-success: #238636;
-    --color-success-muted: rgba(35, 134, 54, 0.15);
-    --color-danger: #f85149;
-    --color-danger-muted: rgba(248, 81, 73, 0.15);
-    --color-warning: #d29922;
-    --color-warning-muted: rgba(210, 153, 34, 0.15);
+    --color-success: #31a97c;
+    --color-success-muted: rgba(49, 169, 124, 0.16);
+    --color-danger: #e15d67;
+    --color-danger-muted: rgba(225, 93, 103, 0.16);
+    --color-warning: #d5a046;
+    --color-warning-muted: rgba(213, 160, 70, 0.16);
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
-    --shadow-lg: 0 10px 26px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+    --color-log-ws-msg: #c8a5ff;
+
+    --shadow-sm: 0 1px 2px rgba(2, 9, 20, 0.35);
+    --shadow-md: 0 8px 20px rgba(2, 9, 20, 0.38), 0 2px 6px rgba(2, 9, 20, 0.22);
+    --shadow-lg: 0 20px 40px rgba(2, 9, 20, 0.45), 0 6px 14px rgba(2, 9, 20, 0.3);
+    --shadow-inset: inset 0 2px 4px rgba(2, 9, 20, 0.32);
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --color-bg: #edf2f8;
+    --color-surface: #f7faff;
+    --color-surface-muted: #e7eef7;
+    --color-surface-hover: #dde6f1;
+    --color-surface-inset: #dfe8f4;
+    --color-surface-overlay: rgba(237, 242, 248, 0.9);
+
+    --color-border: rgba(37, 64, 98, 0.2);
+    --color-border-strong: rgba(37, 64, 98, 0.32);
+
+    --color-text: #17263f;
+    --color-text-muted: #526683;
+    --color-text-subtle: #7083a0;
+
+    --color-accent: #2f6de6;
+    --color-accent-strong: #1f5bd0;
+    --color-accent-muted: rgba(47, 109, 230, 0.14);
+    --color-focus-ring: rgba(47, 109, 230, 0.28);
+
+    --color-success: #1f8f63;
+    --color-success-muted: rgba(31, 143, 99, 0.12);
+    --color-danger: #c33d48;
+    --color-danger-muted: rgba(195, 61, 72, 0.12);
+    --color-warning: #b87821;
+    --color-warning-muted: rgba(184, 120, 33, 0.12);
+
+    --color-log-ws-msg: #7a57b3;
+
+    --shadow-sm: 0 1px 2px rgba(15, 30, 50, 0.06);
+    --shadow-md: 0 8px 20px rgba(15, 30, 50, 0.1), 0 2px 6px rgba(15, 30, 50, 0.06);
+    --shadow-lg: 0 20px 40px rgba(15, 30, 50, 0.14), 0 6px 14px rgba(15, 30, 50, 0.08);
+    --shadow-inset: inset 0 2px 4px rgba(15, 30, 50, 0.16);
 }
 
 /* ========================================
@@ -51,6 +86,9 @@
 body {
     height: 100vh;
     overflow: hidden;
+    transition:
+        background var(--transition-slow),
+        color var(--transition-slow);
 }
 
 #app {
