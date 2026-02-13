@@ -155,6 +155,34 @@ describe("Extension Content Script", () => {
         );
     });
 
+    test("retries lifecycle synchronization when initial subscribe ack fails", async () => {
+        setupBridgeAutoResponses({ hasOdoo: true, hasRtcService: true });
+        loadBridgeScript();
+        await flushPromises();
+
+        let subscribeAttempts = 0;
+        chrome.runtime.sendMessage.mockImplementation((message, callback) => {
+            if (message?.type === "subscribe") {
+                subscribeAttempts += 1;
+                callback?.(subscribeAttempts === 1 ? { error: "failed" } : { status: "ok" });
+                return;
+            }
+            callback?.({ status: "ok" });
+        });
+
+        emitBridgeEvent("call-lifecycle-update", {
+            hasRtcService: true,
+            hasHostedCall: true,
+            isTalking: true
+        });
+        await flushPromises();
+        expect(subscribeAttempts).toBe(1);
+
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+        await flushPromises();
+        expect(subscribeAttempts).toBe(2);
+    });
+
     test("sends ptt command to page bridge when requested by service worker", async () => {
         const { requests } = setupBridgeAutoResponses({ hasOdoo: true, hasRtcService: true });
         loadBridgeScript();
