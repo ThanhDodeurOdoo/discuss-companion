@@ -296,9 +296,22 @@ async function runCallAction(
     return { didRun, state: state ?? undefined };
 }
 
-async function sendPttCommand(command: "ptt-down" | "ptt-up" | "toggle-voice"): Promise<void> {
+async function sendPttCommand(
+    command: "ptt-down" | "ptt-up" | "toggle-voice"
+): Promise<{ didRun: boolean; state?: CallState } | null> {
     await ensureBridgeReady();
-    await bridge.request("ptt-command", { command });
+    const response = await bridge.request<{ didRun?: boolean; state?: CallState | null }>(
+        "ptt-command",
+        { command }
+    );
+    if (!response) {
+        return null;
+    }
+    const didRun = Boolean(response.didRun);
+    const state = response.state ?? null;
+    await updateCachedCallState(state);
+    await sendCallStateToApp(state);
+    return { didRun, state: state ?? undefined };
 }
 
 async function handleStatusState(rawState?: string | null): Promise<void> {
@@ -457,8 +470,12 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
                 sendResponse?.({ error: "invalid-command" });
                 break;
             }
-            void sendPttCommand(request.value.command).then(() => {
-                sendResponse?.({ status: "ok" });
+            void sendPttCommand(request.value.command).then((result) => {
+                if (!result) {
+                    sendResponse?.({ error: "command-failed" });
+                    return;
+                }
+                sendResponse?.({ status: "ok", didRun: result.didRun, state: result.state });
             });
             return true;
     }

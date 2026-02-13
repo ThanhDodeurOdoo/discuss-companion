@@ -32,6 +32,10 @@ function createStoreMock() {
         localSession: undefined,
         channel: { id: 1, name: "General", open: jest.fn() },
         pipService: {},
+        pttExtService: {
+            voiceActivated: false,
+        },
+        setTalking: jest.fn(),
         onPushToTalk: jest.fn(),
         setPttReleaseTimeout: jest.fn(),
         toggleMicrophone: jest.fn(),
@@ -219,7 +223,8 @@ describe("page_bridge store.onChange flow", () => {
                 isMute: false,
                 isDeaf: false,
                 isCameraOn: true,
-                isScreenOn: false
+                isScreenOn: false,
+                isVoiceActivated: false
             }
         });
 
@@ -242,7 +247,8 @@ describe("page_bridge store.onChange flow", () => {
                 isMute: false,
                 isDeaf: false,
                 isCameraOn: true,
-                isScreenOn: true
+                isScreenOn: true,
+                isVoiceActivated: false
             }
         });
     });
@@ -317,7 +323,8 @@ describe("page_bridge store.onChange flow", () => {
                 isMute: false,
                 isDeaf: false,
                 isCameraOn: true,
-                isScreenOn: true
+                isScreenOn: true,
+                isVoiceActivated: false
             }
         });
     });
@@ -330,7 +337,7 @@ describe("page_bridge store.onChange flow", () => {
         await flushBridgeEvents();
 
         let response = await bridgeRequest("ptt-command", { command: "ptt-down" });
-        expect(response.payload).toEqual({ didRun: false });
+        expect(response.payload).toEqual({ didRun: false, state: null });
         expect(rtc.onPushToTalk).not.toHaveBeenCalled();
 
         rtc.localSession = createSession("A");
@@ -338,17 +345,107 @@ describe("page_bridge store.onChange flow", () => {
         await flushBridgeEvents();
 
         response = await bridgeRequest("ptt-command", { command: "ptt-down" });
-        expect(response.payload).toEqual({ didRun: true });
+        expect(response.payload).toEqual({
+            didRun: true,
+            state: {
+                isMute: false,
+                isDeaf: false,
+                isCameraOn: false,
+                isScreenOn: false,
+                isVoiceActivated: false
+            }
+        });
         expect(rtc.onPushToTalk).toHaveBeenCalledTimes(1);
 
         response = await bridgeRequest("ptt-command", { command: "ptt-up" });
-        expect(response.payload).toEqual({ didRun: true });
+        expect(response.payload.didRun).toBe(true);
+        expect(response.payload.state.isVoiceActivated).toBe(false);
         expect(rtc.setPttReleaseTimeout).toHaveBeenCalled();
 
-        await bridgeRequest("ptt-command", { command: "toggle-voice" });
-        await bridgeRequest("ptt-command", { command: "toggle-voice" });
-
+        response = await bridgeRequest("ptt-command", { command: "toggle-voice" });
+        expect(response.payload.didRun).toBe(true);
+        expect(response.payload.state.isVoiceActivated).toBe(true);
+        expect(rtc.pttExtService.voiceActivated).toBe(true);
         expect(rtc.onPushToTalk).toHaveBeenCalledTimes(2);
+
+        response = await bridgeRequest("ptt-command", { command: "ptt-down" });
+        expect(response.payload.didRun).toBe(true);
+        expect(response.payload.state.isVoiceActivated).toBe(false);
+        expect(rtc.pttExtService.voiceActivated).toBe(false);
+        expect(rtc.onPushToTalk).toHaveBeenCalledTimes(3);
+
+        await bridgeRequest("ptt-command", { command: "ptt-up" });
+        expect(rtc.setPttReleaseTimeout).toHaveBeenCalledTimes(2);
+
+        response = await bridgeRequest("ptt-command", { command: "toggle-voice" });
+        expect(response.payload.state.isVoiceActivated).toBe(true);
+        expect(rtc.pttExtService.voiceActivated).toBe(true);
+        expect(rtc.onPushToTalk).toHaveBeenCalledTimes(4);
+
+        response = await bridgeRequest("ptt-command", { command: "toggle-voice" });
+        expect(response.payload.state.isVoiceActivated).toBe(false);
+        expect(rtc.pttExtService.voiceActivated).toBe(false);
         expect(rtc.setPttReleaseTimeout).toHaveBeenCalledWith(0);
+    });
+
+    test("mute transition forces voice latch off until re-toggled", async () => {
+        const { store, rtc, triggerChange } = createStoreMock();
+        setOdooStore(store);
+
+        await bridgeRequest("start-store-watch");
+        await flushBridgeEvents();
+
+        const session = createSession("A");
+        rtc.localSession = session;
+        triggerChange(rtc, "localSession");
+        await flushBridgeEvents();
+
+        let response = await bridgeRequest("ptt-command", { command: "toggle-voice" });
+        expect(response.payload.state.isVoiceActivated).toBe(true);
+        expect(rtc.pttExtService.voiceActivated).toBe(true);
+
+        session.isMute = true;
+        triggerChange(session, "is_muted");
+        await flushBridgeEvents();
+        expect(collector.last("call-state-update").payload.state.isVoiceActivated).toBe(false);
+        expect(rtc.pttExtService.voiceActivated).toBe(false);
+
+        session.isMute = false;
+        triggerChange(session, "is_muted");
+        await flushBridgeEvents();
+        expect(collector.last("call-state-update").payload.state.isVoiceActivated).toBe(false);
+
+        response = await bridgeRequest("read-call-state");
+        expect(response.payload.state.isVoiceActivated).toBe(false);
+    });
+
+    test("muting and deafening actions explicitly stop talking", async () => {
+        const { store, rtc, triggerChange } = createStoreMock();
+        setOdooStore(store);
+
+        await bridgeRequest("start-store-watch");
+        await flushBridgeEvents();
+
+        rtc.localSession = createSession("A", { isTalking: true });
+        triggerChange(rtc, "localSession");
+        await flushBridgeEvents();
+
+        await bridgeRequest("call-action", { action: { type: "toggle-microphone" } });
+        expect(rtc.toggleMicrophone).toHaveBeenCalledTimes(1);
+        expect(rtc.setTalking).toHaveBeenCalledWith(false);
+        expect(rtc.pttExtService.voiceActivated).toBe(false);
+
+        await bridgeRequest("call-action", { action: { type: "toggle-deafen" } });
+        expect(rtc.toggleDeafen).toHaveBeenCalledTimes(1);
+        expect(rtc.setTalking).toHaveBeenCalledTimes(2);
+        expect(rtc.pttExtService.voiceActivated).toBe(false);
+
+        await bridgeRequest("call-action", { action: { type: "set-mute", value: true } });
+        expect(rtc.toggleMicrophone).toHaveBeenCalledTimes(2);
+        expect(rtc.setTalking).toHaveBeenCalledTimes(3);
+
+        await bridgeRequest("call-action", { action: { type: "set-deaf", value: true } });
+        expect(rtc.toggleDeafen).toHaveBeenCalledTimes(2);
+        expect(rtc.setTalking).toHaveBeenCalledTimes(4);
     });
 });

@@ -3,4 +3,5 @@ export type CallState = {
     isDeaf: boolean;
     isCameraOn: boolean;
     isScreenOn: boolean;
+    isVoiceActivated: boolean;
 };

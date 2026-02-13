@@ -24,13 +24,25 @@
                         <span class="icon" aria-hidden="true">call_end</span>
                     </button>
                 </div>
+                <div class="call__voice-row">
+                    <span class="call__voice-label">Voice latch</span>
+                    <button class="voice-switch"
+                        role="switch"
+                        t-att-class="{ 'is-on': this.popup.isVoiceActivated() }"
+                        t-att-aria-checked="this.popup.isVoiceActivated() ? 'true' : 'false'"
+                        t-att-title="this.popup.isVoiceActivated() ? 'Disable voice latch' : 'Enable voice latch'"
+                        t-on-click="() => this.popup.toggleVoiceMode()">
+                        <span class="voice-switch__thumb"
+                            t-att-data-state="this.popup.isVoiceActivated() ? 'ON' : 'OFF'"></span>
+                    </button>
+                </div>
             </div>
             <div class="actions">
                 <button class="btn btn--ghost" t-if="this.popup.hasCallTab()" t-on-click="() => this.popup.onClickGoToCall()">Go to Call</button>
                 <button class="btn btn--icon btn--ghost actions__pip actions__primary" t-if="this.popup.hasCallTab()" t-att-title="'Open Picture in Picture'" t-on-click="() => this.popup.openPip()">
                     <span class="icon" aria-hidden="true">picture_in_picture</span>
                 </button>
-                <button class="btn btn--success actions__primary text-truncate" t-if="!this.popup.hasCallTab() &amp;&amp; this.popup.lastJoinedCall()" t-on-click="() => this.popup.rejoinLastCall()" t-att-title="'Re-join ' + this.popup.lastJoinedCall().name">Re-join "<t t-esc="this.popup.lastJoinedCall().name"/>"</button>
+                <button class="btn btn--success actions__primary text-truncate" t-if="!this.popup.hasCallTab() &amp;&amp; this.popup.lastJoinedCall()" t-on-click="() => this.popup.rejoinLastCall()" t-att-title="'Re-join ' + this.popup.lastJoinedCall().name">Re-join "<t t-out="this.popup.lastJoinedCall().name"/>"</button>
                 <button class="btn btn--icon btn--ghost actions__settings" t-on-click="() => this.popup.toggleSettings()" t-att-title="'Open settings'">
                     <span class="icon" aria-hidden="true">settings</span>
                 </button>

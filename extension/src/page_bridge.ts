@@ -33,6 +33,10 @@ type RtcService = {
     localSession?: RtcSession;
     channel?: RtcChannel;
     pipService?: unknown;
+    pttExtService?: {
+        voiceActivated?: boolean;
+    };
+    setTalking?: (isTalking: boolean) => Promise<void> | void;
     onPushToTalk: () => void;
     setPttReleaseTimeout: (duration?: number) => void;
     toggleMicrophone: () => Promise<void> | void;
@@ -89,6 +93,42 @@ type OdooWindow = Window & {
         return getStore()?.rtc;
     }
 
+    function readRtcVoiceActivated(rtc?: RtcService): boolean | null {
+        const value = rtc?.pttExtService?.voiceActivated;
+        return typeof value === "boolean" ? value : null;
+    }
+
+    function setVoiceActivated(value: boolean, rtc?: RtcService) {
+        voiceActivated = value;
+        const targetRtc = rtc ?? getRtc();
+        if (targetRtc?.pttExtService) {
+            targetRtc.pttExtService.voiceActivated = value;
+        }
+    }
+
+    function getVoiceActivated(rtc?: RtcService): boolean {
+        const rtcValue = readRtcVoiceActivated(rtc);
+        if (rtcValue === null) {
+            return voiceActivated;
+        }
+        voiceActivated = rtcValue;
+        return rtcValue;
+    }
+
+    async function stopTalkingAndDisableVoice(rtc?: RtcService): Promise<void> {
+        const targetRtc = rtc ?? getRtc();
+        if (!targetRtc) {
+            setVoiceActivated(false);
+            return;
+        }
+        setVoiceActivated(false, targetRtc);
+        if (typeof targetRtc.setTalking === "function") {
+            await targetRtc.setTalking(false);
+            return;
+        }
+        targetRtc.setPttReleaseTimeout(0);
+    }
+
     function getSessionKey(session?: RtcSession): string | null {
         if (!session) {
             return null;
@@ -102,17 +142,23 @@ type OdooWindow = Window & {
         return null;
     }
 
-    function readCallState(): CallState | null {
-        const session = getRtc()?.localSession;
-        if (!session) {
-            return null;
-        }
+    function buildCallState(session: RtcSession, rtc?: RtcService): CallState {
         return {
             isMute: Boolean(session.isMute),
             isDeaf: Boolean(session.is_deaf),
             isCameraOn: Boolean(session.is_camera_on),
-            isScreenOn: Boolean(session.is_screen_sharing_on)
+            isScreenOn: Boolean(session.is_screen_sharing_on),
+            isVoiceActivated: getVoiceActivated(rtc)
         };
+    }
+
+    function readCallState(): CallState | null {
+        const rtc = getRtc();
+        const session = rtc?.localSession;
+        if (!session) {
+            return null;
+        }
+        return buildCallState(session, rtc);
     }
 
     function emitBridgeEvent(type: BridgeEvent["type"], payload: unknown) {
@@ -180,7 +226,7 @@ type OdooWindow = Window & {
 
     function bindSessionWatchers(store: MailStore, session: RtcSession) {
         cleanupSessionWatchers();
-        voiceActivated = false;
+        setVoiceActivated(false, store.rtc);
 
         const sessionKey = getSessionKey(session);
         if (!sessionKey) {
@@ -194,6 +240,7 @@ type OdooWindow = Window & {
         activeSessionToken += 1;
         activeSessionKey = sessionKey;
         const token = activeSessionToken;
+        let previousMute = Boolean(session.isMute);
 
         const emitSessionLifecycle = () => {
             if (!isCurrentSession(token, sessionKey)) {
@@ -210,12 +257,12 @@ type OdooWindow = Window & {
             if (!isCurrentSession(token, sessionKey)) {
                 return;
             }
-            emitCallState({
-                isMute: Boolean(session.isMute),
-                isDeaf: Boolean(session.is_deaf),
-                isCameraOn: Boolean(session.is_camera_on),
-                isScreenOn: Boolean(session.is_screen_sharing_on)
-            });
+            const isMute = Boolean(session.isMute);
+            if (isMute && !previousMute) {
+                setVoiceActivated(false, store.rtc);
+            }
+            previousMute = isMute;
+            emitCallState(buildCallState(session, store.rtc));
         };
 
         addSessionWatcherStop(store.onChange(session, "isTalking", emitSessionLifecycle));
@@ -245,7 +292,7 @@ type OdooWindow = Window & {
         if (!localSession) {
             activeSessionToken += 1;
             activeSessionKey = null;
-            voiceActivated = false;
+            setVoiceActivated(false, rtc);
             cleanupSessionWatchers();
             emitLifecycle({ hasRtcService: true, hasHostedCall: false, isTalking: false });
             emitCallState(null);
@@ -258,12 +305,7 @@ type OdooWindow = Window & {
                 hasHostedCall: true,
                 isTalking: Boolean(localSession.isTalking)
             });
-            emitCallState({
-                isMute: Boolean(localSession.isMute),
-                isDeaf: Boolean(localSession.is_deaf),
-                isCameraOn: Boolean(localSession.is_camera_on),
-                isScreenOn: Boolean(localSession.is_screen_sharing_on)
-            });
+            emitCallState(buildCallState(localSession, rtc));
             return;
         }
 
@@ -335,7 +377,7 @@ type OdooWindow = Window & {
 
     function stopStoreWatch() {
         storeWatchRunning = false;
-        voiceActivated = false;
+        setVoiceActivated(false);
         cleanupBootstrapWatcher();
         cleanupSessionWatchers();
         if (stopRtcWatcher) {
@@ -363,7 +405,11 @@ type OdooWindow = Window & {
         if (!rtc?.localSession) {
             return false;
         }
+        const wasMuted = Boolean(rtc.localSession.isMute);
         await rtc.toggleMicrophone();
+        if (!wasMuted) {
+            await stopTalkingAndDisableVoice(rtc);
+        }
         return true;
     }
 
@@ -372,7 +418,11 @@ type OdooWindow = Window & {
         if (!rtc?.localSession) {
             return false;
         }
+        const wasDeaf = Boolean(rtc.localSession.is_deaf);
         await rtc.toggleDeafen();
+        if (!wasDeaf) {
+            await stopTalkingAndDisableVoice(rtc);
+        }
         return true;
     }
 
@@ -420,6 +470,9 @@ type OdooWindow = Window & {
         }
         if (localSession.isMute !== value) {
             await rtc.toggleMicrophone();
+            if (value) {
+                await stopTalkingAndDisableVoice(rtc);
+            }
         }
         return true;
     }
@@ -432,6 +485,9 @@ type OdooWindow = Window & {
         }
         if (localSession.is_deaf !== value) {
             await rtc.toggleDeafen();
+            if (value) {
+                await stopTalkingAndDisableVoice(rtc);
+            }
         }
         return true;
     }
@@ -489,32 +545,39 @@ type OdooWindow = Window & {
         }
     }
 
-    function runPttCommand(command: PttCommand): boolean {
+    function runPttCommand(command: PttCommand): { didRun: boolean; state: CallState | null } {
         const rtc = getRtc();
         if (!rtc?.localSession) {
-            return false;
+            return { didRun: false, state: null };
         }
+        getVoiceActivated(rtc);
+        let didRun = true;
         switch (command) {
             case "ptt-down":
-                voiceActivated = false;
+                setVoiceActivated(false, rtc);
                 rtc.onPushToTalk();
-                return true;
+                break;
             case "ptt-up":
                 if (!voiceActivated) {
                     rtc.setPttReleaseTimeout();
                 }
-                return true;
+                break;
             case "toggle-voice":
                 if (voiceActivated) {
                     rtc.setPttReleaseTimeout(0);
                 } else {
                     rtc.onPushToTalk();
                 }
-                voiceActivated = !voiceActivated;
-                return true;
+                setVoiceActivated(!voiceActivated, rtc);
+                break;
             default:
-                return false;
+                didRun = false;
         }
+        const state = readCallState();
+        if (didRun) {
+            emitCallState(state);
+        }
+        return { didRun, state };
     }
 
     function getCallInfo() {
@@ -563,8 +626,8 @@ type OdooWindow = Window & {
                 if (!command) {
                     return buildResponse(requestId, false, { error: "invalid-ptt-command" });
                 }
-                const didRun = runPttCommand(command);
-                return buildResponse(requestId, true, { didRun });
+                const result = runPttCommand(command);
+                return buildResponse(requestId, true, result);
             }
             case "get-call-info": {
                 return buildResponse(requestId, true, getCallInfo());

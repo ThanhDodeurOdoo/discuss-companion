@@ -8,11 +8,15 @@ import {
 import type { CallState } from "./call_state_types";
 import { executeInCallTab } from "./utils";
 
+type PttCommand = "ptt-down" | "ptt-up" | "toggle-voice";
+
 type CallActionResponse = { status: "ok"; didRun: boolean; state?: CallState } | { error: string };
 
 type CallStateResponse = { status: "ok"; state?: CallState } | { error: string };
 
 type FocusResponse = { status: "ok"; didFocus: boolean } | { error: string };
+
+type PttCommandResponse = { status: "ok"; didRun: boolean; state?: CallState } | { error: string };
 
 // Some actions (like PiP) require a live user gesture and won't work from the service worker.
 // We allow these to execute locally when the popup has focus; everything else is routed to the SW.
@@ -88,4 +92,17 @@ export async function requestFocusCallTab(): Promise<boolean> {
         return false;
     }
     return response.didFocus;
+}
+
+export async function requestPttCommand(
+    command: PttCommand
+): Promise<{ didRun: boolean; state?: CallState } | null> {
+    const response = await sendMessage<PttCommandResponse>({
+        type: "ptt-command",
+        value: { command }
+    });
+    if (!response || "error" in response) {
+        return null;
+    }
+    return { didRun: response.didRun, state: response.state };
 }
