@@ -2,15 +2,20 @@
 
 This document describes the current extension runtime after the hard cutover to the reactive Odoo lifecycle model.
 
-## Core decisions
-
 - `rtc.localSession` is the only source of truth for call lifecycle.
 - Lifecycle detection is reactive (`store.onChange`), not polling.
 - PTT runs directly through Odoo RTC APIs (`onPushToTalk`, `setPttReleaseTimeout`).
-- No legacy compatibility path remains for the old Odoo PTT extension service.
 - The service worker owns cross-tab state and owner election.
 
 ## Runtime components
+
+### Entrypoint wrappers
+
+- `extension/src/content.ts`, `extension/src/page_bridge.ts`, and `extension/src/service_worker_messages.ts` are thin wrapper entrypoints.
+- Runtime logic is split by context under:
+  - `extension/src/content/`
+  - `extension/src/page_bridge/`
+  - `extension/src/service_worker/`
 
 ### Call actions
 
@@ -21,9 +26,15 @@ This document describes the current extension runtime after the hard cutover to 
   - `CALL_ACTION_APP_COMMANDS` aliases for WS commands.
   - `requiresValue` contract for toggles vs setters.
 
-### Page bridge (`extension/src/page_bridge.ts`)
+### Page bridge (`extension/src/page_bridge.ts` + `extension/src/page_bridge/*`)
 
 - Runs in page context and calls Odoo services directly.
+- Main runtime entry: `extension/src/page_bridge/main.ts`.
+- Key modules:
+  - `runtime_state.ts`, `rtc_access.ts`
+  - `event_emitter.ts`, `store_watch.ts`
+  - `call_actions.ts`, `ptt_runtime.ts`
+  - `request_router.ts`
 - Uses `mail.store.onChange` to watch:
   - `rtc.localSession` for lifecycle.
   - Session fields for state:
@@ -37,9 +48,15 @@ This document describes the current extension runtime after the hard cutover to 
   - `start-store-watch`, `stop-store-watch`
   - `ptt-command`
 
-### Content script (`extension/src/content.ts`)
+### Content script (`extension/src/content.ts` + `extension/src/content/*`)
 
 - Injects and talks to the page bridge.
+- Main runtime entry: `extension/src/content/main.ts`.
+- Key modules:
+  - `runtime_state.ts`, `bridge_watch.ts`
+  - `call_state_sync.ts`, `lifecycle_sync.ts`, `call_info_capture.ts`
+  - `call_controls.ts`, `ws_runtime.ts`
+  - `sw_message_router.ts`, `settings_runtime.ts`
 - Starts the bridge watcher via `start-store-watch` (with retries on initial load/focus/visibility).
 - Translates lifecycle events into SW coordination:
   - call start => `subscribe`
@@ -49,9 +66,13 @@ This document describes the current extension runtime after the hard cutover to 
 - Routes both WS PTT frames and SW shortcut messages to bridge `ptt-command`.
 - Keeps in-memory `cachedCallState` and forwards state snapshots to SW.
 
-### Service worker (`extension/src/service_worker.ts`, `extension/src/service_worker_messages.ts`)
+### Service worker (`extension/src/service_worker.ts`, `extension/src/service_worker_messages.ts`, `extension/src/service_worker/*`)
 
 - Handles message routing and tab ownership.
+- Runtime implementation: `extension/src/service_worker/message_handlers.ts`.
+- Key modules:
+  - `ownership_state.ts`, `content_forwarders.ts`
+  - `shortcuts.ts`, `icon_state.ts`, `tab_focus.ts`
 - Maintains session state:
   - `isTalkingByTabId`
   - `callTabId`
@@ -204,18 +225,9 @@ Firefox can throw cross-compartment errors when parsing some FlatBuffers `Status
   - `assets/*.js`
 - Extension runs on HTTP(S) pages, but watcher activation requires Odoo runtime availability.
 
-## Removed legacy flow (intentional)
-
-- No old page-message compatibility bridge remains.
-- No `discuss-push-to-talk` forwarding path remains.
-- No `ask-is-enabled` or `ask-version` SW cases remain.
-- No `chrome.runtime.onMessageExternal` listener remains.
-- No `externally_connectable` manifest entry remains.
-- No compatibility tests/files for the removed flow remain.
-
-## Adding a new call action
+## How to add a new call action
 
 1. Add definition in `extension/src/call_action_definitions.ts`.
-2. Implement runtime behavior in `extension/src/page_bridge.ts` (`runAction`).
+2. Implement runtime behavior in `extension/src/page_bridge/call_actions.ts` (`runAction`).
 3. Use from popup/other callers through `CallActionType` and SW call-action routing.
 4. If needed for app commands, add aliases to `appCommands`.

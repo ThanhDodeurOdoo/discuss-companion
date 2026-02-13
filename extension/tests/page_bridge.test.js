@@ -329,6 +329,30 @@ describe("page_bridge store.onChange flow", () => {
         });
     });
 
+    test("bootstrap watcher attaches rtc localSession watcher once after delayed store availability", async () => {
+        const { store } = createStoreMock();
+
+        await bridgeRequest("start-store-watch");
+        await flushBridgeEvents();
+
+        setOdooStore(store);
+        document.body.appendChild(document.createElement("div"));
+        await flushBridgeEvents();
+
+        const localSessionWatcherCalls = store.onChange.mock.calls.filter(
+            ([target, key]) => target === store.rtc && key === "localSession"
+        );
+        expect(localSessionWatcherCalls).toHaveLength(1);
+
+        document.body.appendChild(document.createElement("span"));
+        await flushBridgeEvents();
+
+        const localSessionWatcherCallsAfter = store.onChange.mock.calls.filter(
+            ([target, key]) => target === store.rtc && key === "localSession"
+        );
+        expect(localSessionWatcherCallsAfter).toHaveLength(1);
+    });
+
     test("ptt-command uses rtc methods only with a localSession", async () => {
         const { store, rtc, triggerChange } = createStoreMock();
         setOdooStore(store);

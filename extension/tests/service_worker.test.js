@@ -72,6 +72,23 @@ describe("Extension Service Worker", () => {
         expect(chrome.action.setIcon).toHaveBeenCalled();
     });
 
+    test("unsubscribe promotes another subscribed tab as owner", async () => {
+        mockStorage.isTalkingByTabId[111] = false;
+        mockStorage.isTalkingByTabId[222] = true;
+        mockStorage.callTabId = 111;
+        const sendResponse = jest.fn();
+
+        capturedHandleMessage({ type: "unsubscribe" }, { tab: { id: 111 } }, sendResponse);
+        await flushPromises();
+
+        expect(mockStorage.callTabId).toBe(222);
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(222, {
+            type: "content-owner-update",
+            value: { isOwner: true }
+        });
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(111, { type: "content-unsubscribe" });
+    });
+
     test("handles is-talking message and updates icon", async () => {
         capturedHandleMessage({ type: "is-talking", value: true }, { tab: { id: 123 } });
         await flushPromises();
