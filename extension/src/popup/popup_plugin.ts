@@ -1,7 +1,12 @@
 import { Plugin, signal, computed } from "@odoo/owl";
 import { executeInCurrentTab } from "../utils";
 import { CallActionType, type CallAction } from "../call_actions";
-import { requestCallAction, requestCallState, requestFocusCallTab } from "../command_api";
+import {
+    requestCallAction,
+    requestCallState,
+    requestFocusCallTab,
+    requestPttCommand
+} from "../command_api";
 import { CallState, getCallTabId, getStoredCallState } from "../call_state";
 import { IS_FIREFOX_BUILD } from "../env";
 import { SESSION_STATE_STORAGE_AREA } from "../storage/session_state";
@@ -30,6 +35,7 @@ export class PopupPlugin extends Plugin {
     isDeaf = signal(false);
     isCameraOn = signal(false);
     isScreenOn = signal(false);
+    isVoiceActivated = signal(false);
     isSettingsOpen = signal(false);
     lastJoinedCall = signal<{ url: string; name: string } | null>(null);
     isStatusDefault = computed(
@@ -145,6 +151,14 @@ export class PopupPlugin extends Plugin {
         await this.runCallAction({ type: CallActionType.ToggleScreen }, { focusCallTab: true });
     }
 
+    async toggleVoiceMode() {
+        const result = await requestPttCommand("toggle-voice");
+        if (!result) {
+            return;
+        }
+        this.applyCallState(result.state);
+    }
+
     async openPip() {
         await this.runCallAction({ type: CallActionType.OpenPip });
     }
@@ -161,6 +175,7 @@ export class PopupPlugin extends Plugin {
         this.isDeaf.set(Boolean(state?.isDeaf));
         this.isCameraOn.set(Boolean(state?.isCameraOn));
         this.isScreenOn.set(Boolean(state?.isScreenOn));
+        this.isVoiceActivated.set(Boolean(state?.isVoiceActivated));
     }
 
     async runCallAction(

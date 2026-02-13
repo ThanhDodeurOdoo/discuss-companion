@@ -31,7 +31,8 @@ type MessageHandlerDeps = {
     log: (...args: unknown[]) => void;
 };
 
-type Command = "ptt-pressed" | "toggle-voice";
+type ShortcutCommand = "ptt-pressed" | "toggle-voice";
+type PttCommand = "ptt-down" | "ptt-up" | "toggle-voice";
 
 export type MessageHandlers = {
     handleMessage: (
@@ -102,6 +103,10 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         chrome.tabs.sendMessage(tabId, message);
     }
 
+    function isPttCommand(command: unknown): command is PttCommand {
+        return command === "ptt-down" || command === "ptt-up" || command === "toggle-voice";
+    }
+
     async function notifyOwnerChange(
         previousOwner: number | null,
         nextOwner: number | null,
@@ -164,6 +169,29 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         });
     }
 
+    async function forwardPttCommand(
+        tabId: number,
+        payload: { command?: PttCommand } | null,
+        sendResponse: (response?: unknown) => void
+    ) {
+        const command = payload?.command;
+        if (!isPttCommand(command)) {
+            sendResponse?.({ error: "invalid-command" });
+            return;
+        }
+        chrome.tabs.sendMessage(
+            tabId,
+            { type: "content-ptt-command", value: { command } },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    sendResponse?.({ error: "message-failed" });
+                    return;
+                }
+                sendResponse?.(response);
+            }
+        );
+    }
+
     async function handleMessage(
         request: ExtensionMessage,
         sender: chrome.runtime.MessageSender,
@@ -176,6 +204,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
             !tabId &&
             type !== "call-action" &&
             type !== "refresh-call-state" &&
+            type !== "ptt-command" &&
             type !== "focus-call-tab"
         ) {
             sendResponse?.({ error: "no-tab" });
@@ -256,6 +285,19 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 void forwardRefreshCallState(callTabId, sendResponse);
                 return true;
             }
+            case "ptt-command": {
+                const callTabId = await getCallTabId();
+                if (callTabId === null) {
+                    sendResponse?.({ error: "no-call-tab" });
+                    break;
+                }
+                void forwardPttCommand(
+                    callTabId,
+                    value as { command?: PttCommand } | null,
+                    sendResponse
+                );
+                return true;
+            }
             case "focus-call-tab": {
                 const didFocus = await focusCallTab();
                 sendResponse?.({ status: "ok", didFocus });
@@ -330,7 +372,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         const tabIds = Object.keys(isTalkingByTabId);
         for (const tabIdStr of tabIds) {
             const tabId = Number(tabIdStr);
-            switch (command as Command) {
+            switch (command as ShortcutCommand) {
                 case "toggle-voice":
                     chrome.tabs.sendMessage(tabId, {
                         type: "content-ptt-command",

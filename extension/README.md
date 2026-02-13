@@ -15,6 +15,7 @@ The extension is derived from Odoo's own extension for Push-to-Talk.
 - Extension shortcut push-to-talk (not system wide on macOS)
 - Mute/Unmute/camera/share-screen/leave-call
 - Quick access to the call tab and activation of picture-in-picture.
+- Voice activation toggle
 
 ### When running alonside the app:
 

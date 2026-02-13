@@ -37,7 +37,8 @@ export function isCallStateObserverPayload(value: unknown): value is CallStateOb
         typeof state.isMute === "boolean" &&
         typeof state.isDeaf === "boolean" &&
         typeof state.isCameraOn === "boolean" &&
-        typeof state.isScreenOn === "boolean"
+        typeof state.isScreenOn === "boolean" &&
+        typeof state.isVoiceActivated === "boolean"
     );
 }
 

@@ -173,7 +173,11 @@ describe("Extension Content Script", () => {
         await flushPromises();
 
         expect(requests.some((request) => request.type === "ptt-command")).toBe(true);
-        expect(sendResponse).toHaveBeenCalledWith({ status: "ok" });
+        expect(sendResponse).toHaveBeenCalledWith({
+            status: "ok",
+            didRun: true,
+            state: undefined
+        });
     });
 
     test("connects WebSocket when owner and companion enabled", async () => {
@@ -219,7 +223,8 @@ describe("Extension Content Script", () => {
                 isMute: false,
                 isDeaf: false,
                 isCameraOn: true,
-                isScreenOn: false
+                isScreenOn: false,
+                isVoiceActivated: false
             }
         });
         await flushPromises();
