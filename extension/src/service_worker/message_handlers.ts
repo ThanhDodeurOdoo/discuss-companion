@@ -10,7 +10,12 @@ import {
     setIsTalkingByTabId
 } from "../storage/session_state";
 import { IS_FIREFOX_BUILD } from "../env";
-import type { SwToContentMessage } from "../messaging/sw_channel";
+import {
+    ContentToSwMessageType,
+    SwToContentMessageType,
+    type SwToContentMessage
+} from "../messaging/sw_channel";
+import type { PttCommand } from "../page_bridge/runtime_types";
 import { createContentForwarders } from "./content_forwarders";
 import { createIconStateController } from "./icon_state";
 import { createOwnershipController } from "./ownership_state";
@@ -80,10 +85,10 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
 
         if (
             !tabId &&
-            type !== "call-action" &&
-            type !== "refresh-call-state" &&
-            type !== "ptt-command" &&
-            type !== "focus-call-tab"
+            type !== ContentToSwMessageType.CallAction &&
+            type !== ContentToSwMessageType.RefreshCallState &&
+            type !== ContentToSwMessageType.PttCommand &&
+            type !== ContentToSwMessageType.FocusCallTab
         ) {
             sendResponse?.({ error: "no-tab" });
             return;
@@ -92,7 +97,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         const safeTabId = tabId as number;
 
         switch (type) {
-            case "subscribe": {
+            case ContentToSwMessageType.Subscribe: {
                 const isTalkingByTabId = await getIsTalkingByTabId();
                 const previousOwner = await getCallTabId();
                 isTalkingByTabId[safeTabId] = false;
@@ -104,18 +109,18 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                     isTalkingByTabId[previousOwner] !== undefined
                 ) {
                     sendToContentTab(previousOwner, {
-                        type: "content-owner-update",
+                        type: SwToContentMessageType.ContentOwnerUpdate,
                         value: { isOwner: false }
                     });
                 }
                 sendToContentTab(safeTabId, {
-                    type: "content-subscribe",
+                    type: SwToContentMessageType.ContentSubscribe,
                     value: { isOwner: true }
                 });
                 sendResponse?.({ status: "ok" });
                 break;
             }
-            case "unsubscribe": {
+            case ContentToSwMessageType.Unsubscribe: {
                 const isTalkingByTabId = await getIsTalkingByTabId();
                 const previousOwner = await getCallTabId();
                 delete isTalkingByTabId[safeTabId];
@@ -125,12 +130,12 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                     await setAppConnected(false);
                 }
                 await ownership.notifyOwnerChange(previousOwner, nextOwner, isTalkingByTabId);
-                sendToContentTab(safeTabId, { type: "content-unsubscribe" });
+                sendToContentTab(safeTabId, { type: SwToContentMessageType.ContentUnsubscribe });
                 await iconState.updateAppIcon();
                 sendResponse?.({ status: "ok" });
                 break;
             }
-            case "is-talking": {
+            case ContentToSwMessageType.IsTalking: {
                 const isTalkingByTabId = await getIsTalkingByTabId();
                 isTalkingByTabId[safeTabId] = value as boolean;
                 await setIsTalkingByTabId(isTalkingByTabId);
@@ -141,7 +146,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 sendResponse?.({ status: "ok" });
                 break;
             }
-            case "call-action": {
+            case ContentToSwMessageType.CallAction: {
                 const callTabId = await getCallTabId();
                 if (callTabId === null) {
                     sendResponse?.({ error: "no-call-tab" });
@@ -154,7 +159,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 );
                 return true;
             }
-            case "refresh-call-state": {
+            case ContentToSwMessageType.RefreshCallState: {
                 const callTabId = await getCallTabId();
                 if (callTabId === null) {
                     sendResponse?.({ error: "no-call-tab" });
@@ -163,7 +168,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 void forwarders.forwardRefreshCallState(callTabId, sendResponse);
                 return true;
             }
-            case "ptt-command": {
+            case ContentToSwMessageType.PttCommand: {
                 const callTabId = await getCallTabId();
                 if (callTabId === null) {
                     sendResponse?.({ error: "no-call-tab" });
@@ -171,17 +176,17 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 }
                 void forwarders.forwardPttCommand(
                     callTabId,
-                    value as { command?: "ptt-down" | "ptt-up" | "toggle-voice" } | null,
+                    value as { command?: PttCommand } | null,
                     sendResponse
                 );
                 return true;
             }
-            case "focus-call-tab": {
+            case ContentToSwMessageType.FocusCallTab: {
                 const didFocus = await tabFocus.focusCallTab();
                 sendResponse?.({ status: "ok", didFocus });
                 break;
             }
-            case "content-connection-state": {
+            case ContentToSwMessageType.ContentConnectionState: {
                 if (!tabId || !(await ownership.isOwnerTab(safeTabId))) {
                     sendResponse?.({ status: "ok", ignored: true });
                     break;
@@ -194,7 +199,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 sendResponse?.({ status: "ok" });
                 break;
             }
-            case "content-call-state-update": {
+            case ContentToSwMessageType.ContentCallStateUpdate: {
                 if (!tabId || !(await ownership.isOwnerTab(safeTabId))) {
                     sendResponse?.({ status: "ok", ignored: true });
                     break;

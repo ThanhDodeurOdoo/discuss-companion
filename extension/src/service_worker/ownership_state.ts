@@ -1,3 +1,5 @@
+import { SwToContentMessageType } from "../messaging/sw_channel";
+
 export function createOwnershipController(deps: {
     setStoredCallState: (state?: import("../call_state_types").CallState | null) => Promise<void>;
     getCallTabId: () => Promise<number | null>;
@@ -55,7 +57,7 @@ export function createOwnershipController(deps: {
     ): Promise<void> {
         if (nextOwner !== null && nextOwner !== previousOwner) {
             sendToContentTab(nextOwner, {
-                type: "content-owner-update",
+                type: SwToContentMessageType.ContentOwnerUpdate,
                 value: { isOwner: true }
             });
         }
@@ -65,7 +67,7 @@ export function createOwnershipController(deps: {
             isTalkingByTabId[previousOwner] !== undefined
         ) {
             sendToContentTab(previousOwner, {
-                type: "content-owner-update",
+                type: SwToContentMessageType.ContentOwnerUpdate,
                 value: { isOwner: false }
             });
         }

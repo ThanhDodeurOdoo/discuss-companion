@@ -4,15 +4,11 @@ import {
     type CallAction,
     type CallActionOptions
 } from "../call_actions";
-
-type PttCommand = "ptt-down" | "ptt-up" | "toggle-voice";
+import { SwToContentMessageType } from "../messaging/sw_channel";
+import { isPttCommand, type PttCommand } from "../page_bridge/runtime_types";
 
 export function createContentForwarders(deps: { focusCallTab: () => Promise<boolean> }) {
     const { focusCallTab } = deps;
-
-    function isPttCommand(command: unknown): command is PttCommand {
-        return command === "ptt-down" || command === "ptt-up" || command === "toggle-voice";
-    }
 
     async function forwardCallAction(
         tabId: number,
@@ -29,7 +25,7 @@ export function createContentForwarders(deps: { focusCallTab: () => Promise<bool
         }
         chrome.tabs.sendMessage(
             tabId,
-            { type: "content-call-action", value: payload },
+            { type: SwToContentMessageType.ContentCallAction, value: payload },
             (response) => {
                 if (chrome.runtime.lastError) {
                     sendResponse?.({ error: "message-failed" });
@@ -44,13 +40,17 @@ export function createContentForwarders(deps: { focusCallTab: () => Promise<bool
         tabId: number,
         sendResponse: (response?: unknown) => void
     ): Promise<void> {
-        chrome.tabs.sendMessage(tabId, { type: "content-refresh-call-state" }, (response) => {
-            if (chrome.runtime.lastError) {
-                sendResponse?.({ error: "message-failed" });
-                return;
+        chrome.tabs.sendMessage(
+            tabId,
+            { type: SwToContentMessageType.ContentRefreshCallState },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    sendResponse?.({ error: "message-failed" });
+                    return;
+                }
+                sendResponse?.(response);
             }
-            sendResponse?.(response);
-        });
+        );
     }
 
     async function forwardPttCommand(
@@ -65,7 +65,7 @@ export function createContentForwarders(deps: { focusCallTab: () => Promise<bool
         }
         chrome.tabs.sendMessage(
             tabId,
-            { type: "content-ptt-command", value: { command } },
+            { type: SwToContentMessageType.ContentPttCommand, value: { command } },
             (response) => {
                 if (chrome.runtime.lastError) {
                     sendResponse?.({ error: "message-failed" });

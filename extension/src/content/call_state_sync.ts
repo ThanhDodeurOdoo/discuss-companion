@@ -1,11 +1,13 @@
 import type { CallState } from "../call_state_types";
 import type { BridgeClient } from "../messaging/bridge_client";
+import { BridgeRequestType } from "../messaging/bridge_protocol";
+import { ContentToSwMessageType } from "../messaging/sw_channel";
 import type { WsClient } from "../ws/ws_client";
 import { buildCallStateMessage, type CallStateSnapshot } from "../ws/ws_codec";
 import type { ContentRuntimeState } from "./runtime_state";
 
 export type SendToServiceWorker = <T>(message: {
-    type: string;
+    type: ContentToSwMessageType;
     value?: unknown;
 }) => Promise<T | null>;
 
@@ -42,7 +44,7 @@ export function createCallStateSyncRuntime(deps: {
     const { state, bridge, wsClient, ensureBridgeReady, sendToServiceWorker } = deps;
 
     async function sendToServiceWorkerExpectOk(message: {
-        type: string;
+        type: ContentToSwMessageType;
         value?: unknown;
     }): Promise<boolean> {
         const response = await sendToServiceWorker(message);
@@ -68,14 +70,16 @@ export function createCallStateSyncRuntime(deps: {
             return;
         }
         await sendToServiceWorker({
-            type: "content-call-state-update",
+            type: ContentToSwMessageType.ContentCallStateUpdate,
             value: { state: nextState }
         });
     }
 
     async function refreshAndSendCallState(): Promise<CallState | null> {
         await ensureBridgeReady();
-        const response = await bridge.request<{ state?: CallState | null }>("read-call-state");
+        const response = await bridge.request<{ state?: CallState | null }>(
+            BridgeRequestType.ReadCallState
+        );
         const nextState = response?.state ?? null;
         if (response) {
             await updateCachedCallState(nextState);

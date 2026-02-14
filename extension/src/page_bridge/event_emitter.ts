@@ -1,5 +1,5 @@
 import type { CallState } from "../call_state_types";
-import { BRIDGE_CHANNEL, type BridgeEvent } from "../messaging/bridge_protocol";
+import { BRIDGE_CHANNEL, BridgeEventType, type BridgeEvent } from "../messaging/bridge_protocol";
 import type { PageBridgeRuntimeState } from "./runtime_state";
 
 export function createBridgeEventEmitter(state: PageBridgeRuntimeState) {
@@ -23,7 +23,7 @@ export function createBridgeEventEmitter(state: PageBridgeRuntimeState) {
             return;
         }
         state.lastLifecycleSignature = signature;
-        emitBridgeEvent("call-lifecycle-update", payload);
+        emitBridgeEvent(BridgeEventType.CallLifecycleUpdate, payload);
     }
 
     function emitCallState(stateValue: CallState | null): void {
@@ -33,7 +33,7 @@ export function createBridgeEventEmitter(state: PageBridgeRuntimeState) {
             return;
         }
         state.lastCallStateSignature = signature;
-        emitBridgeEvent("call-state-update", payload);
+        emitBridgeEvent(BridgeEventType.CallStateUpdate, payload);
     }
 
     return {

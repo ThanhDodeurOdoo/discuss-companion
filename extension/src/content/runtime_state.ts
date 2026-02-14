@@ -7,7 +7,11 @@ export const LIFECYCLE_RESYNC_DELAY = 1000;
 
 const mutedLog = (..._args: unknown[]) => {};
 
-export type WorkerSubscriptionState = "unknown" | "subscribed" | "unsubscribed";
+export enum WorkerSubscriptionState {
+    Unknown = "unknown",
+    Subscribed = "subscribed",
+    Unsubscribed = "unsubscribed"
+}
 
 export type ContentRuntimeState = {
     wsPort: number;
@@ -40,7 +44,7 @@ export function createContentRuntimeState(): ContentRuntimeState {
         callInfoCaptureTimeoutId: null,
         lifecycleResyncTimeoutId: null,
         lastLifecyclePayload: null,
-        workerSubscriptionState: "unknown",
+        workerSubscriptionState: WorkerSubscriptionState.Unknown,
         logTarget: mutedLog
     };
 }

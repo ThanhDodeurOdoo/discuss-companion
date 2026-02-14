@@ -3,11 +3,11 @@ import type { CallState } from "../call_state_types";
 import {
     BRIDGE_CHANNEL,
     type BridgeRequest,
-    type BridgeRequestType,
+    BridgeRequestType,
     type BridgeResponse,
     isBridgeMessage
 } from "../messaging/bridge_protocol";
-import type { PttCommand } from "./runtime_types";
+import { isPttCommand, type PttCommand } from "./runtime_types";
 
 export function createBridgeRequestRouter(deps: {
     runAction: (action: CallAction) => Promise<boolean>;
@@ -38,8 +38,8 @@ export function createBridgeRequestRouter(deps: {
 
     async function handleRequest(request: BridgeRequest): Promise<BridgeResponse> {
         const { requestId, type, payload } = request;
-        switch (type as BridgeRequestType) {
-            case "call-action": {
+        switch (type) {
+            case BridgeRequestType.CallAction: {
                 const action = (payload as { action?: CallAction } | undefined)?.action;
                 if (!action) {
                     return buildResponse(requestId, false, { error: "invalid-action" });
@@ -48,25 +48,25 @@ export function createBridgeRequestRouter(deps: {
                 const state = readCallState();
                 return buildResponse(requestId, true, { didRun, state });
             }
-            case "read-call-state": {
+            case BridgeRequestType.ReadCallState: {
                 const state = readCallState();
                 return buildResponse(requestId, true, { state });
             }
-            case "start-store-watch": {
+            case BridgeRequestType.StartStoreWatch: {
                 return buildResponse(requestId, true, startStoreWatch());
             }
-            case "stop-store-watch": {
+            case BridgeRequestType.StopStoreWatch: {
                 return buildResponse(requestId, true, stopStoreWatch());
             }
-            case "ptt-command": {
-                const command = (payload as { command?: PttCommand } | undefined)?.command;
-                if (!command) {
+            case BridgeRequestType.PttCommand: {
+                const command = (payload as { command?: unknown } | undefined)?.command;
+                if (!isPttCommand(command)) {
                     return buildResponse(requestId, false, { error: "invalid-ptt-command" });
                 }
                 const result = runPttCommand(command);
                 return buildResponse(requestId, true, result);
             }
-            case "get-call-info": {
+            case BridgeRequestType.GetCallInfo: {
                 return buildResponse(requestId, true, getCallInfo());
             }
             default:

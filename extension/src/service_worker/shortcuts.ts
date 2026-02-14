@@ -1,8 +1,19 @@
 import { IS_FIREFOX_BUILD } from "../env";
+import { SwToContentMessageType } from "../messaging/sw_channel";
+import { PttCommand } from "../page_bridge/runtime_types";
 
 const PTT_PRESSED_THROTTLE_MS = 150;
 
-type ShortcutCommand = "ptt-pressed" | "toggle-voice";
+export enum ShortcutCommand {
+    PttPressed = "ptt-pressed",
+    ToggleVoice = "toggle-voice"
+}
+
+const SHORTCUT_COMMANDS = new Set<string>(Object.values(ShortcutCommand));
+
+function isShortcutCommand(command: string): command is ShortcutCommand {
+    return SHORTCUT_COMMANDS.has(command);
+}
 
 export function createShortcutController(deps: {
     log: (...args: unknown[]) => void;
@@ -16,11 +27,11 @@ export function createShortcutController(deps: {
             return;
         }
 
-        if (command !== "ptt-pressed" && command !== "toggle-voice") {
+        if (!isShortcutCommand(command)) {
             return;
         }
 
-        if (command === "ptt-pressed") {
+        if (command === ShortcutCommand.PttPressed) {
             const now = Date.now();
             if (now - lastPttPressedAt < PTT_PRESSED_THROTTLE_MS) {
                 return;
@@ -33,17 +44,17 @@ export function createShortcutController(deps: {
         const tabIds = Object.keys(isTalkingByTabId);
         for (const tabIdStr of tabIds) {
             const tabId = Number(tabIdStr);
-            switch (command as ShortcutCommand) {
-                case "toggle-voice":
+            switch (command) {
+                case ShortcutCommand.ToggleVoice:
                     chrome.tabs.sendMessage(tabId, {
-                        type: "content-ptt-command",
-                        value: { command: "toggle-voice" }
+                        type: SwToContentMessageType.ContentPttCommand,
+                        value: { command: PttCommand.ToggleVoice }
                     });
                     break;
-                case "ptt-pressed":
+                case ShortcutCommand.PttPressed:
                     chrome.tabs.sendMessage(tabId, {
-                        type: "content-ptt-command",
-                        value: { command: "ptt-down" }
+                        type: SwToContentMessageType.ContentPttCommand,
+                        value: { command: PttCommand.PttDown }
                     });
                     break;
             }

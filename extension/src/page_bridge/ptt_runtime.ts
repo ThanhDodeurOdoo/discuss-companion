@@ -1,5 +1,5 @@
 import type { CallState } from "../call_state_types";
-import type { PttCommand, RtcService } from "./runtime_types";
+import { PttCommand, type RtcService } from "./runtime_types";
 
 type PttAccess = {
     getRtc: () => RtcService | undefined;
@@ -24,16 +24,16 @@ export function createPttRuntime(deps: {
         let didRun = true;
 
         switch (command) {
-            case "ptt-down":
+            case PttCommand.PttDown:
                 access.setVoiceActivated(false, rtc);
                 rtc.onPushToTalk();
                 break;
-            case "ptt-up":
+            case PttCommand.PttUp:
                 if (!voiceActivated) {
                     rtc.setPttReleaseTimeout();
                 }
                 break;
-            case "toggle-voice":
+            case PttCommand.ToggleVoice:
                 if (voiceActivated) {
                     rtc.setPttReleaseTimeout(0);
                 } else {

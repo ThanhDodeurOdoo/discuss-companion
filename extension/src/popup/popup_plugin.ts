@@ -9,6 +9,7 @@ import {
 } from "../command_api";
 import { CallState, getCallTabId, getStoredCallState } from "../call_state";
 import { IS_FIREFOX_BUILD } from "../env";
+import { PttCommand } from "../page_bridge/runtime_types";
 import { SESSION_STATE_STORAGE_AREA } from "../storage/session_state";
 
 const EXTENSION_VERSION = __EXTENSION_VERSION__;
@@ -152,7 +153,7 @@ export class PopupPlugin extends Plugin {
     }
 
     async toggleVoiceMode() {
-        const result = await requestPttCommand("toggle-voice");
+        const result = await requestPttCommand(PttCommand.ToggleVoice);
         if (!result) {
             return;
         }

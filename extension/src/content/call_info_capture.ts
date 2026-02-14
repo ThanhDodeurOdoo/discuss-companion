@@ -1,4 +1,5 @@
 import type { BridgeClient } from "../messaging/bridge_client";
+import { BridgeRequestType } from "../messaging/bridge_protocol";
 import { CALL_INFO_CAPTURE_DELAY, type ContentRuntimeState } from "./runtime_state";
 
 export function createCallInfoCaptureController(deps: {
@@ -30,7 +31,7 @@ export function createCallInfoCaptureController(deps: {
                     channelId?: number;
                     channelName?: string;
                     origin?: string;
-                }>("get-call-info");
+                }>(BridgeRequestType.GetCallInfo);
                 if (info?.channelId && info.origin) {
                     const url = new URL("/odoo/action-mail.action_discuss", info.origin);
                     url.searchParams.set("active_id", `discuss.channel_${info.channelId}`);
