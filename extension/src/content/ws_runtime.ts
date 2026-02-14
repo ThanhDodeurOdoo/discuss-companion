@@ -1,11 +1,15 @@
 import { createWsClient, type WsClient } from "../ws/ws_client";
+import { ContentToSwMessageType } from "../messaging/sw_channel";
 import { buildPingMessage } from "../ws/ws_codec";
 import type { ContentRuntimeState } from "./runtime_state";
 
 export function createContentWsRuntime(deps: {
     state: ContentRuntimeState;
     log: (...args: unknown[]) => void;
-    sendToServiceWorker: <T>(message: { type: string; value?: unknown }) => Promise<T | null>;
+    sendToServiceWorker: <T>(message: {
+        type: ContentToSwMessageType;
+        value?: unknown;
+    }) => Promise<T | null>;
     onMessage: (data: Uint8Array) => void;
     onConnected: () => Promise<void>;
 }) {
@@ -17,7 +21,7 @@ export function createContentWsRuntime(deps: {
         onMessage,
         onConnectionChange: (connected) => {
             void sendToServiceWorker({
-                type: "content-connection-state",
+                type: ContentToSwMessageType.ContentConnectionState,
                 value: { isConnected: connected }
             });
             if (connected) {

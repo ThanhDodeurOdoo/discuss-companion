@@ -1,6 +1,6 @@
 import type { CallState } from "../call_state_types";
-import { isSwToContentMessage } from "../messaging/sw_channel";
-import type { ContentRuntimeState } from "./runtime_state";
+import { SwToContentMessageType, isSwToContentMessage } from "../messaging/sw_channel";
+import { WorkerSubscriptionState, type ContentRuntimeState } from "./runtime_state";
 
 export function registerSwMessageRouter(deps: {
     state: ContentRuntimeState;
@@ -46,7 +46,9 @@ export function registerSwMessageRouter(deps: {
 
         state.isOwner = nextOwner;
         state.isSubscribed = subscribed;
-        state.workerSubscriptionState = subscribed ? "subscribed" : "unsubscribed";
+        state.workerSubscriptionState = subscribed
+            ? WorkerSubscriptionState.Subscribed
+            : WorkerSubscriptionState.Unsubscribed;
 
         if (state.isOwner && state.isSubscribed) {
             await ensureBridgeReady();
@@ -72,17 +74,17 @@ export function registerSwMessageRouter(deps: {
         }
 
         switch (request.type) {
-            case "content-subscribe":
+            case SwToContentMessageType.ContentSubscribe:
                 void applySubscriptionChange(request.value.isOwner, true);
                 break;
-            case "content-unsubscribe":
+            case SwToContentMessageType.ContentUnsubscribe:
                 void applySubscriptionChange(false, false).then(() => {
                     if (hasHostedCall() && hasLastLifecyclePayload()) {
                         scheduleLifecycleResync(0);
                     }
                 });
                 break;
-            case "content-owner-update":
+            case SwToContentMessageType.ContentOwnerUpdate:
                 void applySubscriptionChange(request.value.isOwner, true);
                 break;
             default:

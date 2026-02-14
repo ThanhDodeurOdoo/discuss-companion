@@ -6,9 +6,9 @@ import {
     type CallActionResult
 } from "./call_actions";
 import type { CallState } from "./call_state_types";
+import { ContentToSwMessageType } from "./messaging/sw_channel";
+import type { PttCommand } from "./page_bridge/runtime_types";
 import { executeInCallTab } from "./utils";
-
-type PttCommand = "ptt-down" | "ptt-up" | "toggle-voice";
 
 type CallActionResponse = { status: "ok"; didRun: boolean; state?: CallState } | { error: string };
 
@@ -24,7 +24,10 @@ function canExecuteLocally() {
     return typeof document !== "undefined" && document.hasFocus();
 }
 
-function sendMessage<T>(message: { type: string; value?: unknown }): Promise<T | null> {
+function sendMessage<T>(message: {
+    type: ContentToSwMessageType;
+    value?: unknown;
+}): Promise<T | null> {
     return new Promise((resolve) => {
         chrome.runtime.sendMessage(message, (response: T) => {
             if (chrome.runtime.lastError) {
@@ -69,7 +72,7 @@ export async function requestCallAction(
         return { didRun };
     }
     const response = await sendMessage<CallActionResponse>({
-        type: "call-action",
+        type: ContentToSwMessageType.CallAction,
         value: { action, options }
     });
     if (!response || "error" in response) {
@@ -79,7 +82,9 @@ export async function requestCallAction(
 }
 
 export async function requestCallState(): Promise<CallState | undefined> {
-    const response = await sendMessage<CallStateResponse>({ type: "refresh-call-state" });
+    const response = await sendMessage<CallStateResponse>({
+        type: ContentToSwMessageType.RefreshCallState
+    });
     if (!response || "error" in response) {
         return undefined;
     }
@@ -87,7 +92,9 @@ export async function requestCallState(): Promise<CallState | undefined> {
 }
 
 export async function requestFocusCallTab(): Promise<boolean> {
-    const response = await sendMessage<FocusResponse>({ type: "focus-call-tab" });
+    const response = await sendMessage<FocusResponse>({
+        type: ContentToSwMessageType.FocusCallTab
+    });
     if (!response || "error" in response) {
         return false;
     }
@@ -98,7 +105,7 @@ export async function requestPttCommand(
     command: PttCommand
 ): Promise<{ didRun: boolean; state?: CallState } | null> {
     const response = await sendMessage<PttCommandResponse>({
-        type: "ptt-command",
+        type: ContentToSwMessageType.PttCommand,
         value: { command }
     });
     if (!response || "error" in response) {

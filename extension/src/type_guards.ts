@@ -1,4 +1,5 @@
 import type { CallState } from "./call_state_types";
+import { isPttCommand, type PttCommand } from "./page_bridge/runtime_types";
 
 export type CallStateObserverPayload = {
     hasState: boolean;
@@ -12,7 +13,7 @@ export type CallLifecycleObserverPayload = {
 };
 
 export type PttCommandPayload = {
-    command: "ptt-down" | "ptt-up" | "toggle-voice";
+    command: PttCommand;
 };
 
 export function isCallStateObserverPayload(value: unknown): value is CallStateObserverPayload {
@@ -65,9 +66,5 @@ export function isPttCommandPayload(value: unknown): value is PttCommandPayload 
         return false;
     }
     const payload = value as { command?: unknown };
-    return (
-        payload.command === "ptt-down" ||
-        payload.command === "ptt-up" ||
-        payload.command === "toggle-voice"
-    );
+    return isPttCommand(payload.command);
 }

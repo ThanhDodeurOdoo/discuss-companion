@@ -1,32 +1,54 @@
 import type { CallAction, CallActionOptions } from "../call_actions";
 import type { CallState } from "../call_state_types";
+import type { PttCommand } from "../page_bridge/runtime_types";
+
+export enum SwToContentMessageType {
+    ContentSubscribe = "content-subscribe",
+    ContentUnsubscribe = "content-unsubscribe",
+    ContentOwnerUpdate = "content-owner-update",
+    ContentCallAction = "content-call-action",
+    ContentRefreshCallState = "content-refresh-call-state",
+    ContentPttCommand = "content-ptt-command"
+}
+
+export enum ContentToSwMessageType {
+    Subscribe = "subscribe",
+    Unsubscribe = "unsubscribe",
+    IsTalking = "is-talking",
+    CallAction = "call-action",
+    RefreshCallState = "refresh-call-state",
+    PttCommand = "ptt-command",
+    FocusCallTab = "focus-call-tab",
+    ContentConnectionState = "content-connection-state",
+    ContentCallStateUpdate = "content-call-state-update"
+}
 
 export type ContentSubscribeMessage = {
-    type: "content-subscribe";
+    type: SwToContentMessageType.ContentSubscribe;
     value: { isOwner: boolean };
 };
 
 export type ContentUnsubscribeMessage = {
-    type: "content-unsubscribe";
+    type: SwToContentMessageType.ContentUnsubscribe;
 };
 
 export type ContentOwnerUpdateMessage = {
-    type: "content-owner-update";
+    type: SwToContentMessageType.ContentOwnerUpdate;
     value: { isOwner: boolean };
 };
 
 export type ContentCallActionMessage = {
-    type: "content-call-action";
+    type: SwToContentMessageType.ContentCallAction;
     value: { action: CallAction; options?: CallActionOptions };
 };
 
 export type ContentRefreshCallStateMessage = {
-    type: "content-refresh-call-state";
+    type: SwToContentMessageType.ContentRefreshCallState;
 };
 
 export type ContentPttCommandMessage = {
-    type: "content-ptt-command";
-    value: { command: "ptt-down" | "ptt-up" | "toggle-voice" };
+    type: SwToContentMessageType.ContentPttCommand;
+    value: { command: PttCommand };
 };
 
 export type SwToContentMessage =
@@ -38,25 +60,18 @@ export type SwToContentMessage =
     | ContentPttCommandMessage;
 
 export type ContentConnectionStateMessage = {
-    type: "content-connection-state";
+    type: ContentToSwMessageType.ContentConnectionState;
     value: { isConnected: boolean };
 };
 
 export type ContentCallStateUpdateMessage = {
-    type: "content-call-state-update";
+    type: ContentToSwMessageType.ContentCallStateUpdate;
     value: { state: CallState | null };
 };
 
 export type SwResponse<T> = T | { error: string };
 
-const CONTENT_MESSAGE_TYPES = new Set([
-    "content-subscribe",
-    "content-unsubscribe",
-    "content-owner-update",
-    "content-call-action",
-    "content-refresh-call-state",
-    "content-ptt-command"
-]);
+const CONTENT_MESSAGE_TYPES = new Set<string>(Object.values(SwToContentMessageType));
 
 export function isSwToContentMessage(value: unknown): value is SwToContentMessage {
     if (!value || typeof value !== "object") {
@@ -67,7 +82,7 @@ export function isSwToContentMessage(value: unknown): value is SwToContentMessag
 }
 
 export function sendToServiceWorker<T>(message: {
-    type: string;
+    type: ContentToSwMessageType;
     value?: unknown;
 }): Promise<T | null> {
     return new Promise((resolve) => {

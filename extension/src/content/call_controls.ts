@@ -8,12 +8,15 @@ import {
 import { parseAppCommand, resolveAppCommandAction } from "../app_commands";
 import type { CallState } from "../call_state_types";
 import type { BridgeClient } from "../messaging/bridge_client";
+import { BridgeRequestType } from "../messaging/bridge_protocol";
+import { ContentToSwMessageType, SwToContentMessageType } from "../messaging/sw_channel";
+import { PttCommand } from "../page_bridge/runtime_types";
 import { parseWsMessage } from "../ws/ws_codec";
 import { isCallStateObserverPayload, isPttCommandPayload } from "../type_guards";
 import type { ContentRuntimeState } from "./runtime_state";
 
 export type SendToServiceWorker = <T>(message: {
-    type: string;
+    type: ContentToSwMessageType;
     value?: unknown;
 }) => Promise<T | null>;
 
@@ -45,11 +48,11 @@ export function createCallControlsRuntime(deps: {
         options: CallActionOptions = {}
     ): Promise<CallActionResult> {
         if (requiresFocusCallTab(action) || options.focusCallTab) {
-            await sendToServiceWorker({ type: "focus-call-tab" });
+            await sendToServiceWorker({ type: ContentToSwMessageType.FocusCallTab });
         }
         await ensureBridgeReady();
         const response = await bridge.request<{ didRun?: boolean; state?: CallState | null }>(
-            "call-action",
+            BridgeRequestType.CallAction,
             { action }
         );
         const didRun = Boolean(response?.didRun);
@@ -62,11 +65,11 @@ export function createCallControlsRuntime(deps: {
     }
 
     async function sendPttCommand(
-        command: "ptt-down" | "ptt-up" | "toggle-voice"
+        command: PttCommand
     ): Promise<{ didRun: boolean; state?: CallState } | null> {
         await ensureBridgeReady();
         const response = await bridge.request<{ didRun?: boolean; state?: CallState | null }>(
-            "ptt-command",
+            BridgeRequestType.PttCommand,
             { command }
         );
         if (!response) {
@@ -85,7 +88,7 @@ export function createCallControlsRuntime(deps: {
             return;
         }
         if (command.name === "focus-call-tab" || command.name === "go-to-call") {
-            await sendToServiceWorker({ type: "focus-call-tab" });
+            await sendToServiceWorker({ type: ContentToSwMessageType.FocusCallTab });
             await sendCallStateToApp();
             return;
         }
@@ -107,10 +110,10 @@ export function createCallControlsRuntime(deps: {
         }
         switch (message.type) {
             case "ptt-down":
-                void sendPttCommand("ptt-down");
+                void sendPttCommand(PttCommand.PttDown);
                 break;
             case "ptt-up":
-                void sendPttCommand("ptt-up");
+                void sendPttCommand(PttCommand.PttUp);
                 break;
             case "status":
                 void handleStatusState(message.state);
@@ -137,7 +140,7 @@ export function createCallControlsRuntime(deps: {
         }
         const typed = request as { type?: unknown; value?: unknown };
         switch (typed.type) {
-            case "content-call-action":
+            case SwToContentMessageType.ContentCallAction:
                 if (!isCallAction((typed.value as { action?: unknown } | null)?.action)) {
                     sendResponse?.({ error: "invalid-action" });
                     return false;
@@ -149,12 +152,12 @@ export function createCallControlsRuntime(deps: {
                     sendResponse?.({ status: "ok", didRun: result.didRun, state: result.state });
                 });
                 return true;
-            case "content-refresh-call-state":
+            case SwToContentMessageType.ContentRefreshCallState:
                 void refreshAndSendCallState().then((state) => {
                     sendResponse?.({ status: "ok", state });
                 });
                 return true;
-            case "content-ptt-command":
+            case SwToContentMessageType.ContentPttCommand:
                 if (!isPttCommandPayload(typed.value)) {
                     sendResponse?.({ error: "invalid-command" });
                     return false;

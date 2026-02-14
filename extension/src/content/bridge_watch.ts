@@ -1,4 +1,5 @@
 import type { BridgeClient } from "../messaging/bridge_client";
+import { BridgeRequestType } from "../messaging/bridge_protocol";
 import { injectScriptOnce } from "../utils/dom_inject";
 import { BRIDGE_SCRIPT_ID, type ContentRuntimeState } from "./runtime_state";
 
@@ -31,7 +32,9 @@ export function createBridgeWatchRuntime(
             return;
         }
         await ensureBridgeReady();
-        const result = await bridge.request<{ running?: boolean }>("start-store-watch");
+        const result = await bridge.request<{ running?: boolean }>(
+            BridgeRequestType.StartStoreWatch
+        );
         state.hasStartedStoreWatch = Boolean(result?.running);
     }
 
@@ -40,7 +43,9 @@ export function createBridgeWatchRuntime(
             return;
         }
         await ensureBridgeReady();
-        const result = await bridge.request<{ running?: boolean }>("stop-store-watch");
+        const result = await bridge.request<{ running?: boolean }>(
+            BridgeRequestType.StopStoreWatch
+        );
         state.hasStartedStoreWatch = Boolean(result?.running);
     }
 

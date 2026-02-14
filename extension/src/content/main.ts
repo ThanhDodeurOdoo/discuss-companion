@@ -1,4 +1,5 @@
 import { createBridgeClient } from "../messaging/bridge_client";
+import { BridgeEventType } from "../messaging/bridge_protocol";
 import { sendToServiceWorker } from "../messaging/sw_channel";
 import type { CallState } from "../call_state_types";
 import { createBridgeWatchRuntime } from "./bridge_watch";
@@ -69,8 +70,8 @@ export function startContentRuntime(): void {
     });
     handleWsMessageRef = callControls.handleWsMessage;
 
-    bridge.onEvent("call-lifecycle-update", lifecycleSync.queueLifecycleUpdate);
-    bridge.onEvent("call-state-update", callControls.handleBridgeCallStateEvent);
+    bridge.onEvent(BridgeEventType.CallLifecycleUpdate, lifecycleSync.queueLifecycleUpdate);
+    bridge.onEvent(BridgeEventType.CallStateUpdate, callControls.handleBridgeCallStateEvent);
 
     registerSwMessageRouter({
         state,

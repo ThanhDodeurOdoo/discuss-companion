@@ -1,4 +1,14 @@
-export type PttCommand = "ptt-down" | "ptt-up" | "toggle-voice";
+export enum PttCommand {
+    PttDown = "ptt-down",
+    PttUp = "ptt-up",
+    ToggleVoice = "toggle-voice"
+}
+
+const PTT_COMMANDS = new Set<string>(Object.values(PttCommand));
+
+export function isPttCommand(value: unknown): value is PttCommand {
+    return typeof value === "string" && PTT_COMMANDS.has(value);
+}
 
 export type RtcSession = {
     localId?: string;

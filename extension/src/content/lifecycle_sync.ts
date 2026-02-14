@@ -1,10 +1,18 @@
-import { LIFECYCLE_RESYNC_DELAY, type ContentRuntimeState } from "./runtime_state";
+import {
+    LIFECYCLE_RESYNC_DELAY,
+    WorkerSubscriptionState,
+    type ContentRuntimeState
+} from "./runtime_state";
+import { ContentToSwMessageType } from "../messaging/sw_channel";
 import { isCallLifecycleObserverPayload, type CallLifecycleObserverPayload } from "../type_guards";
 
 export function createLifecycleSyncRuntime(deps: {
     state: ContentRuntimeState;
     log: (...args: unknown[]) => void;
-    sendToServiceWorkerExpectOk: (message: { type: string; value?: unknown }) => Promise<boolean>;
+    sendToServiceWorkerExpectOk: (message: {
+        type: ContentToSwMessageType;
+        value?: unknown;
+    }) => Promise<boolean>;
     updateCachedCallState: (
         state: import("../call_state_types").CallState | null,
         options?: { forcePersist?: boolean }
@@ -36,34 +44,38 @@ export function createLifecycleSyncRuntime(deps: {
     ): Promise<boolean> {
         let ok = true;
         if (payload.hasHostedCall) {
-            if (state.workerSubscriptionState !== "subscribed") {
-                const subscribed = await sendToServiceWorkerExpectOk({ type: "subscribe" });
+            if (state.workerSubscriptionState !== WorkerSubscriptionState.Subscribed) {
+                const subscribed = await sendToServiceWorkerExpectOk({
+                    type: ContentToSwMessageType.Subscribe
+                });
                 ok = subscribed && ok;
                 if (subscribed) {
-                    state.workerSubscriptionState = "subscribed";
+                    state.workerSubscriptionState = WorkerSubscriptionState.Subscribed;
                 }
             }
             const talkingUpdated = await sendToServiceWorkerExpectOk({
-                type: "is-talking",
+                type: ContentToSwMessageType.IsTalking,
                 value: payload.isTalking
             });
             ok = talkingUpdated && ok;
         } else {
             const talkingCleared = await sendToServiceWorkerExpectOk({
-                type: "is-talking",
+                type: ContentToSwMessageType.IsTalking,
                 value: false
             });
             ok = talkingCleared && ok;
-            if (state.workerSubscriptionState !== "unsubscribed") {
-                const unsubscribed = await sendToServiceWorkerExpectOk({ type: "unsubscribe" });
+            if (state.workerSubscriptionState !== WorkerSubscriptionState.Unsubscribed) {
+                const unsubscribed = await sendToServiceWorkerExpectOk({
+                    type: ContentToSwMessageType.Unsubscribe
+                });
                 ok = unsubscribed && ok;
                 if (unsubscribed) {
-                    state.workerSubscriptionState = "unsubscribed";
+                    state.workerSubscriptionState = WorkerSubscriptionState.Unsubscribed;
                 }
             }
         }
         if (!ok) {
-            state.workerSubscriptionState = "unknown";
+            state.workerSubscriptionState = WorkerSubscriptionState.Unknown;
         }
         return ok;
     }
