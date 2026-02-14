@@ -5,6 +5,7 @@ import {
 } from "./runtime_state";
 import { ContentToSwMessageType } from "../messaging/sw_channel";
 import { isCallLifecycleObserverPayload, type CallLifecycleObserverPayload } from "../type_guards";
+import type { CallState } from "../call_state_types";
 
 export function createLifecycleSyncRuntime(deps: {
     state: ContentRuntimeState;
@@ -14,7 +15,7 @@ export function createLifecycleSyncRuntime(deps: {
         value?: unknown;
     }) => Promise<boolean>;
     updateCachedCallState: (
-        state: import("../call_state_types").CallState | null,
+        state: CallState | null,
         options?: { forcePersist?: boolean }
     ) => Promise<void>;
     scheduleCallInfoCapture: () => void;

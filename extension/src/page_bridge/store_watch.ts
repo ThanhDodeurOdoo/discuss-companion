@@ -1,15 +1,13 @@
-import type { MailStore, RtcSession } from "./runtime_types";
+import type { MailStore, RtcSession, RtcService } from "./runtime_types";
 import type { PageBridgeRuntimeState } from "./runtime_state";
+import type { CallState } from "../call_state_types";
 
 type RtcAccess = {
     getStore: () => MailStore | undefined;
-    getRtc: () => import("./runtime_types").RtcService | undefined;
-    setVoiceActivated: (value: boolean, rtc?: import("./runtime_types").RtcService) => void;
+    getRtc: () => RtcService | undefined;
+    setVoiceActivated: (value: boolean, rtc?: RtcService) => void;
     getSessionKey: (session?: RtcSession) => string | null;
-    buildCallState: (
-        session: RtcSession,
-        rtc?: import("./runtime_types").RtcService
-    ) => import("../call_state_types").CallState;
+    buildCallState: (session: RtcSession, rtc?: RtcService) => CallState;
 };
 
 export function createStoreWatchController(deps: {
@@ -20,7 +18,7 @@ export function createStoreWatchController(deps: {
         hasHostedCall: boolean;
         isTalking: boolean;
     }) => void;
-    emitCallState: (state: import("../call_state_types").CallState | null) => void;
+    emitCallState: (state: CallState | null) => void;
 }) {
     const { state, access, emitLifecycle, emitCallState } = deps;
 
