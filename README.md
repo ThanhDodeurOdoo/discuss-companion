@@ -18,17 +18,13 @@ The Discuss Companion is a companion app for Odoo Discuss, currently supporting 
 
 The app backend is written in Rust, the app frontend (and the extension) is written in TypeScript using [Owl v3](https://github.com/odoo/owl) as the framework.
 
-## Architecture
+## Doc
 
-The repository contains 2 parts:
-1.  **The App (macOS and Linux)**:
-    -   Captures global key events using platform-specific APIs and runs a WebSocket server.
-    -   macOS: Uses Core Graphics Event Tap
-    -   Linux: Uses XRecord (X11 only, Wayland not yet supported)
-2.  **The Extension (Chrome & Firefox)**:
-    -   Connects to the desktop agent via WebSockets and relays PTT signals to the Odoo web page.
-
-The communication between the App and the Extension (WS), and between the backend and the frontend of the app (IPC) uses [FlatBuffers](https://google.github.io/flatbuffers/), The schema is defined in `ws_protocol.fbs` and `ipc_protocol.fbs`. 
+- [Architecture overview](./ARCHITECTURE.md)
+- [App architecture](./app/ARCHITECTURE.md)
+- [App features guide](./app/README.md)
+- [Extension architecture](./extension/src/ARCHITECTURE.md)
+- [Extension usage](./extension/README.md)
 
 
 ## Development
