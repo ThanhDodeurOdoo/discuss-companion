@@ -20,6 +20,18 @@ export type SendToServiceWorker = <T>(message: {
     value?: unknown;
 }) => Promise<T | null>;
 
+/**
+ * Builds the call-controls runtime for content context command handling.
+ *
+ * This runtime is the command execution boundary that normalizes requests from:
+ * - service-worker forwarded actions,
+ * - native app websocket frames,
+ * - page-bridge call-state events.
+ *
+ * Core invariant: whenever a command path yields a new call state, the runtime
+ * updates the local cache and attempts to propagate the snapshot back to the
+ * native app so UI/app state converge.
+ */
 export function createCallControlsRuntime(deps: {
     state: ContentRuntimeState;
     bridge: BridgeClient;
@@ -43,6 +55,13 @@ export function createCallControlsRuntime(deps: {
         log
     } = deps;
 
+    /**
+     * Executes a call action through the page bridge and synchronizes resulting state.
+     *
+     * Focus-sensitive actions can request a tab focus first via the worker.
+     * After execution, any returned state is persisted in cache and forwarded to
+     * the app transport layer.
+     */
     async function runCallAction(
         action: CallAction,
         options: CallActionOptions = {}
@@ -64,6 +83,12 @@ export function createCallControlsRuntime(deps: {
         return { didRun, state: state ?? undefined };
     }
 
+    /**
+     * Sends a PTT command through the bridge and syncs resulting state.
+     *
+     * Returns `null` when the bridge did not provide a response (request timeout
+     * or unavailable bridge), allowing callers to return a command-failed error.
+     */
     async function sendPttCommand(
         command: PttCommand
     ): Promise<{ didRun: boolean; state?: CallState } | null> {
@@ -82,6 +107,14 @@ export function createCallControlsRuntime(deps: {
         return { didRun, state: state ?? undefined };
     }
 
+    /**
+     * Handles `status` commands received from the app websocket.
+     *
+     * Supported commands are mapped to either:
+     * - worker-level focus requests,
+     * - state refresh requests,
+     * - resolved call actions.
+     */
     async function handleStatusState(rawState?: string | null): Promise<void> {
         const command = parseAppCommand(rawState);
         if (!command) {
@@ -103,6 +136,13 @@ export function createCallControlsRuntime(deps: {
         await runCallAction(action);
     }
 
+    /**
+     * Dispatches decoded websocket frames into the appropriate command path.
+     *
+     * PTT frames trigger bridge PTT commands; status frames route through app
+     * command parsing. Pong frames are acknowledged implicitly by transport
+     * liveness and require no state mutation here.
+     */
     function handleWsMessage(data: Uint8Array): void {
         const message = parseWsMessage(data);
         if (!message) {
@@ -123,6 +163,12 @@ export function createCallControlsRuntime(deps: {
         }
     }
 
+    /**
+     * Applies call-state events coming from page-bridge observers.
+     *
+     * Bridge events are considered authoritative snapshots of in-page call
+     * state; they refresh cache first and then are forwarded to the app channel.
+     */
     function handleBridgeCallStateEvent(payload: unknown): void {
         if (!isCallStateObserverPayload(payload)) {
             return;
@@ -131,6 +177,16 @@ export function createCallControlsRuntime(deps: {
         void updateCachedCallState(nextState).then(() => sendCallStateToApp(nextState));
     }
 
+    /**
+     * Handles service-worker forwarded command messages.
+     *
+     * The function mirrors service-worker request semantics:
+     * - returns `true` when response is produced asynchronously,
+     * - returns `false` for unknown/invalid messages handled synchronously.
+     *
+     * This allows the upstream listener to preserve `sendResponse` only for
+     * branches that need async completion.
+     */
     function handleContentMessage(
         request: unknown,
         sendResponse?: (response?: unknown) => void

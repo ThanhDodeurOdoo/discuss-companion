@@ -22,6 +22,12 @@ import { createOwnershipController } from "./ownership_state";
 import { createShortcutController } from "./shortcuts";
 import { createTabFocusController } from "./tab_focus";
 
+/**
+ * Runtime message wraper received by the service worker.
+ *
+ * The concrete `value` shape depends on `type` and is validated/normalized by
+ * the branch handling that message type.
+ */
 interface ExtensionMessage {
     type: string;
     value?: unknown;
@@ -43,7 +49,29 @@ export type MessageHandlers = {
     updateAppIcon: () => Promise<void>;
 };
 
+/**
+ * Creates the servic-worker message coordinator.
+ *
+ * This is the service-worker side integration point for all extension contexts
+ * (content scripts, popup, keyboard commands, and tab lifecycle events). The
+ * coordinator delegates specialized concerns to focused controllers:
+ * - ownership election and owner notifications,
+ * - forwarding commands into the owner content tab,
+ * - icon state updates from connection/talking status,
+ * - tab focusing and shortcut command dispatch.
+ *
+ * The worker is the authoritative owner of cross-tab session state persisted in
+ * storage (`callTabId`, `isTalkingByTabId`, app connection status, cached call
+ * state). Content tabs only publish updates  the worker validates ownership
+ * before accepting writes that affect shared state
+ */
 export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandlers {
+    /**
+     * elper for service-worker -> content messages.
+     *
+     * These messages are advisory routing events; if a tab is gone, ownership
+     * reconciliation paths will clean up state on subsequent lifecycle updates.
+     */
     function sendToContentTab(tabId: number, message: SwToContentMessage): void {
         chrome.tabs.sendMessage(tabId, message);
     }
@@ -75,6 +103,22 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         getIsTalkingByTabId
     });
 
+    /**
+     * Primary message entry point for requests targeting the worker.
+     *
+     * Message families:
+     * - lifecycle coordination from content (`subscribe`, `unsubscribe`, `is-talking`);
+     * - command forwarding requests from popup/app pathways (`call-action`,
+     *   `refresh-call-state`, `ptt-command`, `focus-call-tab`);
+     * - owner-only replication updates (`content-connection-state`,
+     *   `content-call-state-update`).
+     *
+     * Response contract:
+     * - returns `true` only when response is fulfilled asynchronously by a
+     *   forwarder callback (`sendResponse` kept alive by caller listener);
+     * - returns `false`/void for branches that resolve synchronously in this
+     *   function after storage/controller operations complete.
+     */
     async function handleMessage(
         request: ExtensionMessage,
         sender: chrome.runtime.MessageSender,
@@ -217,10 +261,25 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         return false;
     }
 
+    /**
+     * Handles keyboard shortcut commands (e.g. PTT down/up, togle voice).
+     *
+     * Shortcut routing is kept separate from `handleMessage` because commands are
+     * delivered through browser command events, not runtime messaging.
+     */
     function handleCommand(command: string): void {
         void shortcuts.handleCommand(command);
     }
 
+    /**
+     * Cleans ownership/session state when a tab is closed.
+     *
+     * This path mirrors unsubscribe semantics for hard tab teardown:
+     * - remove tab from talking map,
+     * - reset app-connected state when owner disappears,
+     * - elect and notify next owner (if any),
+     * - refresh icon state to reflect current aggregate state.
+     */
     async function handleTabRemoved(tabId: number): Promise<void> {
         const isTalkingByTabId = await getIsTalkingByTabId();
         const previousOwner = await getCallTabId();
@@ -234,6 +293,12 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         await iconState.updateAppIcon();
     }
 
+    /**
+     * Handles toolbar action click behavior.
+     *
+     * Current policy opens the shortcuts page on Chromium builds, while Firefox
+     * keeps this action disabled to match platform-specific product behavior.
+     */
     function handleActionClicked(): void {
         if (IS_FIREFOX_BUILD) {
             return;
