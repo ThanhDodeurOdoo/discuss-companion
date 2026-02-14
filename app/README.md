@@ -1,71 +1,69 @@
-# Discuss Companion Application
+# Discuss Companion App
 
-## Table of Contents
-- [Discuss Companion Application](#discuss-companion-application)
-  - [Table of Contents](#table-of-contents)
-  - [Architecture Overview](#architecture-overview)
-  - [Core Components](#core-components)
-    - [Backend (Rust)](#backend-rust)
-    - [Frontend (Owl)](#frontend-owl)
+## What the App Do
+Discuss Companion provide a desktop control surface for Odoo Discuss calls. It captures push-to-talk globaly, syncs with the extension through localhost WebSoket, and exposes fast call actions and status in a compact UI.
 
-## Architecture Overview
+## Main Window Features
+1. Push-to-talk keybinding button:
+   - Click the key display to start recording mode.
+   - Press any key combination to store a new binding.
+2. Status indicators:
+   - Accessibility permission state.
+   - Extension WebSoket connection state.
+3. Event logs:
+   - Shows recent runtime events (PTT, WS, call state, errors).
+   - Includes a `Clear` action.
+4. Safety action:
+   - `force release` in the footer sends an immediate PTT-up safeguard.
 
-The application acts as a bridge between the User's Operating System and the web-based Odoo Discuss client.
+## Settings
+1. Show icons in PTT button:
+   - Toggle between icon symbols and key names.
+2. Appearance:
+   - Dark mode or clear mode UI theme.
+3. App visibility mode (when availabl):
+   - Tray + dock only when window is open.
+   - Tray + dock always.
+   - Dock only.
+4. WebSocket port:
+   - Configure extension/app WS port.
+   - Use `Reload` to restart the server on the new port.
 
-```mermaid
-graph TD
-    subgraph "OS Layer"
-        Keyboard[Global Keyboard Hook]
-    end
+## Call Controls
+When an active call is detected, the app shows direct controls:
+1. Mute / unmute.
+2. Deafen / undeafen.
+3. Camera on/off.
+4. Screen share on/off.
+5. Leave call.
+6. `Go to Call` to focus the browser call tab.
 
-    subgraph "App"
-        RustBackend[Rust Backend]
-        
-        subgraph "Frontend"
-            Owl[Owl UI]
-            Plugin[App Plugin]
-        end
-    end
+## Tray / Dock Behavior
+1. The app can run as a tray/dock companion without keeping the main window open.
+2. Visibility behavior is controlled by the app visibility setting.
+3. Tray and dock menus expose quick controls and lifecycle actions depending on platform/features.
 
-    subgraph "Browser"
-        Ext[Extension]
-        Odoo[Odoo Client]
-    end
-    Plugin -- "update_binding" --> RustBackend
-    Keyboard -- Key Press --> RustBackend
-    RustBackend -- "ptt-event" --> Plugin
-    RustBackend -- "WebSocket (FlatBuffers)" --> Ext
-    Ext --> Odoo
-```
+## Typical User Flow
+1. Launch the app.
+2. Confirm accessibility/input permissions are granted.
+3. Configure or record your PTT binding.
+4. Enable Discuss Companion in the browser extension.
+5. Join an Odoo Discuss call.
+6. Use global PTT and optional call controls from the app.
 
-The system consists of three main layers:
-1.  **Input Capture Layer**: Intercepts global keyboard events (even when the app is backgrounded).
-2.  **App Logic Layer**: Processes the input, manages state, and provides a UI for configuration.
-3.  **Communication Layer**: Broadcasts the PTT state to connected clients (Odoo) via WebSocket.
+## Troubleshooting
+1. Permission shows as missing:
+   - Grant Accessibility (and Input Monitoring where required), then retry in-app.
+2. Extension disconnected:
+   - Check that extension is loaded and `use discuss companion` is enabled.
+3. No active call actions available:
+   - Ensure an Odoo call is active in the browser and the extension is connected.
+4. Commands not reaching extension:
+   - Verify the app WS port and extension WS port match, then reload the server.
+5. Linux behavior:
+   - X11 is supported; Wayland is not currently supported.
 
----
-
-## Core Components
-
-### Backend (Rust)
-Located in `app/backend`, it is responsible for input handling, runtime wiring, and the WebSocket server.
-
-| Module                                             | Description                                                                                                                    |
-| :------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
-| [`lib.rs`](backend/src/lib.rs)                     | Entry point. Initializes logging/profiling and delegates app composition to the runtime module.                                |
-| [`runtime.rs`](backend/src/runtime.rs)             | **Runtime wiring**: builds the Tauri `Builder`, sets up the WS server, tray, menus, and starts the PTT engine and event loop.  |
-| [`api/commands.rs`](backend/src/api/commands.rs)   | Tauri command handlers (IPC from frontend). Includes binding updates, WS port changes, app/window commands, and state queries. |
-| [`api/ws_server.rs`](backend/src/api/ws_server.rs) | WebSocket server for the browser extension. Accepts connections and broadcasts PTT + call state via FlatBuffers.               |
-| [`protocol/`](backend/src/protocol)                | Domain types and serialization. `types.rs` defines `KeyBinding`, `CallState`, etc. `messages.rs` builds FlatBuffers payloads.  |
-| [`ptt_engine/`](backend/src/ptt_engine)            | OS-specific global keyboard hooks (CoreGraphics on macOS, X11 on Linux). Emits PTT events to the runtime.                      |
-| [`interface/`](backend/src/interface)              | UI integration for system surfaces: tray, call controls window, and menu handling.                                             |
-
-### Frontend (Owl)
-Located in `app/frontend`, the UI is built using the **Owl Framework**.
-
-| Component                                       | Description                                                                                                                                                             |
-| :---------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`main.ts`](frontend/main.ts)                   | Entry point. Mounts the Owl application.                                                                                                                                |
-| [`app_plugin.ts`](frontend/app_plugin.ts)       | The core controller. Manages global state (recording mode, logs, connection status, current binding) using signals. It listens for backend events and invokes commands. |
-| [`companion.ts`](frontend/companion.ts)         | The main layout component hosting the sub-pages.                                                                                                                        |
-| [`control_page.xml`](frontend/control_page.xml) | The interface for viewing status and recording new keybindings.                                                                                                         |
+## Related Docs
+- [App Architecture](./ARCHITECTURE.md)
+- [Repository Architecture Overview](../ARCHITECTURE.md)
+- [Extension Architecture](../extension/src/ARCHITECTURE.md)
