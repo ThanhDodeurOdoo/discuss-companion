@@ -7,34 +7,41 @@ The desktop app capture input and owns runtime state, while the extension bridge
 
 ```mermaid
 flowchart LR
-subgraph OS["Operating System"]
+    subgraph OS["Operating System"]
         PTT["PTT Engine (OS hooks)"]
     end
     subgraph APP["Desktop App (Tauri)"]
         UI["Frontend UI (Owl)"]
-        IPC["IPC Layer (FlatBuffers)"]
-        TRAY["Tray / Call Controls Window"]
+        SWS["Websocket Server"]
+        FE["Tray / Call Controls Window"]
         BE["Rust Backend"]
     end
     subgraph EXT["Browser Extension"]
+        EUI["Extension UI (Owl)"]
         SW["Service Worker"]
         CT["Content Runtime"]
         WS["WS Client Runtime"]
         PB["Page Bridge Runtime"]
     end
     subgraph ODOO["Odoo Web Page"]
-        RTC["mail.store / rtc.localSession"]
+        RTC["mail.store / RTC (Owl)"]
     end
 
-    UI --> IPC
-    IPC --> BE
-    BE --> TRAY
-    BE <-->|"WebSocket (FlatBuffers)"| WS
     PTT --> BE
+    UI --> FE
+    FE <-->|"flatbuffers"| BE
+    BE --> SWS
+    SWS <-->|"flatbuffers"| WS
+    EUI --> SW
     SW --> CT
     CT --> WS
     CT --> PB
     PB --> RTC
+
+   UI:::interface
+   EUI:::interface
+   RTC:::interface
+    classDef interface fill:#f96,stroke:#333,stroke-width:2px,color:#000
 ```
 
 ## High-Level Components
