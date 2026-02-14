@@ -1,6 +1,9 @@
-import type { BridgeClient } from "../messaging/bridge_client";
-import { BridgeRequestType } from "../messaging/bridge_protocol";
-import { CALL_INFO_CAPTURE_DELAY, type ContentRuntimeState } from "./runtime_state";
+import type { BridgeClient } from "@extension/src/messaging/bridge_client";
+import { BridgeRequestType } from "@extension/src/messaging/bridge_protocol";
+import {
+    CALL_INFO_CAPTURE_DELAY,
+    type ContentRuntimeState
+} from "@extension/src/content/runtime_state";
 
 export function createCallInfoCaptureController(deps: {
     state: ContentRuntimeState;

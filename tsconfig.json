@@ -3,6 +3,10 @@
     "target": "ES2024",
     "useDefineForClassFields": true,
     "module": "ESNext",
+    "baseUrl": ".",
+    "paths": {
+      "@extension/*": ["extension/*"]
+    },
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
 

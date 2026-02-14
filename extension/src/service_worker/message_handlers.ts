@@ -1,6 +1,6 @@
-import { type CallAction, type CallActionOptions } from "../call_actions";
-import { setStoredCallState } from "../call_state";
-import type { CallState } from "../call_state_types";
+import { type CallAction, type CallActionOptions } from "@extension/src/call_actions";
+import { setStoredCallState } from "@extension/src/call_state";
+import type { CallState } from "@extension/src/call_state_types";
 import {
     getAppConnected,
     getCallTabId,
@@ -8,19 +8,19 @@ import {
     setAppConnected,
     setCallTabId,
     setIsTalkingByTabId
-} from "../storage/session_state";
-import { IS_FIREFOX_BUILD } from "../env";
+} from "@extension/src/storage/session_state";
+import { IS_FIREFOX_BUILD } from "@extension/src/env";
 import {
     ContentToSwMessageType,
     SwToContentMessageType,
     type SwToContentMessage
-} from "../messaging/sw_channel";
-import type { PttCommand } from "../page_bridge/runtime_types";
-import { createContentForwarders } from "./content_forwarders";
-import { createIconStateController } from "./icon_state";
-import { createOwnershipController } from "./ownership_state";
-import { createShortcutController } from "./shortcuts";
-import { createTabFocusController } from "./tab_focus";
+} from "@extension/src/messaging/sw_channel";
+import type { PttCommand } from "@extension/src/page_bridge/runtime_types";
+import { createContentForwarders } from "@extension/src/service_worker/content_forwarders";
+import { createIconStateController } from "@extension/src/service_worker/icon_state";
+import { createOwnershipController } from "@extension/src/service_worker/ownership_state";
+import { createShortcutController } from "@extension/src/service_worker/shortcuts";
+import { createTabFocusController } from "@extension/src/service_worker/tab_focus";
 
 /**
  * Runtime message wraper received by the service worker.

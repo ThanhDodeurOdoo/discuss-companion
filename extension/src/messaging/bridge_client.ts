@@ -5,7 +5,7 @@ import {
     isBridgeEvent,
     isBridgeResponse,
     nextBridgeRequestId
-} from "./bridge_protocol";
+} from "@extension/src/messaging/bridge_protocol";
 
 export type BridgeClient = {
     request: <T = unknown>(

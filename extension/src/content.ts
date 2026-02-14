@@ -1,3 +1,3 @@
-import { startContentRuntime } from "./content/main";
+import { startContentRuntime } from "@extension/src/content/main";
 
 startContentRuntime();

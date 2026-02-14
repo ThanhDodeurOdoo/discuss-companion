@@ -1,6 +1,9 @@
-import { createMessageHandlers, type MessageHandlers } from "./service_worker_messages";
-import { IS_FIREFOX_BUILD } from "./env";
-import { clearSessionState } from "./storage/session_state";
+import {
+    createMessageHandlers,
+    type MessageHandlers
+} from "@extension/src/service_worker_messages";
+import { IS_FIREFOX_BUILD } from "@extension/src/env";
+import { clearSessionState } from "@extension/src/storage/session_state";
 
 /**
  * Service-worker entrypoint

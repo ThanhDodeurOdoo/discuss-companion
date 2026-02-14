@@ -2,10 +2,13 @@ import {
     LIFECYCLE_RESYNC_DELAY,
     WorkerSubscriptionState,
     type ContentRuntimeState
-} from "./runtime_state";
-import { ContentToSwMessageType } from "../messaging/sw_channel";
-import { isCallLifecycleObserverPayload, type CallLifecycleObserverPayload } from "../type_guards";
-import type { CallState } from "../call_state_types";
+} from "@extension/src/content/runtime_state";
+import { ContentToSwMessageType } from "@extension/src/messaging/sw_channel";
+import {
+    isCallLifecycleObserverPayload,
+    type CallLifecycleObserverPayload
+} from "@extension/src/type_guards";
+import type { CallState } from "@extension/src/call_state_types";
 
 export function createLifecycleSyncRuntime(deps: {
     state: ContentRuntimeState;

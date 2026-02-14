@@ -1,10 +1,10 @@
 import * as flatbuffers from "flatbuffers";
-import { Message } from "../discuss/ws-protocol/message";
-import { MessageBody } from "../discuss/ws-protocol/message-body";
-import { Ping } from "../discuss/ws-protocol/ping";
-import { Status } from "../discuss/ws-protocol/status";
-import { CallState as WsCallState } from "../discuss/ws-protocol/call-state";
-import { IS_FIREFOX_BUILD } from "../env";
+import { Message } from "@extension/src/discuss/ws-protocol/message";
+import { MessageBody } from "@extension/src/discuss/ws-protocol/message-body";
+import { Ping } from "@extension/src/discuss/ws-protocol/ping";
+import { Status } from "@extension/src/discuss/ws-protocol/status";
+import { CallState as WsCallState } from "@extension/src/discuss/ws-protocol/call-state";
+import { IS_FIREFOX_BUILD } from "@extension/src/env";
 
 export type CallStateSnapshot = {
     hasCall: boolean;

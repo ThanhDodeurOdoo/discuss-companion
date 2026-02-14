@@ -1,5 +1,5 @@
-import type { CallState } from "./call_state_types";
-import { isPttCommand, type PttCommand } from "./page_bridge/runtime_types";
+import type { CallState } from "@extension/src/call_state_types";
+import { isPttCommand, type PttCommand } from "@extension/src/page_bridge/runtime_types";
 
 export type CallStateObserverPayload = {
     hasState: boolean;

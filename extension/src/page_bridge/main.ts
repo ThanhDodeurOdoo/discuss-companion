@@ -1,11 +1,11 @@
-import { createCallActionRunner } from "./call_actions";
-import { createBridgeEventEmitter } from "./event_emitter";
-import { createPttRuntime } from "./ptt_runtime";
-import { createBridgeRequestRouter } from "./request_router";
-import { createRtcAccess } from "./rtc_access";
-import { createPageBridgeRuntimeState } from "./runtime_state";
-import { createStoreWatchController } from "./store_watch";
-import type { OdooWindow } from "./runtime_types";
+import { createCallActionRunner } from "@extension/src/page_bridge/call_actions";
+import { createBridgeEventEmitter } from "@extension/src/page_bridge/event_emitter";
+import { createPttRuntime } from "@extension/src/page_bridge/ptt_runtime";
+import { createBridgeRequestRouter } from "@extension/src/page_bridge/request_router";
+import { createRtcAccess } from "@extension/src/page_bridge/rtc_access";
+import { createPageBridgeRuntimeState } from "@extension/src/page_bridge/runtime_state";
+import { createStoreWatchController } from "@extension/src/page_bridge/store_watch";
+import type { OdooWindow } from "@extension/src/page_bridge/runtime_types";
 
 const BRIDGE_MARKER = "__DISCUSS_COMPANION_PAGE_BRIDGE_INSTALLED__";
 

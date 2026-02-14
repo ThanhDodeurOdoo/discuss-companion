@@ -1,7 +1,7 @@
-import { createWsClient, type WsClient } from "../ws/ws_client";
-import { ContentToSwMessageType } from "../messaging/sw_channel";
-import { buildPingMessage } from "../ws/ws_codec";
-import type { ContentRuntimeState } from "./runtime_state";
+import { createWsClient, type WsClient } from "@extension/src/ws/ws_client";
+import { ContentToSwMessageType } from "@extension/src/messaging/sw_channel";
+import { buildPingMessage } from "@extension/src/ws/ws_codec";
+import type { ContentRuntimeState } from "@extension/src/content/runtime_state";
 
 export function createContentWsRuntime(deps: {
     state: ContentRuntimeState;

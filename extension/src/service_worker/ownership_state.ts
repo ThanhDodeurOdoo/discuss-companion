@@ -1,5 +1,8 @@
-import { SwToContentMessageType, type SwToContentMessage } from "../messaging/sw_channel";
-import type { CallState } from "../call_state_types";
+import {
+    SwToContentMessageType,
+    type SwToContentMessage
+} from "@extension/src/messaging/sw_channel";
+import type { CallState } from "@extension/src/call_state_types";
 
 export function createOwnershipController(deps: {
     setStoredCallState: (state?: CallState | null) => Promise<void>;

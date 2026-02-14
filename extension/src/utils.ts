@@ -2,7 +2,7 @@
  * https://developer.chrome.com/docs/extensions/reference/api/scripting
  */
 
-import { resolveCallTabId } from "./call_state";
+import { resolveCallTabId } from "@extension/src/call_state";
 
 const RESTRICTED_URL_PREFIXES = [
     "chrome://",

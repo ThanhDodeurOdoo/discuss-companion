@@ -1,5 +1,5 @@
-import type { CallState } from "../call_state_types";
-import { PttCommand, type RtcService } from "./runtime_types";
+import type { CallState } from "@extension/src/call_state_types";
+import { PttCommand, type RtcService } from "@extension/src/page_bridge/runtime_types";
 
 type PttAccess = {
     getRtc: () => RtcService | undefined;

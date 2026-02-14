@@ -1,5 +1,5 @@
-import type { CallState } from "./call_state_types";
-import { CALL_ACTION_DEFINITIONS } from "./call_action_definitions";
+import type { CallState } from "@extension/src/call_state_types";
+import { CALL_ACTION_DEFINITIONS } from "@extension/src/call_action_definitions";
 
 const buildActionTypeMap = <T extends Record<string, { id: string }>>(actions: T) => {
     const result = {} as { [K in keyof T]: T[K]["id"] };

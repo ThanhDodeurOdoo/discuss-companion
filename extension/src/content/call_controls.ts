@@ -4,16 +4,19 @@ import {
     type CallActionResult,
     isCallAction,
     requiresFocusCallTab
-} from "../call_actions";
-import { parseAppCommand, resolveAppCommandAction } from "../app_commands";
-import type { CallState } from "../call_state_types";
-import type { BridgeClient } from "../messaging/bridge_client";
-import { BridgeRequestType } from "../messaging/bridge_protocol";
-import { ContentToSwMessageType, SwToContentMessageType } from "../messaging/sw_channel";
-import { PttCommand } from "../page_bridge/runtime_types";
-import { parseWsMessage } from "../ws/ws_codec";
-import { isCallStateObserverPayload, isPttCommandPayload } from "../type_guards";
-import type { ContentRuntimeState } from "./runtime_state";
+} from "@extension/src/call_actions";
+import { parseAppCommand, resolveAppCommandAction } from "@extension/src/app_commands";
+import type { CallState } from "@extension/src/call_state_types";
+import type { BridgeClient } from "@extension/src/messaging/bridge_client";
+import { BridgeRequestType } from "@extension/src/messaging/bridge_protocol";
+import {
+    ContentToSwMessageType,
+    SwToContentMessageType
+} from "@extension/src/messaging/sw_channel";
+import { PttCommand } from "@extension/src/page_bridge/runtime_types";
+import { parseWsMessage } from "@extension/src/ws/ws_codec";
+import { isCallStateObserverPayload, isPttCommandPayload } from "@extension/src/type_guards";
+import type { ContentRuntimeState } from "@extension/src/content/runtime_state";
 
 export type SendToServiceWorker = <T>(message: {
     type: ContentToSwMessageType;

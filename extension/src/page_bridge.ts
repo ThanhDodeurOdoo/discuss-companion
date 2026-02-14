@@ -1,3 +1,3 @@
-import { startPageBridgeRuntime } from "./page_bridge/main";
+import { startPageBridgeRuntime } from "@extension/src/page_bridge/main";
 
 startPageBridgeRuntime();

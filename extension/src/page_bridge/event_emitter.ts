@@ -1,6 +1,10 @@
-import type { CallState } from "../call_state_types";
-import { BRIDGE_CHANNEL, BridgeEventType, type BridgeEvent } from "../messaging/bridge_protocol";
-import type { PageBridgeRuntimeState } from "./runtime_state";
+import type { CallState } from "@extension/src/call_state_types";
+import {
+    BRIDGE_CHANNEL,
+    BridgeEventType,
+    type BridgeEvent
+} from "@extension/src/messaging/bridge_protocol";
+import type { PageBridgeRuntimeState } from "@extension/src/page_bridge/runtime_state";
 
 export function createBridgeEventEmitter(state: PageBridgeRuntimeState) {
     function emitBridgeEvent(type: BridgeEvent["type"], payload: unknown): void {

@@ -1,16 +1,16 @@
-import { createBridgeClient } from "../messaging/bridge_client";
-import { BridgeEventType } from "../messaging/bridge_protocol";
-import { sendToServiceWorker } from "../messaging/sw_channel";
-import type { CallState } from "../call_state_types";
-import { createBridgeWatchRuntime } from "./bridge_watch";
-import { createCallControlsRuntime } from "./call_controls";
-import { createCallInfoCaptureController } from "./call_info_capture";
-import { createCallStateSyncRuntime } from "./call_state_sync";
-import { createLifecycleSyncRuntime } from "./lifecycle_sync";
-import { createLogger, createContentRuntimeState } from "./runtime_state";
-import { initializeContentSettingsRuntime } from "./settings_runtime";
-import { registerSwMessageRouter } from "./sw_message_router";
-import { createContentWsRuntime } from "./ws_runtime";
+import { createBridgeClient } from "@extension/src/messaging/bridge_client";
+import { BridgeEventType } from "@extension/src/messaging/bridge_protocol";
+import { sendToServiceWorker } from "@extension/src/messaging/sw_channel";
+import type { CallState } from "@extension/src/call_state_types";
+import { createBridgeWatchRuntime } from "@extension/src/content/bridge_watch";
+import { createCallControlsRuntime } from "@extension/src/content/call_controls";
+import { createCallInfoCaptureController } from "@extension/src/content/call_info_capture";
+import { createCallStateSyncRuntime } from "@extension/src/content/call_state_sync";
+import { createLifecycleSyncRuntime } from "@extension/src/content/lifecycle_sync";
+import { createLogger, createContentRuntimeState } from "@extension/src/content/runtime_state";
+import { initializeContentSettingsRuntime } from "@extension/src/content/settings_runtime";
+import { registerSwMessageRouter } from "@extension/src/content/sw_message_router";
+import { createContentWsRuntime } from "@extension/src/content/ws_runtime";
 
 /**
  * Composition root for the content script runtime.

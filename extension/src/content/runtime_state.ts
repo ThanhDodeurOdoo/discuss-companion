@@ -1,5 +1,5 @@
-import type { CallState } from "../call_state_types";
-import type { CallLifecycleObserverPayload } from "../type_guards";
+import type { CallState } from "@extension/src/call_state_types";
+import type { CallLifecycleObserverPayload } from "@extension/src/type_guards";
 
 export const BRIDGE_SCRIPT_ID = "__discuss_companion_page_bridge__";
 export const CALL_INFO_CAPTURE_DELAY = 3000;

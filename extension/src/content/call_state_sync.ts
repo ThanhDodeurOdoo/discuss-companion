@@ -1,10 +1,10 @@
-import type { CallState } from "../call_state_types";
-import type { BridgeClient } from "../messaging/bridge_client";
-import { BridgeRequestType } from "../messaging/bridge_protocol";
-import { ContentToSwMessageType } from "../messaging/sw_channel";
-import type { WsClient } from "../ws/ws_client";
-import { buildCallStateMessage, type CallStateSnapshot } from "../ws/ws_codec";
-import type { ContentRuntimeState } from "./runtime_state";
+import type { CallState } from "@extension/src/call_state_types";
+import type { BridgeClient } from "@extension/src/messaging/bridge_client";
+import { BridgeRequestType } from "@extension/src/messaging/bridge_protocol";
+import { ContentToSwMessageType } from "@extension/src/messaging/sw_channel";
+import type { WsClient } from "@extension/src/ws/ws_client";
+import { buildCallStateMessage, type CallStateSnapshot } from "@extension/src/ws/ws_codec";
+import type { ContentRuntimeState } from "@extension/src/content/runtime_state";
 
 export type SendToServiceWorker = <T>(message: {
     type: ContentToSwMessageType;

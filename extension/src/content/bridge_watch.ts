@@ -1,7 +1,7 @@
-import type { BridgeClient } from "../messaging/bridge_client";
-import { BridgeRequestType } from "../messaging/bridge_protocol";
-import { injectScriptOnce } from "../utils/dom_inject";
-import { BRIDGE_SCRIPT_ID, type ContentRuntimeState } from "./runtime_state";
+import type { BridgeClient } from "@extension/src/messaging/bridge_client";
+import { BridgeRequestType } from "@extension/src/messaging/bridge_protocol";
+import { injectScriptOnce } from "@extension/src/utils/dom_inject";
+import { BRIDGE_SCRIPT_ID, type ContentRuntimeState } from "@extension/src/content/runtime_state";
 
 export type BridgeWatchRuntime = {
     ensureBridgeReady: () => Promise<void>;

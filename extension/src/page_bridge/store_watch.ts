@@ -1,6 +1,6 @@
-import type { MailStore, RtcSession, RtcService } from "./runtime_types";
-import type { PageBridgeRuntimeState } from "./runtime_state";
-import type { CallState } from "../call_state_types";
+import type { MailStore, RtcSession, RtcService } from "@extension/src/page_bridge/runtime_types";
+import type { PageBridgeRuntimeState } from "@extension/src/page_bridge/runtime_state";
+import type { CallState } from "@extension/src/call_state_types";
 
 type RtcAccess = {
     getStore: () => MailStore | undefined;

@@ -1,7 +1,7 @@
 import { App as OwlApp } from "@odoo/owl";
-import { Popup } from "./popup_component";
-import { PopupPlugin } from "./popup_plugin";
-import { templates } from "./popup.xml";
+import { Popup } from "@extension/src/popup/popup_component";
+import { PopupPlugin } from "@extension/src/popup/popup_plugin";
+import { templates } from "@extension/src/popup/popup.xml";
 import "./popup.css";
 
 async function start() {

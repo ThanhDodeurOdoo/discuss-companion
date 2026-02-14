@@ -1,16 +1,16 @@
 import { Plugin, signal, computed } from "@odoo/owl";
-import { executeInCurrentTab } from "../utils";
-import { CallActionType, type CallAction } from "../call_actions";
+import { executeInCurrentTab } from "@extension/src/utils";
+import { CallActionType, type CallAction } from "@extension/src/call_actions";
 import {
     requestCallAction,
     requestCallState,
     requestFocusCallTab,
     requestPttCommand
-} from "../command_api";
-import { CallState, getCallTabId, getStoredCallState } from "../call_state";
-import { IS_FIREFOX_BUILD } from "../env";
-import { PttCommand } from "../page_bridge/runtime_types";
-import { SESSION_STATE_STORAGE_AREA } from "../storage/session_state";
+} from "@extension/src/command_api";
+import { CallState, getCallTabId, getStoredCallState } from "@extension/src/call_state";
+import { IS_FIREFOX_BUILD } from "@extension/src/env";
+import { PttCommand } from "@extension/src/page_bridge/runtime_types";
+import { SESSION_STATE_STORAGE_AREA } from "@extension/src/storage/session_state";
 
 const EXTENSION_VERSION = __EXTENSION_VERSION__;
 
