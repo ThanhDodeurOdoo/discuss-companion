@@ -1,14 +1,12 @@
-import { SwToContentMessageType } from "../messaging/sw_channel";
+import { SwToContentMessageType, type SwToContentMessage } from "../messaging/sw_channel";
+import type { CallState } from "../call_state_types";
 
 export function createOwnershipController(deps: {
-    setStoredCallState: (state?: import("../call_state_types").CallState | null) => Promise<void>;
+    setStoredCallState: (state?: CallState | null) => Promise<void>;
     getCallTabId: () => Promise<number | null>;
     setCallTabId: (tabId?: number | null) => Promise<void>;
     getIsTalkingByTabId: () => Promise<Record<string, boolean>>;
-    sendToContentTab: (
-        tabId: number,
-        message: import("../messaging/sw_channel").SwToContentMessage
-    ) => void;
+    sendToContentTab: (tabId: number, message: SwToContentMessage) => void;
 }) {
     const { setStoredCallState, getCallTabId, setCallTabId, sendToContentTab } = deps;
 
