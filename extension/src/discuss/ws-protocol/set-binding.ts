@@ -4,7 +4,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { KeyBinding } from '../../discuss/ws-protocol/key-binding.js';
+import { KeyBinding } from '@extension/src/discuss/ws-protocol/key-binding.js';
 
 
 export class SetBinding {

@@ -1,4 +1,8 @@
-import { CALL_ACTION_APP_COMMANDS, type CallAction, isCallAction } from "./call_actions";
+import {
+    CALL_ACTION_APP_COMMANDS,
+    type CallAction,
+    isCallAction
+} from "@extension/src/call_actions";
 
 export type ParsedAppCommand = {
     name: string;

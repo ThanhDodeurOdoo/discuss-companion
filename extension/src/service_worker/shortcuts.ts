@@ -1,6 +1,6 @@
-import { IS_FIREFOX_BUILD } from "../env";
-import { SwToContentMessageType } from "../messaging/sw_channel";
-import { PttCommand } from "../page_bridge/runtime_types";
+import { IS_FIREFOX_BUILD } from "@extension/src/env";
+import { SwToContentMessageType } from "@extension/src/messaging/sw_channel";
+import { PttCommand } from "@extension/src/page_bridge/runtime_types";
 
 const PTT_PRESSED_THROTTLE_MS = 150;
 

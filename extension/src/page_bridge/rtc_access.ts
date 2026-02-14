@@ -1,6 +1,11 @@
-import type { CallState } from "../call_state_types";
-import type { OdooWindow, MailStore, RtcService, RtcSession } from "./runtime_types";
-import type { PageBridgeRuntimeState } from "./runtime_state";
+import type { CallState } from "@extension/src/call_state_types";
+import type {
+    OdooWindow,
+    MailStore,
+    RtcService,
+    RtcSession
+} from "@extension/src/page_bridge/runtime_types";
+import type { PageBridgeRuntimeState } from "@extension/src/page_bridge/runtime_state";
 
 export function createRtcAccess(win: OdooWindow, state: PageBridgeRuntimeState) {
     function getStore(): MailStore | undefined {

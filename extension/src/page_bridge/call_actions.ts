@@ -1,5 +1,5 @@
-import type { CallAction } from "../call_actions";
-import type { RtcService } from "./runtime_types";
+import type { CallAction } from "@extension/src/call_actions";
+import type { RtcService } from "@extension/src/page_bridge/runtime_types";
 
 type RtcAccess = {
     getRtc: () => RtcService | undefined;

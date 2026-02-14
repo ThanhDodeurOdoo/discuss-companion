@@ -3,9 +3,9 @@ import {
     requiresFocusCallTab,
     type CallAction,
     type CallActionOptions
-} from "../call_actions";
-import { SwToContentMessageType } from "../messaging/sw_channel";
-import { isPttCommand, type PttCommand } from "../page_bridge/runtime_types";
+} from "@extension/src/call_actions";
+import { SwToContentMessageType } from "@extension/src/messaging/sw_channel";
+import { isPttCommand, type PttCommand } from "@extension/src/page_bridge/runtime_types";
 
 export function createContentForwarders(deps: { focusCallTab: () => Promise<boolean> }) {
     const { focusCallTab } = deps;

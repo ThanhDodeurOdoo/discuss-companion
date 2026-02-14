@@ -1,6 +1,9 @@
-import type { CallState } from "../call_state_types";
-import { SwToContentMessageType, isSwToContentMessage } from "../messaging/sw_channel";
-import { WorkerSubscriptionState, type ContentRuntimeState } from "./runtime_state";
+import type { CallState } from "@extension/src/call_state_types";
+import { SwToContentMessageType, isSwToContentMessage } from "@extension/src/messaging/sw_channel";
+import {
+    WorkerSubscriptionState,
+    type ContentRuntimeState
+} from "@extension/src/content/runtime_state";
 
 /**
  * Registers service-worker -> content message routing for subscription and

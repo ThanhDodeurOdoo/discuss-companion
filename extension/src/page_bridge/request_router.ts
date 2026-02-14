@@ -1,13 +1,13 @@
-import type { CallAction } from "../call_actions";
-import type { CallState } from "../call_state_types";
+import type { CallAction } from "@extension/src/call_actions";
+import type { CallState } from "@extension/src/call_state_types";
 import {
     BRIDGE_CHANNEL,
     type BridgeRequest,
     BridgeRequestType,
     type BridgeResponse,
     isBridgeMessage
-} from "../messaging/bridge_protocol";
-import { isPttCommand, type PttCommand } from "./runtime_types";
+} from "@extension/src/messaging/bridge_protocol";
+import { isPttCommand, type PttCommand } from "@extension/src/page_bridge/runtime_types";
 
 export function createBridgeRequestRouter(deps: {
     runAction: (action: CallAction) => Promise<boolean>;

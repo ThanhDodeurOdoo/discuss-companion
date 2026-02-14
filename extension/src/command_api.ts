@@ -4,11 +4,11 @@ import {
     type CallAction,
     type CallActionOptions,
     type CallActionResult
-} from "./call_actions";
-import type { CallState } from "./call_state_types";
-import { ContentToSwMessageType } from "./messaging/sw_channel";
-import type { PttCommand } from "./page_bridge/runtime_types";
-import { executeInCallTab } from "./utils";
+} from "@extension/src/call_actions";
+import type { CallState } from "@extension/src/call_state_types";
+import { ContentToSwMessageType } from "@extension/src/messaging/sw_channel";
+import type { PttCommand } from "@extension/src/page_bridge/runtime_types";
+import { executeInCallTab } from "@extension/src/utils";
 
 type CallActionResponse = { status: "ok"; didRun: boolean; state?: CallState } | { error: string };
 

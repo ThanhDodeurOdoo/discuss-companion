@@ -1,5 +1,5 @@
-import { readLocalSettings } from "../storage/local_settings";
-import type { ContentRuntimeState } from "./runtime_state";
+import { readLocalSettings } from "@extension/src/storage/local_settings";
+import type { ContentRuntimeState } from "@extension/src/content/runtime_state";
 
 const mutedLog = (..._args: unknown[]) => {};
 

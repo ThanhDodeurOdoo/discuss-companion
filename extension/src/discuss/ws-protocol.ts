@@ -2,18 +2,18 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-export { BindingInfo } from './ws-protocol/binding-info.js';
-export { CallState } from './ws-protocol/call-state.js';
-export { Error } from './ws-protocol/error.js';
-export { GetBinding } from './ws-protocol/get-binding.js';
-export { KeyBinding } from './ws-protocol/key-binding.js';
-export { Message } from './ws-protocol/message.js';
-export { MessageBody } from './ws-protocol/message-body.js';
-export { Modifier } from './ws-protocol/modifier.js';
-export { Ping } from './ws-protocol/ping.js';
-export { Pong } from './ws-protocol/pong.js';
-export { PttDown } from './ws-protocol/ptt-down.js';
-export { PttUp } from './ws-protocol/ptt-up.js';
-export { SetBinding } from './ws-protocol/set-binding.js';
-export { Shutdown } from './ws-protocol/shutdown.js';
-export { Status } from './ws-protocol/status.js';
+export { BindingInfo } from '@extension/src/discuss/ws-protocol/binding-info.js';
+export { CallState } from '@extension/src/discuss/ws-protocol/call-state.js';
+export { Error } from '@extension/src/discuss/ws-protocol/error.js';
+export { GetBinding } from '@extension/src/discuss/ws-protocol/get-binding.js';
+export { KeyBinding } from '@extension/src/discuss/ws-protocol/key-binding.js';
+export { Message } from '@extension/src/discuss/ws-protocol/message.js';
+export { MessageBody } from '@extension/src/discuss/ws-protocol/message-body.js';
+export { Modifier } from '@extension/src/discuss/ws-protocol/modifier.js';
+export { Ping } from '@extension/src/discuss/ws-protocol/ping.js';
+export { Pong } from '@extension/src/discuss/ws-protocol/pong.js';
+export { PttDown } from '@extension/src/discuss/ws-protocol/ptt-down.js';
+export { PttUp } from '@extension/src/discuss/ws-protocol/ptt-up.js';
+export { SetBinding } from '@extension/src/discuss/ws-protocol/set-binding.js';
+export { Shutdown } from '@extension/src/discuss/ws-protocol/shutdown.js';
+export { Status } from '@extension/src/discuss/ws-protocol/status.js';

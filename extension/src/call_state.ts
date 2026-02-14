@@ -1,11 +1,11 @@
-import type { CallState } from "./call_state_types";
+import type { CallState } from "@extension/src/call_state_types";
 import {
     getCallState,
     setCallState,
     getCallTabId as getStoredCallTabId,
     setCallTabId as setStoredCallTabId,
     getIsTalkingByTabId
-} from "./storage/session_state";
+} from "@extension/src/storage/session_state";
 
 export type { CallState };
 

@@ -1,5 +1,5 @@
-import type { CallState } from "../call_state_types";
-import { IS_FIREFOX_BUILD } from "../env";
+import type { CallState } from "@extension/src/call_state_types";
+import { IS_FIREFOX_BUILD } from "@extension/src/env";
 
 const CALL_STATE_KEY = "callState";
 const CALL_TAB_ID_KEY = "callTabId";
