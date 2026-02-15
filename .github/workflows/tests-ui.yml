@@ -1,4 +1,4 @@
-name: Extension
+name: Tests:UI
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   lint:
-    name: Extension Lint
+    name: Frontend Lint
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -27,11 +27,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run extension lint
-        run: npm run lint:extension
+      - name: Run frontend lint
+        run: npm run lint:frontend
 
   typecheck:
-    name: Extension Typecheck
+    name: Frontend Typecheck
     needs: lint
     runs-on: macos-latest
     steps:
@@ -48,11 +48,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run extension typecheck
-        run: npm run typecheck:extension
+      - name: Run frontend typecheck
+        run: npm run typecheck:frontend
 
   test:
-    name: Extension Tests
+    name: Frontend Tests
     needs: [lint, typecheck]
     runs-on: macos-latest
     steps:
@@ -69,5 +69,5 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run extension tests
-        run: npm run test:extension
+      - name: Run frontend tests
+        run: npm run test:frontend

@@ -1,16 +1,14 @@
-# Discuss Companion
-[![UI](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ui.yml)
-[![Extension](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/extension.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/extension.yml)
-[![API Tests](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/api_tests.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/api_tests.yml)
+# Discuss Companion [![GitHub version](https://badge.fury.io/gh/ThanhDodeurOdoo%2Fdiscuss-companion.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion)
+
+[![UI](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-ui.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-ui.yml)
+[![Extension](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-extension.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-extension.yml)
+[![API Tests](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-api.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-api.yml)
+
+[![macOS](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-macOS.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-macOS.yml)
+[![Ubuntu](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-ubuntu.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-ubuntu.yml)
+[![Debian](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-debian.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-debian.yml)
 
 [![CodeQuality](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/github-code-scanning/codeql)
-
-### targets
-
-[![macOS](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/macOS.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/macOS.yml)
-[![Ubuntu](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/ubuntu.yml)
-[![Debian Trixie](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/debian.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/debian.yml)
-[![Debian X11](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/debian-x11.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/debian-x11.yml)
 
 The Discuss Companion is a companion app for Odoo Discuss, currently supporting macOS and Linux (X11). It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus, along with convenient quick-access call control features when in a call in Odoo Discuss. This also requires the extension to be installed in a compatible browser (chromium / firefox).
 
