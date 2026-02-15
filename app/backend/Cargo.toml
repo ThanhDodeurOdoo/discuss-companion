@@ -50,7 +50,7 @@ objc2 = "0.6.3"
 objc2-app-kit = { version = "0.3.2", features = ["NSApplication", "NSMenu", "NSResponder"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.180"
+libc = "0.2.182"
 x11 = { version = "2.21.0", features = ["xlib", "xrecord"], optional = true }
 
 [dev-dependencies]
