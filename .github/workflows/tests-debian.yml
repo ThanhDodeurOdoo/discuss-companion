@@ -1,4 +1,4 @@
-name: Debian (Trixie)
+name: Tests:Debian
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   verify:
-    name: Debian Verify
+    name: Debian X11 Verify
     runs-on: ubuntu-latest
     container:
       image: debian:trixie
@@ -33,6 +33,8 @@ jobs:
             libsoup-3.0-dev \
             libwebkit2gtk-4.1-dev \
             librsvg2-dev \
+            libx11-dev \
+            libxtst-dev \
             pkg-config \
             python3 \
             xz-utils
@@ -61,12 +63,26 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             app/backend/target
-          key: debian-cargo-verify-${{ hashFiles('app/backend/Cargo.lock') }}
+          key: debian-x11-cargo-verify-${{ hashFiles('app/backend/Cargo.lock') }}
           restore-keys: |
-            debian-cargo-verify-
+            debian-x11-cargo-verify-
 
       - name: Install dependencies
         run: npm install
 
-      - name: Run verify
-        run: npm run verify
+      - name: Lint frontend & extension
+        run: |
+          npm run lint:extension
+          npm run lint:frontend
+          npm run typecheck
+
+      - name: Lint backend (with X11)
+        run: cd app/backend && cargo fmt --check && cargo clippy --features x11 --tests -- -D warnings
+
+      - name: Test frontend & extension
+        run: |
+          npm run test:frontend
+          npm run test:extension
+
+      - name: Test backend (with X11)
+        run: cd app/backend && cargo test --features x11
