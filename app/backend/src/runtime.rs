@@ -210,7 +210,6 @@ pub(crate) fn apply_app_visibility_mode<R: tauri::Runtime>(
 struct PttHandler {
     app_handle: tauri::AppHandle,
     ws_tx: broadcast::Sender<Vec<u8>>,
-    tray_icon_controller: tray::TrayIconController,
     is_active: bool,
     is_connected: bool,
 }
@@ -220,7 +219,6 @@ impl PttHandler {
         Self {
             app_handle,
             ws_tx,
-            tray_icon_controller: tray::TrayIconController::new(),
             is_active: false,
             is_connected: false,
         }
@@ -273,9 +271,9 @@ impl PttHandler {
         }
     }
 
-    fn update_tray(&mut self) {
-        self.tray_icon_controller
-            .update(&self.app_handle, self.is_connected, self.is_active);
+    fn update_tray(&self) {
+        tray::set_connection_state(&self.app_handle, self.is_connected);
+        tray::set_talking_state(&self.app_handle, self.is_active);
     }
 }
 
