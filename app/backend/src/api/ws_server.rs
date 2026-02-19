@@ -212,6 +212,7 @@ async fn handle_connection<R: tauri::Runtime>(
                                                 send_to_frontend(&app_handle, &payload);
                                                 let _ =
                                                     tray::update_tray_menu(&app_handle, Some(state));
+                                                tray::set_call_state(&app_handle, Some(state));
                                                 #[cfg(target_os = "macos")]
                                                 let _ = dock_menu::update_dock_menu(&app_handle, Some(state));
                                             }

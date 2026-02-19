@@ -1,3 +1,5 @@
+use std::{collections::HashMap, sync::Mutex};
+
 #[cfg(target_os = "macos")]
 use tauri::menu::IconMenuItem;
 use tauri::{
@@ -12,82 +14,354 @@ use crate::{WsState, api, protocol::CallState};
 
 pub const TRAY_ID: &str = "main-tray";
 const TRAY_OPEN_MAIN_WINDOW_ID: &str = "open-main-window";
-const ICON_ACTIVE_ONLINE: &[u8] = include_bytes!("../../../../assets/icons/active_online_icon.png");
-const ICON_INACTIVE_ONLINE: &[u8] =
-    include_bytes!("../../../../assets/icons/inactive_online_icon.png");
-const ICON_INACTIVE_OFFLINE: &[u8] =
-    include_bytes!("../../../../assets/icons/inactive_offline_icon.png");
+const MASK_DEAF: &[u8] = include_bytes!("../../../../assets/masks/deaf_w.png");
+const MASK_MUTE: &[u8] = include_bytes!("../../../../assets/masks/mute_w.png");
+const MASK_NOT_TALKING: &[u8] = include_bytes!("../../../../assets/masks/not_talking.png");
+const MASK_OFFLINE: &[u8] = include_bytes!("../../../../assets/masks/offline.png");
+const MASK_ONLINE: &[u8] = include_bytes!("../../../../assets/masks/online.png");
+const MASK_TALKING: &[u8] = include_bytes!("../../../../assets/masks/talking.png");
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum TrayIconState {
-    InactiveOffline,
-    InactiveOnline,
-    ActiveOnline,
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+enum TrayForegroundMask {
+    #[default]
+    NotTalking,
+    Talking,
 }
 
-pub struct TrayIconController {
-    active_online_icon: Option<Image<'static>>,
-    inactive_online_icon: Option<Image<'static>>,
-    inactive_offline_icon: Option<Image<'static>>,
-    last_state: Option<TrayIconState>,
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum TrayConnectionMask {
+    Offline,
+    Online,
 }
 
-impl Default for TrayIconController {
-    fn default() -> Self {
-        Self::new()
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct TrayVisualState {
+    connection: TrayConnectionState,
+    talking: TrayTalkingState,
+    audio: TrayAudioState,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct TrayIconVariant {
+    foreground: TrayForegroundMask,
+    audio_overlay: TrayAudioOverlay,
+    connection: TrayConnectionMask,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum TrayAudioState {
+    #[default]
+    Normal,
+    Muted,
+    Deafened,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+enum TrayAudioOverlay {
+    #[default]
+    None,
+    Mute,
+    Deaf,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum TrayConnectionState {
+    #[default]
+    Offline,
+    Online,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum TrayTalkingState {
+    #[default]
+    NotTalking,
+    Talking,
+}
+
+impl TrayVisualState {
+    fn icon_variant(self) -> TrayIconVariant {
+        let foreground = if self.talking == TrayTalkingState::Talking {
+            TrayForegroundMask::Talking
+        } else {
+            TrayForegroundMask::NotTalking
+        };
+        let audio_overlay = if foreground == TrayForegroundMask::Talking {
+            TrayAudioOverlay::None
+        } else {
+            match self.audio {
+                TrayAudioState::Deafened => TrayAudioOverlay::Deaf,
+                TrayAudioState::Muted => TrayAudioOverlay::Mute,
+                TrayAudioState::Normal => TrayAudioOverlay::None,
+            }
+        };
+        let connection = match self.connection {
+            TrayConnectionState::Offline => TrayConnectionMask::Offline,
+            TrayConnectionState::Online => TrayConnectionMask::Online,
+        };
+        TrayIconVariant {
+            foreground,
+            audio_overlay,
+            connection,
+        }
     }
+}
+
+struct MaskImage {
+    rgba: Vec<u8>,
+    width: u32,
+    height: u32,
+}
+
+impl MaskImage {
+    fn from_png(bytes: &[u8]) -> tauri::Result<Self> {
+        let image = Image::from_bytes(bytes)?;
+        Ok(Self {
+            rgba: image.rgba().to_vec(),
+            width: image.width(),
+            height: image.height(),
+        })
+    }
+}
+
+struct TrayMasks {
+    deaf: MaskImage,
+    mute: MaskImage,
+    not_talking: MaskImage,
+    offline: MaskImage,
+    online: MaskImage,
+    talking: MaskImage,
+}
+
+impl TrayMasks {
+    fn load() -> tauri::Result<Self> {
+        // TODO: maybe later use some kind of oncecell/lazycell to act as static and lazyload if not initialized
+        Ok(Self {
+            deaf: MaskImage::from_png(MASK_DEAF)?,
+            mute: MaskImage::from_png(MASK_MUTE)?,
+            not_talking: MaskImage::from_png(MASK_NOT_TALKING)?,
+            offline: MaskImage::from_png(MASK_OFFLINE)?,
+            online: MaskImage::from_png(MASK_ONLINE)?,
+            talking: MaskImage::from_png(MASK_TALKING)?,
+        })
+    }
+
+    fn foreground_mask(&self, foreground: TrayForegroundMask) -> &MaskImage {
+        match foreground {
+            TrayForegroundMask::NotTalking => &self.not_talking,
+            TrayForegroundMask::Talking => &self.talking,
+        }
+    }
+
+    fn audio_overlay_mask(&self, audio_overlay: TrayAudioOverlay) -> Option<&MaskImage> {
+        match audio_overlay {
+            TrayAudioOverlay::None => None,
+            TrayAudioOverlay::Mute => Some(&self.mute),
+            TrayAudioOverlay::Deaf => Some(&self.deaf),
+        }
+    }
+
+    fn connection_mask(&self, connection: TrayConnectionMask) -> &MaskImage {
+        match connection {
+            TrayConnectionMask::Offline => &self.offline,
+            TrayConnectionMask::Online => &self.online,
+        }
+    }
+
+    fn dimensions(&self) -> (u32, u32) {
+        (self.not_talking.width, self.not_talking.height)
+    }
+}
+
+struct TrayIconController {
+    // Pre-rendered icons keyed by tray variant to avoid recomposing RGBA layers on updates.
+    icons: HashMap<TrayIconVariant, Image<'static>>,
+    visual_state: TrayVisualState,
+    last_applied_variant: Option<TrayIconVariant>,
 }
 
 impl TrayIconController {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            active_online_icon: Image::from_bytes(ICON_ACTIVE_ONLINE).ok(),
-            inactive_online_icon: Image::from_bytes(ICON_INACTIVE_ONLINE).ok(),
-            inactive_offline_icon: Image::from_bytes(ICON_INACTIVE_OFFLINE).ok(),
-            last_state: None,
-        }
+    fn new() -> tauri::Result<Self> {
+        let masks = TrayMasks::load()?;
+        Ok(Self {
+            icons: render_icon_variants(&masks),
+            visual_state: TrayVisualState::default(),
+            last_applied_variant: None,
+        })
     }
 
-    pub fn update<R: Runtime>(
-        &mut self,
-        app_handle: &AppHandle<R>,
-        is_connected: bool,
-        is_active: bool,
-    ) {
+    fn set_connection_state(&mut self, is_connected: bool) {
+        self.visual_state.connection = if is_connected {
+            TrayConnectionState::Online
+        } else {
+            TrayConnectionState::Offline
+        };
+    }
+
+    fn set_talking_state(&mut self, is_talking: bool) {
+        self.visual_state.talking = if is_talking {
+            TrayTalkingState::Talking
+        } else {
+            TrayTalkingState::NotTalking
+        };
+    }
+
+    fn set_call_state(&mut self, call_state: Option<CallState>) {
+        let call_state = call_controls_menu::menu_state(call_state);
+        self.visual_state.audio = match call_state {
+            Some(state) if state.is_deaf => TrayAudioState::Deafened,
+            Some(state) if state.is_mute => TrayAudioState::Muted,
+            _ => TrayAudioState::Normal,
+        };
+    }
+
+    fn current_icon(&self) -> Option<Image<'static>> {
+        self.icons.get(&self.visual_state.icon_variant()).cloned()
+    }
+
+    fn apply<R: Runtime>(&mut self, app_handle: &AppHandle<R>) {
         let Some(tray_icon) = app_handle.tray_by_id(TRAY_ID) else {
             return;
         };
-
-        let state = Self::state_for_connection(is_connected, is_active);
-        if self.last_state == Some(state) {
+        let variant = self.visual_state.icon_variant();
+        if self.last_applied_variant == Some(variant) {
             return;
         }
-
-        if let Some(icon) = self.icon_for_state(state) {
-            let _ = tray_icon.set_icon(Some(icon));
-            self.last_state = Some(state);
+        if let Some(icon) = self.icons.get(&variant) {
+            let _ = tray_icon.set_icon(Some(icon.clone()));
+            self.last_applied_variant = Some(variant);
         }
     }
+}
 
-    fn state_for_connection(is_connected: bool, is_active: bool) -> TrayIconState {
-        if !is_connected {
-            TrayIconState::InactiveOffline
-        } else if is_active {
-            TrayIconState::ActiveOnline
-        } else {
-            TrayIconState::InactiveOnline
+struct TrayIconState {
+    controller: Mutex<TrayIconController>,
+}
+
+pub fn set_connection_state<R: Runtime>(app_handle: &AppHandle<R>, is_connected: bool) {
+    update_tray_icon_state(app_handle, |controller| {
+        controller.set_connection_state(is_connected);
+    });
+}
+
+pub fn set_talking_state<R: Runtime>(app_handle: &AppHandle<R>, is_talking: bool) {
+    update_tray_icon_state(app_handle, |controller| {
+        controller.set_talking_state(is_talking);
+    });
+}
+
+pub fn set_call_state<R: Runtime>(app_handle: &AppHandle<R>, call_state: Option<CallState>) {
+    update_tray_icon_state(app_handle, |controller| {
+        controller.set_call_state(call_state);
+    });
+}
+
+fn update_tray_icon_state<R: Runtime>(
+    app_handle: &AppHandle<R>,
+    update: impl FnOnce(&mut TrayIconController),
+) {
+    let Some(tray_icon_state) = app_handle.try_state::<TrayIconState>() else {
+        return;
+    };
+    let Ok(mut controller) = tray_icon_state.controller.lock() else {
+        return;
+    };
+    update(&mut controller);
+    controller.apply(app_handle);
+}
+
+fn render_icon_variants(masks: &TrayMasks) -> HashMap<TrayIconVariant, Image<'static>> {
+    let (width, height) = masks.dimensions();
+    let mut icons = HashMap::new();
+    let foreground_masks = [TrayForegroundMask::NotTalking, TrayForegroundMask::Talking];
+    let audio_overlays = [
+        TrayAudioOverlay::None,
+        TrayAudioOverlay::Mute,
+        TrayAudioOverlay::Deaf,
+    ];
+    let connection_masks = [TrayConnectionMask::Offline, TrayConnectionMask::Online];
+    for foreground in foreground_masks {
+        for audio_overlay in audio_overlays {
+            if foreground == TrayForegroundMask::Talking && audio_overlay != TrayAudioOverlay::None
+            {
+                continue;
+            }
+            let foreground_mask = masks.foreground_mask(foreground);
+            let audio_overlay_mask = masks.audio_overlay_mask(audio_overlay);
+            for connection in connection_masks {
+                let variant = TrayIconVariant {
+                    foreground,
+                    audio_overlay,
+                    connection,
+                };
+                let icon = compose_icon(
+                    width,
+                    height,
+                    foreground_mask,
+                    audio_overlay_mask,
+                    masks.connection_mask(connection),
+                );
+                icons.insert(variant, icon);
+            }
         }
     }
+    icons
+}
 
-    fn icon_for_state(&self, state: TrayIconState) -> Option<Image<'_>> {
-        let icon = match state {
-            TrayIconState::InactiveOffline => self.inactive_offline_icon.as_ref(),
-            TrayIconState::InactiveOnline => self.inactive_online_icon.as_ref(),
-            TrayIconState::ActiveOnline => self.active_online_icon.as_ref(),
-        }?;
-        Some(Image::new(icon.rgba(), icon.width(), icon.height()))
+fn compose_icon(
+    width: u32,
+    height: u32,
+    foreground_mask: &MaskImage,
+    audio_overlay_mask: Option<&MaskImage>,
+    status_mask: &MaskImage,
+) -> Image<'static> {
+    let mut rgba = foreground_mask.rgba.clone();
+    blend_overlay_if_matching(foreground_mask, &mut rgba, audio_overlay_mask);
+    blend_overlay_if_matching(foreground_mask, &mut rgba, Some(status_mask));
+    Image::new_owned(rgba, width, height)
+}
+
+fn blend_overlay_if_matching(base: &MaskImage, canvas: &mut [u8], overlay: Option<&MaskImage>) {
+    let Some(overlay) = overlay else {
+        return;
+    };
+    if base.width != overlay.width || base.height != overlay.height {
+        return;
     }
+    blend_overlay(canvas, &overlay.rgba);
+}
+
+fn blend_overlay(canvas: &mut [u8], overlay: &[u8]) {
+    for (dst_pixel, src_pixel) in canvas.chunks_exact_mut(4).zip(overlay.chunks_exact(4)) {
+        blend_pixel(dst_pixel, src_pixel);
+    }
+}
+
+fn blend_pixel(dst: &mut [u8], src: &[u8]) {
+    let [dst_r, dst_g, dst_b, dst_alpha] = dst else {
+        return;
+    };
+    let [src_r, src_g, src_b, src_alpha] = src else {
+        return;
+    };
+    let src_alpha = u32::from(*src_alpha);
+    if src_alpha == 0 {
+        return;
+    }
+    let inv_alpha = 255 - src_alpha;
+    let blend_channel = |src_channel: u8, dst_channel: u8| {
+        let src = u32::from(src_channel) * src_alpha;
+        let dst = u32::from(dst_channel) * inv_alpha;
+        to_u8((src + dst + 127) / 255)
+    };
+    *dst_r = blend_channel(*src_r, *dst_r);
+    *dst_g = blend_channel(*src_g, *dst_g);
+    *dst_b = blend_channel(*src_b, *dst_b);
+    let dst_alpha_u32 = u32::from(*dst_alpha) * inv_alpha;
+    *dst_alpha = to_u8(src_alpha + (dst_alpha_u32 + 127) / 255);
+}
+
+fn to_u8(value: u32) -> u8 {
+    u8::try_from(value).unwrap_or(u8::MAX)
 }
 
 fn tray_anchor_from_rect<R: Runtime>(
@@ -342,7 +616,13 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<()> {
         .try_state::<WsState>()
         .and_then(|state| state.call_state.read().ok().and_then(|guard| *guard));
     let menu = build_tray_menu(app, call_state)?;
-    let tray_icon = Image::from_bytes(ICON_INACTIVE_OFFLINE)?;
+    let mut tray_icon_controller = TrayIconController::new()?;
+    tray_icon_controller.set_call_state(call_state);
+    let tray_icon = if let Some(icon) = tray_icon_controller.current_icon() {
+        icon
+    } else {
+        Image::from_bytes(MASK_NOT_TALKING)?
+    };
 
     let builder = TrayIconBuilder::<R>::with_id(TRAY_ID)
         .icon(tray_icon)
@@ -386,5 +666,89 @@ pub fn setup_tray<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<()> {
     let builder = builder.show_menu_on_left_click(false);
 
     builder.build(app)?;
+    app.manage(TrayIconState {
+        controller: Mutex::new(tray_icon_controller),
+    });
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn icon_variant_prioritizes_talking() {
+        let state = TrayVisualState {
+            connection: TrayConnectionState::Online,
+            talking: TrayTalkingState::Talking,
+            audio: TrayAudioState::Deafened,
+        };
+        assert_eq!(
+            state.icon_variant(),
+            TrayIconVariant {
+                foreground: TrayForegroundMask::Talking,
+                audio_overlay: TrayAudioOverlay::None,
+                connection: TrayConnectionMask::Online,
+            }
+        );
+    }
+
+    #[test]
+    fn icon_variant_prioritizes_deaf_over_mute() {
+        let state = TrayVisualState {
+            connection: TrayConnectionState::Offline,
+            talking: TrayTalkingState::NotTalking,
+            audio: TrayAudioState::Deafened,
+        };
+        assert_eq!(
+            state.icon_variant(),
+            TrayIconVariant {
+                foreground: TrayForegroundMask::NotTalking,
+                audio_overlay: TrayAudioOverlay::Deaf,
+                connection: TrayConnectionMask::Offline,
+            }
+        );
+    }
+
+    #[test]
+    fn icon_variant_uses_default_when_not_talking_or_call_flagged() {
+        let state = TrayVisualState {
+            connection: TrayConnectionState::Online,
+            talking: TrayTalkingState::NotTalking,
+            audio: TrayAudioState::Normal,
+        };
+        assert_eq!(
+            state.icon_variant(),
+            TrayIconVariant {
+                foreground: TrayForegroundMask::NotTalking,
+                audio_overlay: TrayAudioOverlay::None,
+                connection: TrayConnectionMask::Online,
+            }
+        );
+    }
+
+    #[test]
+    fn icon_variant_ignores_audio_overlay_while_talking() {
+        let state = TrayVisualState {
+            connection: TrayConnectionState::Offline,
+            talking: TrayTalkingState::Talking,
+            audio: TrayAudioState::Muted,
+        };
+        assert_eq!(
+            state.icon_variant(),
+            TrayIconVariant {
+                foreground: TrayForegroundMask::Talking,
+                audio_overlay: TrayAudioOverlay::None,
+                connection: TrayConnectionMask::Offline,
+            }
+        );
+    }
+
+    #[test]
+    fn compositor_prebuilds_all_icon_variants() -> tauri::Result<()> {
+        let masks = TrayMasks::load()?;
+        let icons = render_icon_variants(&masks);
+        assert_eq!(icons.len(), 8);
+        Ok(())
+    }
 }
