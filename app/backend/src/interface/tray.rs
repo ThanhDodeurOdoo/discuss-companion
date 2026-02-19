@@ -12,6 +12,83 @@ use crate::{WsState, api, protocol::CallState};
 
 pub const TRAY_ID: &str = "main-tray";
 const TRAY_OPEN_MAIN_WINDOW_ID: &str = "open-main-window";
+const ICON_ACTIVE_ONLINE: &[u8] = include_bytes!("../../../../assets/icons/active_online_icon.png");
+const ICON_INACTIVE_ONLINE: &[u8] =
+    include_bytes!("../../../../assets/icons/inactive_online_icon.png");
+const ICON_INACTIVE_OFFLINE: &[u8] =
+    include_bytes!("../../../../assets/icons/inactive_offline_icon.png");
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum TrayIconState {
+    InactiveOffline,
+    InactiveOnline,
+    ActiveOnline,
+}
+
+pub struct TrayIconController {
+    active_online_icon: Option<Image<'static>>,
+    inactive_online_icon: Option<Image<'static>>,
+    inactive_offline_icon: Option<Image<'static>>,
+    last_state: Option<TrayIconState>,
+}
+
+impl Default for TrayIconController {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TrayIconController {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            active_online_icon: Image::from_bytes(ICON_ACTIVE_ONLINE).ok(),
+            inactive_online_icon: Image::from_bytes(ICON_INACTIVE_ONLINE).ok(),
+            inactive_offline_icon: Image::from_bytes(ICON_INACTIVE_OFFLINE).ok(),
+            last_state: None,
+        }
+    }
+
+    pub fn update<R: Runtime>(
+        &mut self,
+        app_handle: &AppHandle<R>,
+        is_connected: bool,
+        is_active: bool,
+    ) {
+        let Some(tray_icon) = app_handle.tray_by_id(TRAY_ID) else {
+            return;
+        };
+
+        let state = Self::state_for_connection(is_connected, is_active);
+        if self.last_state == Some(state) {
+            return;
+        }
+
+        if let Some(icon) = self.icon_for_state(state) {
+            let _ = tray_icon.set_icon(Some(icon));
+            self.last_state = Some(state);
+        }
+    }
+
+    fn state_for_connection(is_connected: bool, is_active: bool) -> TrayIconState {
+        if !is_connected {
+            TrayIconState::InactiveOffline
+        } else if is_active {
+            TrayIconState::ActiveOnline
+        } else {
+            TrayIconState::InactiveOnline
+        }
+    }
+
+    fn icon_for_state(&self, state: TrayIconState) -> Option<Image<'_>> {
+        let icon = match state {
+            TrayIconState::InactiveOffline => self.inactive_offline_icon.as_ref(),
+            TrayIconState::InactiveOnline => self.inactive_online_icon.as_ref(),
+            TrayIconState::ActiveOnline => self.active_online_icon.as_ref(),
+        }?;
+        Some(Image::new(icon.rgba(), icon.width(), icon.height()))
+    }
+}
 
 fn tray_anchor_from_rect<R: Runtime>(
     app_handle: &AppHandle<R>,
@@ -260,11 +337,12 @@ pub fn update_tray_menu<R: Runtime>(
 ///
 /// # Errors
 /// Returns an error if the tray icon cannot be created.
-pub fn setup_tray<R: Runtime>(app: &tauri::App<R>, tray_icon: Image<'static>) -> tauri::Result<()> {
+pub fn setup_tray<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<()> {
     let call_state = app
         .try_state::<WsState>()
         .and_then(|state| state.call_state.read().ok().and_then(|guard| *guard));
     let menu = build_tray_menu(app, call_state)?;
+    let tray_icon = Image::from_bytes(ICON_INACTIVE_OFFLINE)?;
 
     let builder = TrayIconBuilder::<R>::with_id(TRAY_ID)
         .icon(tray_icon)

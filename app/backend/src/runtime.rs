@@ -6,7 +6,7 @@ use std::{
     thread,
 };
 
-use tauri::{Emitter, Manager, async_runtime, image::Image};
+use tauri::{Emitter, Manager, async_runtime};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
 use tracing::{debug, error};
@@ -18,12 +18,6 @@ use crate::{
     interface::{call_controls_menu, call_controls_window, tray},
     protocol, ptt_engine, store_keys,
 };
-
-const ICON_ACTIVE_ONLINE: &[u8] = include_bytes!("../../../assets/icons/active_online_icon.png");
-const ICON_INACTIVE_ONLINE: &[u8] =
-    include_bytes!("../../../assets/icons/inactive_online_icon.png");
-const ICON_INACTIVE_OFFLINE: &[u8] =
-    include_bytes!("../../../assets/icons/inactive_offline_icon.png");
 
 #[allow(
     clippy::too_many_lines,
@@ -102,8 +96,7 @@ pub fn build_app(
                 }
             });
 
-            let tray_icon = Image::from_bytes(ICON_INACTIVE_OFFLINE)?;
-            tray::setup_tray(app, tray_icon)?;
+            tray::setup_tray(app)?;
             apply_app_visibility_mode(app.handle(), app_visibility_mode);
 
             #[cfg(target_os = "macos")]
@@ -217,19 +210,9 @@ pub(crate) fn apply_app_visibility_mode<R: tauri::Runtime>(
 struct PttHandler {
     app_handle: tauri::AppHandle,
     ws_tx: broadcast::Sender<Vec<u8>>,
-    active_online_img: Option<Image<'static>>,
-    inactive_online_img: Option<Image<'static>>,
-    inactive_offline_img: Option<Image<'static>>,
+    tray_icon_controller: tray::TrayIconController,
     is_active: bool,
     is_connected: bool,
-    last_tray_state: Option<TrayIconState>,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum TrayIconState {
-    InactiveOffline,
-    InactiveOnline,
-    ActiveOnline,
 }
 
 impl PttHandler {
@@ -237,12 +220,9 @@ impl PttHandler {
         Self {
             app_handle,
             ws_tx,
-            active_online_img: Image::from_bytes(ICON_ACTIVE_ONLINE).ok(),
-            inactive_online_img: Image::from_bytes(ICON_INACTIVE_ONLINE).ok(),
-            inactive_offline_img: Image::from_bytes(ICON_INACTIVE_OFFLINE).ok(),
+            tray_icon_controller: tray::TrayIconController::new(),
             is_active: false,
             is_connected: false,
-            last_tray_state: None,
         }
     }
 
@@ -294,36 +274,8 @@ impl PttHandler {
     }
 
     fn update_tray(&mut self) {
-        let Some(tray_icon) = self.app_handle.tray_by_id(tray::TRAY_ID) else {
-            return;
-        };
-
-        let state = if !self.is_connected {
-            TrayIconState::InactiveOffline
-        } else if self.is_active {
-            TrayIconState::ActiveOnline
-        } else {
-            TrayIconState::InactiveOnline
-        };
-
-        if self.last_tray_state == Some(state) {
-            return;
-        }
-
-        if let Some(img) = self.tray_image(state) {
-            let _ = tray_icon.set_icon(Some(img));
-            self.last_tray_state = Some(state);
-        }
-    }
-
-    fn tray_image(&self, state: TrayIconState) -> Option<Image<'_>> {
-        let img = match state {
-            TrayIconState::InactiveOffline => self.inactive_offline_img.as_ref(),
-            TrayIconState::InactiveOnline => self.inactive_online_img.as_ref(),
-            TrayIconState::ActiveOnline => self.active_online_img.as_ref(),
-        }?;
-
-        Some(Image::new(img.rgba(), img.width(), img.height()))
+        self.tray_icon_controller
+            .update(&self.app_handle, self.is_connected, self.is_active);
     }
 }
 
