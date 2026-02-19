@@ -64,8 +64,9 @@ body {
 }
 
 .actions__settings {
-    width: 32px;
     height: 32px;
+    width: auto;
+    padding: 5px;
     border-radius: var(--radius-sm);
     color: var(--color-text-muted);
     border-color: transparent;
