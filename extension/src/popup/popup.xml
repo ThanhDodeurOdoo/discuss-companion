@@ -1,60 +1,58 @@
 <templates>
     <div t-name="Popup" class="popup">
-        <t t-if="!this.popup.isSettingsOpen()">
-            <div class="call" t-if="this.popup.hasCallTab()">
-                <div class="call__pulse" aria-hidden="true"></div>
-                <div class="call__actions">
-                    <button class="btn btn--icon call__btn" t-att-class="{ 'is-off': this.popup.isMute() }" t-att-title="this.popup.isMute() ? 'Unmute' : 'Mute'" t-on-click="() => this.popup.toggleMicrophone()">
-                        <span class="icon" t-if="this.popup.isMute()" aria-hidden="true">mic_off</span>
-                        <span class="icon" t-else="" aria-hidden="true">mic</span>
-                    </button>
-                    <button class="btn btn--icon call__btn" t-att-class="{ 'is-off': this.popup.isDeaf() }" t-att-title="this.popup.isDeaf() ? 'Undeafen' : 'Deafen'" t-on-click="() => this.popup.toggleDeafen()">
-                        <span class="icon" t-if="this.popup.isDeaf()" aria-hidden="true">volume_off</span>
-                        <span class="icon" t-else="" aria-hidden="true">volume_up</span>
-                    </button>
-                    <button class="btn btn--icon call__btn" t-att-class="{ 'is-on': this.popup.isCameraOn() }" t-att-title="this.popup.isCameraOn() ? 'Turn camera off' : 'Turn camera on'" t-on-click="() => this.popup.toggleCamera()">
-                        <span class="icon" t-if="this.popup.isCameraOn()" aria-hidden="true">videocam</span>
-                        <span class="icon" t-else="" aria-hidden="true">videocam_off</span>
-                    </button>
-                    <button class="btn btn--icon call__btn" t-att-class="{ 'is-on': this.popup.isScreenOn() }" t-att-title="this.popup.isScreenOn() ? 'Stop sharing screen' : 'Share screen'" t-on-click="() => this.popup.toggleScreen()">
-                        <span class="icon" t-if="this.popup.isScreenOn()" aria-hidden="true">stop_screen_share</span>
-                        <span class="icon" t-else="" aria-hidden="true">screen_share</span>
-                    </button>
-                    <button class="btn btn--icon btn--danger call__btn" t-att-title="'Leave call'" t-on-click="() => this.popup.leaveCall()">
-                        <span class="icon" aria-hidden="true">call_end</span>
-                    </button>
-                </div>
-                <div class="call__voice-row">
-                    <span class="call__voice-label">Voice latch</span>
-                    <button class="voice-switch"
-                        role="switch"
-                        t-att-class="{ 'is-on': this.popup.isVoiceActivated() }"
-                        t-att-aria-checked="this.popup.isVoiceActivated() ? 'true' : 'false'"
-                        t-att-title="this.popup.isVoiceActivated() ? 'Disable voice latch' : 'Enable voice latch'"
-                        t-on-click="() => this.popup.toggleVoiceMode()">
-                        <span class="voice-switch__thumb"
-                            t-att-data-state="this.popup.isVoiceActivated() ? 'ON' : 'OFF'"></span>
-                    </button>
-                </div>
-            </div>
-            <div class="actions">
-                <button class="btn btn--ghost" t-if="this.popup.hasCallTab()" t-on-click="() => this.popup.onClickGoToCall()">Go to Call</button>
-                <button class="btn btn--icon btn--ghost actions__pip actions__primary" t-if="this.popup.hasCallTab()" t-att-title="'Open Picture in Picture'" t-on-click="() => this.popup.openPip()">
-                    <span class="icon" aria-hidden="true">picture_in_picture</span>
+        <div class="call" t-if="this.popup.hasCallTab()">
+            <div class="call__pulse" aria-hidden="true"></div>
+            <div class="call__actions">
+                <button class="btn btn--icon call__btn" t-att-class="{ 'is-off': this.popup.isMute() }" t-att-title="this.popup.isMute() ? 'Unmute' : 'Mute'" t-on-click="() => this.popup.toggleMicrophone()">
+                    <span class="icon" t-if="this.popup.isMute()" aria-hidden="true">mic_off</span>
+                    <span class="icon" t-else="" aria-hidden="true">mic</span>
                 </button>
-                <button class="btn btn--success actions__primary text-truncate" t-if="!this.popup.hasCallTab() &amp;&amp; this.popup.lastJoinedCall()" t-on-click="() => this.popup.rejoinLastCall()" t-att-title="'Re-join ' + this.popup.lastJoinedCall().name">Re-join "<t t-out="this.popup.lastJoinedCall().name"/>"</button>
-                <button class="btn btn--icon btn--ghost actions__settings" t-on-click="() => this.popup.toggleSettings()" t-att-title="'Open settings'">
-                    <span class="icon" aria-hidden="true">settings</span>
+                <button class="btn btn--icon call__btn" t-att-class="{ 'is-off': this.popup.isDeaf() }" t-att-title="this.popup.isDeaf() ? 'Undeafen' : 'Deafen'" t-on-click="() => this.popup.toggleDeafen()">
+                    <span class="icon" t-if="this.popup.isDeaf()" aria-hidden="true">volume_off</span>
+                    <span class="icon" t-else="" aria-hidden="true">volume_up</span>
+                </button>
+                <button class="btn btn--icon call__btn" t-att-class="{ 'is-on': this.popup.isCameraOn() }" t-att-title="this.popup.isCameraOn() ? 'Turn camera off' : 'Turn camera on'" t-on-click="() => this.popup.toggleCamera()">
+                    <span class="icon" t-if="this.popup.isCameraOn()" aria-hidden="true">videocam</span>
+                    <span class="icon" t-else="" aria-hidden="true">videocam_off</span>
+                </button>
+                <button class="btn btn--icon call__btn" t-att-class="{ 'is-on': this.popup.isScreenOn() }" t-att-title="this.popup.isScreenOn() ? 'Stop sharing screen' : 'Share screen'" t-on-click="() => this.popup.toggleScreen()">
+                    <span class="icon" t-if="this.popup.isScreenOn()" aria-hidden="true">stop_screen_share</span>
+                    <span class="icon" t-else="" aria-hidden="true">screen_share</span>
+                </button>
+                <button class="btn btn--icon btn--danger call__btn" t-att-title="'Leave call'" t-on-click="() => this.popup.leaveCall()">
+                    <span class="icon" aria-hidden="true">call_end</span>
                 </button>
             </div>
-        </t>
-        <t t-else="">
-            <div class="settings__header">
-                <div class="settings__title">Settings</div>
-                <button class="btn btn--icon btn--ghost" t-on-click="() => this.popup.toggleSettings()" t-att-title="'Close settings'">
-                    <span class="icon" aria-hidden="true">close</span>
+            <div class="call__voice-row">
+                <span class="call__voice-label">Voice latch</span>
+                <button class="voice-switch"
+                    role="switch"
+                    t-att-class="{ 'is-on': this.popup.isVoiceActivated() }"
+                    t-att-aria-checked="this.popup.isVoiceActivated() ? 'true' : 'false'"
+                    t-att-title="this.popup.isVoiceActivated() ? 'Disable voice latch' : 'Enable voice latch'"
+                    t-on-click="() => this.popup.toggleVoiceMode()">
+                    <span class="voice-switch__thumb"
+                        t-att-data-state="this.popup.isVoiceActivated() ? 'ON' : 'OFF'"></span>
                 </button>
             </div>
+        </div>
+        <div class="actions">
+            <button class="btn btn--ghost" t-if="this.popup.hasCallTab()" t-on-click="() => this.popup.onClickGoToCall()">Go to Call</button>
+            <button class="btn btn--icon btn--ghost actions__pip actions__primary" t-if="this.popup.hasCallTab()" t-att-title="'Open Picture in Picture'" t-on-click="() => this.popup.openPip()">
+                <span class="icon" aria-hidden="true">picture_in_picture</span>
+            </button>
+            <button class="btn btn--success actions__primary text-truncate" t-if="!this.popup.hasCallTab() &amp;&amp; this.popup.lastJoinedCall()" t-on-click="() => this.popup.rejoinLastCall()" t-att-title="'Re-join ' + this.popup.lastJoinedCall().name">Re-join "<t t-out="this.popup.lastJoinedCall().name"/>"</button>
+            <button class="btn btn--icon btn--ghost actions__settings" t-on-click="() => this.popup.toggleSettings()" t-att-title="'Open settings'">
+                <span class="icon" aria-hidden="true">
+                    settings
+                </span>
+                <span class="icon" aria-hidden="true">
+                    <t t-if="this.popup.isSettingsOpen()" t-out="'expand_less'"/>
+                    <t t-else="" t-out="'expand_more'"/>
+                </span>
+            </button>
+        </div>
+        <t t-if="this.popup.isSettingsOpen()">
             <div class="toggle">
                 <label class="toggle__label" for="companion-enabled">Use companion app</label>
                 <input class="toggle__input" type="checkbox" id="companion-enabled"
