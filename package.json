@@ -42,7 +42,10 @@
     "test:backend": "cd app/backend && cargo test",
     "test:api:ipc": "cd app/backend && cargo test --test ipc_api_tests",
     "test:api:ws": "cd app/backend && cargo test --test ws_api_tests",
-    "format:backend": "cd app/backend && cargo +nightly fmt",
+    "format:rust": "cd app/backend && cargo +nightly fmt",
+    "format:backend": "npm run format:rust",
+    "format:ts": "prettier --write \"app/frontend/**/*.ts\" \"extension/**/*.ts\" \"vite.config.ts\"",
+    "format": "npm run format:rust && npm run format:ts",
     "pre:dev": "vite",
     "pre:build": "tsc && vite build",
     "tauri": "tauri"
