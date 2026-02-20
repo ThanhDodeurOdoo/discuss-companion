@@ -29,6 +29,7 @@ mod profiling;
 pub mod protocol;
 pub mod ptt_engine;
 pub mod runtime;
+pub mod utils;
 
 pub const DEFAULT_PORT: u16 = 49152;
 pub mod store_keys {
