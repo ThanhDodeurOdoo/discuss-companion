@@ -87,6 +87,23 @@ fn install_dock_menu(call_state: Option<CallState>) {
 
     DOCK_MENU_PTR.store(ns_menu_ptr, Ordering::Release);
 
+    // Objective-c type encoding for: `(id)applicationDockMenu:(id)sender`
+    //
+    // In Objective-C methods always have two hidden arguments:
+    // 1. `self` (the receiver object)
+    // 2. `_cmd` (the selector for the method)
+    //
+    // We must passe this string explicitely to `class_addMethod` because we are
+    // modifying the class at runtime. Unlike a compiled Objective-Cfile where
+    // the compiler generate these signatures, the runtime needs this manual
+    // hint to know the stack layout and type sizes for the method's arguments.
+    //
+    // The encoding string is structured as: [return_type][self][_cmd][arg1]
+    // - `@` : object (the returned NSMenu)
+    // - `@` : object (the hidden `self` argument)
+    // - `:` : selector (the hidden `_cmd` argument)
+    // - `@` : object (the `sender` argument)
+    // - `\0`: null terminator for C copatibility
     let types = b"@@:@\0";
     #[allow(
         unsafe_code,
