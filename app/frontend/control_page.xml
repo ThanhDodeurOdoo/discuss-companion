@@ -4,9 +4,16 @@
         class="key-display"
         t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }"
         t-on-click="() => this.app.toggleRecording()">
-        <span t-if="this.app.isRecording()" class="key-text">PRESS ANY KEY...</span>
-        <span t-elif="this.app.showSymbols()" class="key-text" t-out="this.keySymbol()"/>
+        <span t-if="!this.app.isRecording()" class="key-top">
+            <span class="key-top__label">PTT</span>
+            <span class="key-top__label">HOLD</span>
+        </span>
+        <span t-if="this.app.isRecording()" class="key-recording-state">
+            <span class="key-text key-text--recording">PRESS ANY KEY</span>
+        </span>
+        <span t-elif="this.app.showSymbols()" class="key-text key-text--symbol" t-out="this.keySymbol()"/>
         <span t-else="" class="key-text" t-out="this.keyName()"/>
+        <span t-if="!this.app.isRecording()" class="key-bottom">TO TALK</span>
     </button>
     <div class="call-panel">
         <div class="call-header">

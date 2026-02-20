@@ -14,70 +14,207 @@
 }
 
 .key-display {
+    --key-surface-top: #f5e9cf;
+    --key-surface-mid: #e8d7b7;
+    --key-surface-bottom: #d4c09b;
+    --key-rim: #9d8968;
+    --key-depth: #695841;
+    --key-face: #fff8ea;
+    --key-text-color: #3f3220;
+
+    appearance: none;
     font-family: var(--font-mono);
-    font-size: 1.5rem;
-    color: var(--color-accent);
-    background: var(--color-surface-inset);
-    padding: var(--space-4) var(--space-6);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-accent);
+    color: var(--key-text-color);
+    background: linear-gradient(
+        180deg,
+        var(--key-surface-top) 0%,
+        var(--key-surface-mid) 60%,
+        var(--key-surface-bottom) 100%
+    );
+    padding: var(--space-3) var(--space-5) var(--space-4);
+    border-radius: 14px;
+    border: 1px solid var(--key-rim);
+    border-bottom-width: 4px;
+    border-bottom-color: var(--key-depth);
     text-align: center;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: var(--space-1);
+    align-items: stretch;
+    gap: var(--space-2);
     min-width: 0;
+    min-height: 120px;
+    position: relative;
+    isolation: isolate;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
     transition:
         background var(--transition-base),
         border-color var(--transition-base),
         color var(--transition-base),
         transform var(--transition-fast),
         box-shadow var(--transition-base);
-    box-shadow: var(--shadow-sm);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(70, 50, 28, 0.18),
+        0 7px 0 rgba(65, 48, 29, 0.6),
+        0 14px 20px rgba(18, 14, 9, 0.32);
+}
+
+.key-display > * {
+    position: relative;
+    z-index: 1;
+}
+
+.key-display::before {
+    content: "";
+    position: absolute;
+    inset: 9px 11px 13px;
+    border-radius: 10px;
+    border: 1px solid rgba(112, 89, 58, 0.34);
+    background: linear-gradient(180deg, var(--key-face) 0%, rgba(255, 255, 255, 0) 82%);
+    pointer-events: none;
+}
+
+.key-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 1rem;
+}
+
+.key-top__label {
+    font-family: var(--font-base);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: rgba(73, 58, 36, 0.82);
 }
 
 .key-text {
-    font-size: 2.5rem;
-    font-weight: 500;
-    word-break: break-all;
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.025em;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    word-break: normal;
     overflow-wrap: anywhere;
 }
 
-.key-display.recording {
-    border-style: solid;
-    background: var(--color-danger-muted);
-    border-color: var(--color-danger);
-    color: var(--color-danger);
-    animation: record-pulse 1.5s infinite;
+.key-text--symbol {
+    font-size: clamp(2.2rem, 3.4vw, 3rem);
 }
 
-@keyframes record-pulse {
-    0% { opacity: 1; box-shadow: 0 0 0px var(--color-danger); }
-    50% { opacity: 0.7; box-shadow: 0 0 10px var(--color-danger); }
-    100% { opacity: 1; box-shadow: 0 0 0px var(--color-danger); }
+.key-recording-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+}
+
+.key-bottom {
+    font-family: var(--font-base);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(73, 58, 36, 0.72);
+}
+
+.key-display.recording {
+    --key-surface-top: #f7dce0;
+    --key-surface-mid: #efc0c7;
+    --key-surface-bottom: #dc9ca4;
+    --key-rim: #a8636b;
+    --key-depth: #74444b;
+    --key-face: #fff1f3;
+    --key-text-color: #611e27;
+
+}
+
+.key-display.recording:not(.pressed):not(:active) {
+    animation:
+        key-record-pulse 1.4s infinite,
+        key-record-float 1.8s ease-in-out infinite;
+}
+
+.key-display.recording .key-text--recording {
+    font-size: clamp(1.25rem, 2.1vw, 1.7rem);
+    letter-spacing: 0.015em;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+@keyframes key-record-pulse {
+    0% {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            inset 0 -1px 0 rgba(70, 50, 28, 0.18),
+            0 7px 0 rgba(65, 48, 29, 0.6),
+            0 14px 20px rgba(18, 14, 9, 0.32);
+    }
+    50% {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            inset 0 -1px 0 rgba(70, 50, 28, 0.18),
+            0 7px 0 rgba(65, 48, 29, 0.6),
+            0 14px 20px rgba(18, 14, 9, 0.32),
+            0 0 0 4px var(--color-danger-muted);
+    }
+    100% {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            inset 0 -1px 0 rgba(70, 50, 28, 0.18),
+            0 7px 0 rgba(65, 48, 29, 0.6),
+            0 14px 20px rgba(18, 14, 9, 0.32);
+    }
+}
+
+@keyframes key-record-float {
+    0%,
+    100% {
+        transform: translateY(-1px);
+    }
+    50% {
+        transform: translateY(3px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .key-display.recording:not(.pressed):not(:active) {
+        animation: none;
+    }
 }
 
 .key-display.pressed {
-    transform: scale(0.95);
-    background: var(--color-accent-muted);
-    box-shadow: var(--shadow-inset);
+    transform: translateY(5px);
+    box-shadow:
+        inset 0 2px 2px rgba(59, 44, 27, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 2px 0 rgba(65, 48, 29, 0.6),
+        0 7px 10px rgba(18, 14, 9, 0.25);
 }
 
-.key-display:hover {
+.key-display:not(.pressed):not(.recording):hover {
     cursor: pointer;
-    transform: scale(1.02);
-    background: var(--color-accent-muted);
+    transform: translateY(-1px);
 }
 
 .key-display:active {
-    transform: scale(0.95);
-    background: var(--color-danger-muted);
-    box-shadow: var(--shadow-inset);
+    transform: translateY(5px);
+    box-shadow:
+        inset 0 2px 2px rgba(59, 44, 27, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 2px 0 rgba(65, 48, 29, 0.6),
+        0 7px 10px rgba(18, 14, 9, 0.25);
 }
 
 .key-display:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px var(--color-focus-ring);
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
 }
 
 /* ========================================
