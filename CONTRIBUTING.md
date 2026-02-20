@@ -130,6 +130,9 @@ Notes:
 - Quit the app via the tray "Quit" action to flush the DHAT output file.
 - The flamegraph capture stops automatically when the app exits.
 
+## Formatting
+
+Run `npm run format` to format the codebase, this will apply both TS and Rust formatting.
 
 ## Verification
 
