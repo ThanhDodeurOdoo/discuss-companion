@@ -10,16 +10,16 @@ use tauri::{
 };
 
 use super::{call_controls_menu, call_controls_window};
-use crate::{WsState, api, protocol::CallState};
+use crate::{WsState, api, protocol::CallState, utils::path::assets};
 
 pub const TRAY_ID: &str = "main-tray";
 const TRAY_OPEN_MAIN_WINDOW_ID: &str = "open-main-window";
-const MASK_DEAF: &[u8] = include_bytes!("../../../../assets/masks/deaf_w.png");
-const MASK_MUTE: &[u8] = include_bytes!("../../../../assets/masks/mute_w.png");
-const MASK_NOT_TALKING: &[u8] = include_bytes!("../../../../assets/masks/not_talking.png");
-const MASK_OFFLINE: &[u8] = include_bytes!("../../../../assets/masks/offline.png");
-const MASK_ONLINE: &[u8] = include_bytes!("../../../../assets/masks/online.png");
-const MASK_TALKING: &[u8] = include_bytes!("../../../../assets/masks/talking.png");
+const MASK_DEAF: &[u8] = include_bytes!(assets!("masks/deaf_w.png"));
+const MASK_MUTE: &[u8] = include_bytes!(assets!("masks/mute_w.png"));
+const MASK_NOT_TALKING: &[u8] = include_bytes!(assets!("masks/not_talking.png"));
+const MASK_OFFLINE: &[u8] = include_bytes!(assets!("masks/offline.png"));
+const MASK_ONLINE: &[u8] = include_bytes!(assets!("masks/online.png"));
+const MASK_TALKING: &[u8] = include_bytes!(assets!("masks/talking.png"));
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 enum TrayForegroundMask {
