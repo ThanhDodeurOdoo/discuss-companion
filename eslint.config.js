@@ -87,7 +87,7 @@ export default defineConfig([
             ]
         }
     },
-    globalIgnores(["vendor/owl/dist/owl.es.js", "**/dist/", "src-tauri/target/"]),
+    globalIgnores(["**/dist/", "src-tauri/target/"]),
     {
         files: [
             "eslint.config.js",
