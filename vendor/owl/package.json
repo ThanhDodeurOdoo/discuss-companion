@@ -1,8 +1,0 @@
-{
-  "name": "@odoo/owl",
-  "version": "3.0.0-alpha.15",
-  "main": "dist/owl.cjs.js",
-  "module": "dist/owl.es.js",
-  "types": "dist/types/owl.d.ts",
-  "type": "module"
-}

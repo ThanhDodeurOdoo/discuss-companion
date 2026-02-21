@@ -1,5 +1,5 @@
 import { Plugin } from "vite";
-import { compileTemplates } from "../vendor/owl/dist/compile_templates.mjs";
+import { compileTemplates } from "@odoo/owl/dist/compile_templates.mjs";
 
 export default function owlXmlPlugin(): Plugin {
     return {

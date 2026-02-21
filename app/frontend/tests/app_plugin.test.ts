@@ -1,4 +1,5 @@
-import { jest, describe, test, expect, beforeEach } from "@jest/globals";
+import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globals";
+import { App as OwlApp } from "@odoo/owl";
 
 jest.unstable_mockModule("@tauri-apps/api/core", () => ({
     __esModule: true,
@@ -34,10 +35,16 @@ const mockedSendCallCommand = sendCallCommand as jest.MockedFunction<typeof send
 
 describe("AppPlugin", () => {
     let plugin: InstanceType<typeof AppPlugin>;
+    let owlApp: OwlApp;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        plugin = new AppPlugin();
+        owlApp = new OwlApp({ test: true });
+        plugin = new AppPlugin(owlApp.pluginManager);
+    });
+
+    afterEach(() => {
+        owlApp.destroy();
     });
 
     test("formatKeyBinding returns correct names", () => {
