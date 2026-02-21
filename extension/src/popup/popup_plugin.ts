@@ -12,7 +12,8 @@ import { IS_FIREFOX_BUILD } from "@extension/src/env";
 import { PttCommand } from "@extension/src/page_bridge/runtime_types";
 import { SESSION_STATE_STORAGE_AREA } from "@extension/src/storage/session_state";
 
-const EXTENSION_VERSION = __EXTENSION_VERSION__;
+const EXTENSION_VERSION =
+    typeof __EXTENSION_VERSION__ === "string" ? __EXTENSION_VERSION__ : "0.0.0";
 
 export enum StatusCode {
     Default = 0,
