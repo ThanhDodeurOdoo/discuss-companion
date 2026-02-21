@@ -7,7 +7,6 @@ export default {
         __APP_VERSION__: "0.0.0"
     },
     moduleNameMapper: {
-        "^@odoo/owl$": "<rootDir>/node_modules/@odoo/owl/dist/owl.es.js",
         "^@extension/(.*)\\.js$": "<rootDir>/extension/$1",
         "^@extension/(.*)$": "<rootDir>/extension/$1",
         // Map .js imports to .ts for FlatBuffers generated code
