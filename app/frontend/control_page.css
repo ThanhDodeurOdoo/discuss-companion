@@ -51,7 +51,7 @@
         border-color var(--transition-base),
         color var(--transition-base),
         transform var(--transition-fast),
-        box-shadow var(--transition-base);
+        box-shadow var(--transition-fast);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.9),
         inset 0 -1px 0 rgba(70, 50, 28, 0.18),
@@ -125,6 +125,7 @@
 }
 
 .key-display.recording {
+    cursor: pointer;
     --key-surface-top: #f7dce0;
     --key-surface-mid: #efc0c7;
     --key-surface-bottom: #dc9ca4;
@@ -190,12 +191,12 @@
 }
 
 .key-display.pressed {
-    transform: translateY(5px);
+    transform: translateY(7px);
     box-shadow:
-        inset 0 2px 2px rgba(59, 44, 27, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.6),
-        0 2px 0 rgba(65, 48, 29, 0.6),
-        0 7px 10px rgba(18, 14, 9, 0.25);
+        0 2px 2px rgba(59, 44, 27, 0.3),
+        0 0px 0 rgba(255, 255, 255, 0.6),
+        0 2px 0 rgba(65, 48, 29, 0),
+        0 0px 0px rgba(18, 14, 9, 0.25);
 }
 
 .key-display:not(.pressed):not(.recording):hover {
@@ -224,7 +225,7 @@
 .call-panel {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-heavy);
     border-radius: var(--radius-lg);
     padding: var(--space-4);
     display: flex;
