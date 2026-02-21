@@ -51,7 +51,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@odoo/owl": "3.0.0-alpha.20",
+    "@odoo/owl": "file:vendor/owl/odoo-owl-3.0.0-alpha.20.tgz",
     "@tauri-apps/api": "^2.10",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "flatbuffers": "^25.9.23"
