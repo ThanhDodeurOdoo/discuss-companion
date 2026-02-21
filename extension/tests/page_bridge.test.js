@@ -33,7 +33,7 @@ function createStoreMock() {
         channel: { id: 1, name: "General", open: jest.fn() },
         pipService: {},
         pttExtService: {
-            voiceActivated: false,
+            voiceActivated: false
         },
         setTalking: jest.fn(),
         onPushToTalk: jest.fn(),

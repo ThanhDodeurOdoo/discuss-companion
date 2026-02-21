@@ -234,6 +234,49 @@ describe("Extension Content Script", () => {
         expect(global.mockSockets.length).toBe(0);
     });
 
+    test("disconnects WebSocket when call ends and service worker unsubscribes", async () => {
+        setupBridgeAutoResponses({ hasOdoo: true, hasRtcService: true });
+        onMessageCallback(
+            { type: "content-subscribe", value: { isOwner: true } },
+            { id: "test-extension-id" }
+        );
+
+        loadBridgeScript();
+        await flushPromises();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(global.mockSockets.length).toBeGreaterThan(0);
+        const socket = global.mockSockets[0];
+
+        emitBridgeEvent("call-lifecycle-update", {
+            hasRtcService: true,
+            hasHostedCall: true,
+            isTalking: true
+        });
+        await flushPromises();
+        jest.clearAllMocks();
+        chrome.runtime.sendMessage.mockImplementation((_message, callback) => {
+            callback?.({ status: "ok" });
+        });
+
+        emitBridgeEvent("call-lifecycle-update", {
+            hasRtcService: true,
+            hasHostedCall: false,
+            isTalking: false
+        });
+        await flushPromises();
+
+        expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+            { type: "unsubscribe" },
+            expect.any(Function)
+        );
+
+        onMessageCallback({ type: "content-unsubscribe" }, { id: "test-extension-id" });
+        await flushPromises();
+
+        expect(socket.close).toHaveBeenCalledTimes(1);
+    });
+
     test("does not clear persisted call state when ownership changes but subscription remains", async () => {
         setupBridgeAutoResponses({ hasOdoo: true, hasRtcService: true });
         loadBridgeScript();

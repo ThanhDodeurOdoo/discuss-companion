@@ -22,7 +22,6 @@ describe("Root Integration Tests", () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // Default mock implementations
         invokeMock.mockImplementation((cmd) => {
             if (cmd === "get_features") {
                 return Promise.resolve({ ptt: true, callControlsTray: true });
