@@ -12,7 +12,6 @@ main {
 main:not(.settings-view) {
     display: grid;
     grid-template-columns: 350px 1fr;
-    gap: 1px;
 }
 
 main.settings-view {
