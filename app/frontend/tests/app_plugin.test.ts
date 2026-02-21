@@ -103,8 +103,6 @@ describe("AppPlugin", () => {
 
         expect(mockedInvoke).toHaveBeenCalledWith("is_extension_connected");
         expect(mockedSetupChannel).toHaveBeenCalled();
-        // expect(mockedListen).toHaveBeenCalledWith("ptt-event", expect.any(Function)); // Moved to channel
-        // expect(mockedListen).toHaveBeenCalledWith("error", expect.any(Function));
     });
 
     test("showMainWindow invokes show_main_window command", async () => {

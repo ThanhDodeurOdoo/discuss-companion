@@ -3,7 +3,7 @@
  */
 import { beforeAll, beforeEach, afterEach, describe, expect, jest, test } from "@jest/globals";
 import { xml } from "@odoo/owl";
-import { cleanupOwl, render, nextOwlTick, userEvent } from "@root/tests/utils/owl_test_utils";
+import { cleanupOwl, render, nextTick, userEvent } from "@root/tests/utils/owl_test_utils";
 import popupTemplateXml from "../src/popup/popup.xml";
 import { mockChrome } from "./utils.js";
 
@@ -65,8 +65,8 @@ async function mountPopup() {
             plugins: [PopupPlugin]
         }
     });
-    await nextOwlTick();
-    await nextOwlTick();
+    await nextTick();
+    await nextTick();
     return mounted.target;
 }
 
@@ -209,7 +209,7 @@ describe("Popup UI", () => {
 
         portInput.value = "70000";
         portInput.dispatchEvent(new Event("input", { bubbles: true }));
-        await nextOwlTick();
+        await nextTick();
         await userEvent.click(saveButton);
 
         const invalidStatus = target.querySelector("#status");
@@ -217,7 +217,7 @@ describe("Popup UI", () => {
 
         portInput.value = "55555";
         portInput.dispatchEvent(new Event("input", { bubbles: true }));
-        await nextOwlTick();
+        await nextTick();
         await userEvent.click(saveButton);
 
         const successStatus = target.querySelector("#status");
@@ -248,7 +248,7 @@ describe("Popup UI", () => {
             },
             "session"
         );
-        await nextOwlTick();
+        await nextTick();
 
         expect(target.querySelector(".call")).toBeTruthy();
         expect(target.querySelector('button[title="Unmute"]')).toBeTruthy();

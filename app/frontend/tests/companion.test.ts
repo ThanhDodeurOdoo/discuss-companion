@@ -1,5 +1,11 @@
 import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globals";
-import { cleanupOwl, render, screen, userEvent } from "@root/tests/utils/owl_test_utils";
+import {
+    cleanupOwl,
+    render,
+    screen,
+    userEvent,
+    updateInput
+} from "@root/tests/utils/owl_test_utils";
 import type { CallStatePayload, ChannelEvent } from "../ipc_types";
 
 // Mock Tauri APIs
@@ -226,10 +232,7 @@ describe("Companion Component Interactions", () => {
         expect(reloadBtn).toBeTruthy();
         expect(portInput).toBeTruthy();
 
-        // Change the port value
-        // We need to trigger the input event for Owl to update the bound value
-        portInput.value = "55555";
-        portInput.dispatchEvent(new Event("input"));
+        await updateInput(portInput, "55555");
 
         await userEvent.click(reloadBtn);
         expect(updateWsPortMock).toHaveBeenCalledWith(55555);

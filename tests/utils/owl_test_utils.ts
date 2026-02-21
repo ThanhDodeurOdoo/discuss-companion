@@ -42,7 +42,7 @@ function createOwlUserEvent<T extends object>(base: T): T {
                 if (result && typeof (result as Promise<unknown>).then === "function") {
                     await result;
                 }
-                await nextOwlTick();
+                await nextTick();
                 return result;
             };
         }
@@ -134,7 +134,7 @@ export function cleanupOwl(): void {
     ownedTargets.clear();
 }
 
-export async function nextOwlTick(): Promise<void> {
+export async function nextTick(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 0));
     if (typeof requestAnimationFrame === "function") {
         await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
@@ -143,6 +143,7 @@ export async function nextOwlTick(): Promise<void> {
     await Promise.resolve();
 }
 
-export async function clickOwl(element: HTMLElement): Promise<void> {
-    await userEvent.click(element);
+export async function updateInput(element: HTMLInputElement, value: string): Promise<void> {
+    await userEvent.clear(element);
+    await userEvent.type(element, value);
 }
