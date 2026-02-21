@@ -7,6 +7,11 @@ const packageJson = JSON.parse(readFileSync(resolve(__dirname, "package.json"), 
 
 export default defineConfig(async () => ({
     clearScreen: false,
+    resolve: {
+        alias: {
+            "@root": resolve(__dirname)
+        }
+    },
     define: {
         __APP_VERSION__: JSON.stringify(packageJson.version)
     },

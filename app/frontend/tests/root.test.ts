@@ -1,5 +1,5 @@
 import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globals";
-import { App as OwlApp } from "@odoo/owl";
+import { cleanupOwl, renderOwl } from "@root/tests/utils/owl_test_utils";
 
 const invokeMock = jest.fn();
 const listenMock = jest.fn(() => Promise.resolve(() => {}));
@@ -18,12 +18,9 @@ const { AppPlugin } = await import("../app_plugin");
 
 describe("Root Integration Tests", () => {
     let target: HTMLElement;
-    let owlApp: OwlApp;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        target = document.createElement("div");
-        document.body.appendChild(target);
 
         // Default mock implementations
         invokeMock.mockImplementation((cmd) => {
@@ -50,15 +47,14 @@ describe("Root Integration Tests", () => {
     });
 
     afterEach(() => {
-        if (owlApp) {
-            owlApp.destroy();
-        }
-        document.body.removeChild(target);
+        cleanupOwl();
     });
 
     async function mountApp() {
-        owlApp = new OwlApp({ plugins: [AppPlugin] });
-        await owlApp.createRoot(Root).mount(target);
+        const mounted = await renderOwl(Root, {
+            appConfig: { plugins: [AppPlugin] }
+        });
+        target = mounted.target;
     }
 
     test("renders the full app hierarchy", async () => {

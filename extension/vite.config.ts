@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
     return {
         resolve: {
             alias: {
+                "@root": resolve(__dirname, ".."),
                 "@extension": resolve(__dirname, "..", "extension")
             }
         },

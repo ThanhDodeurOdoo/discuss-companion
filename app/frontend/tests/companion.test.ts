@@ -1,5 +1,6 @@
 import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globals";
-import { App as OwlApp } from "@odoo/owl";
+import { cleanupOwl, render, screen, userEvent } from "@root/tests/utils/owl_test_utils";
+import type { CallStatePayload, ChannelEvent } from "../ipc_types";
 
 // Mock Tauri APIs
 const invokeMock = jest.fn();
@@ -29,14 +30,63 @@ jest.unstable_mockModule("../ipc", () => ({
 }));
 
 const { Root } = await import("../root");
+const { CallCommand } = await import("../call_commands");
+const { ChannelEventType } = await import("../ipc_types");
+
+const DEFAULT_FEATURES = { ptt: true, callControlsTray: true };
+const IN_CALL_STATE: CallStatePayload = {
+    hasCall: true,
+    hasState: true,
+    isMute: false,
+    isDeaf: false,
+    isCameraOn: false,
+    isScreenOn: false
+};
+
+function mockInvokeDefaults({
+    features = DEFAULT_FEATURES,
+    extensionConnected = false
+}: {
+    features?: { ptt: boolean; callControlsTray: boolean };
+    extensionConnected?: boolean;
+} = {}) {
+    invokeMock.mockImplementation((cmd) => {
+        if (cmd === "get_features") {
+            return Promise.resolve(features);
+        }
+        if (cmd === "get_app_visibility_mode") {
+            return Promise.resolve("trayAndDockWhenWindowOpen");
+        }
+        if (cmd === "is_extension_connected") {
+            return Promise.resolve(extensionConnected);
+        }
+        if (cmd === "get_current_binding") {
+            return Promise.resolve({ code: 0, modifiers: [] });
+        }
+        if (cmd === "get_ws_port") {
+            return Promise.resolve(49152);
+        }
+        if (cmd === "is_accessibility_granted") {
+            return Promise.resolve(true);
+        }
+        return Promise.resolve(null);
+    });
+}
+
+function mockCallState(state: CallStatePayload) {
+    setupChannelMock.mockImplementation(async (onEvent) => {
+        const dispatch = onEvent as (event: ChannelEvent) => void | Promise<void>;
+        await dispatch({
+            type: ChannelEventType.CallState,
+            payload: state
+        });
+    });
+}
 
 describe("Companion Component Interactions", () => {
     let target: HTMLElement;
-    let owlApp: OwlApp;
 
     beforeEach(() => {
-        target = document.createElement("div");
-        document.body.appendChild(target);
         invokeMock.mockClear();
         listenMock.mockClear();
         setRecordingModeMock.mockClear();
@@ -45,83 +95,41 @@ describe("Companion Component Interactions", () => {
         setupChannelMock.mockClear();
         sendCallCommandMock.mockClear();
         ChannelMock.mockClear();
-
-        // Default mock implementations
-        invokeMock.mockImplementation((cmd) => {
-            if (cmd === "get_features") {
-                return Promise.resolve({ ptt: true, callControlsTray: true });
-            }
-            if (cmd === "get_app_visibility_mode") {
-                return Promise.resolve("trayAndDockWhenWindowOpen");
-            }
-            if (cmd === "is_extension_connected") {
-                return Promise.resolve(false);
-            }
-            if (cmd === "get_current_binding") {
-                return Promise.resolve({ code: 0, modifiers: [] });
-            }
-            if (cmd === "get_ws_port") {
-                return Promise.resolve(49152);
-            }
-            if (cmd === "is_accessibility_granted") {
-                return Promise.resolve(true);
-            }
-            return Promise.resolve(null);
-        });
+        setupChannelMock.mockImplementation(async () => {});
+        sendCallCommandMock.mockImplementation(async () => true);
+        mockInvokeDefaults();
     });
 
     afterEach(() => {
-        if (owlApp) {
-            owlApp.destroy();
-        }
-        document.body.removeChild(target);
+        cleanupOwl();
     });
 
     async function mountApp() {
         const { AppPlugin } = await import("../app_plugin");
-        owlApp = new OwlApp({ plugins: [AppPlugin] });
-        await owlApp.createRoot(Root).mount(target);
+        const mounted = await render(Root, {
+            appConfig: { plugins: [AppPlugin] }
+        });
+        target = mounted.target;
     }
 
     test("PTT Button toggles recording mode", async () => {
         await mountApp();
 
-        const pttBtn = target.querySelector(".key-display") as HTMLButtonElement;
+        const pttBtn = screen.getByRole("button", { name: /ptt/i }) as HTMLButtonElement;
         expect(pttBtn).toBeTruthy();
 
-        // Initial state: not recording
         expect(pttBtn.classList.contains("recording")).toBe(false);
 
-        // Click to start recording
-        await pttBtn.click();
+        await userEvent.click(pttBtn);
         expect(setRecordingModeMock).toHaveBeenCalledWith(true);
 
-        // Let's verify the subsequent call
-        await pttBtn.click();
+        await userEvent.click(pttBtn);
         expect(setRecordingModeMock).toHaveBeenCalledWith(false);
     });
 
     test("PTT UI is hidden when feature is disabled", async () => {
-        invokeMock.mockImplementation((cmd) => {
-            if (cmd === "get_features") {
-                return Promise.resolve({ ptt: false, callControlsTray: false });
-            }
-            if (cmd === "get_app_visibility_mode") {
-                return Promise.resolve("trayAndDockWhenWindowOpen");
-            }
-            if (cmd === "is_extension_connected") {
-                return Promise.resolve(false);
-            }
-            if (cmd === "get_current_binding") {
-                return Promise.resolve({ code: 0, modifiers: [] });
-            }
-            if (cmd === "get_ws_port") {
-                return Promise.resolve(49152);
-            }
-            if (cmd === "is_accessibility_granted") {
-                return Promise.resolve(true);
-            }
-            return Promise.resolve(null);
+        mockInvokeDefaults({
+            features: { ptt: false, callControlsTray: false }
         });
 
         await mountApp();
@@ -135,22 +143,82 @@ describe("Companion Component Interactions", () => {
 
     test("Force Release button triggers force_ptt_up", async () => {
         await mountApp();
-        const forceBtn = target.querySelector(".safety-btn") as HTMLButtonElement;
+        const forceBtn = screen.getByRole("button", {
+            name: /force release/i
+        }) as HTMLButtonElement;
         expect(forceBtn).toBeTruthy();
-        expect(forceBtn.textContent).toContain("force release");
 
-        await forceBtn.click();
+        await userEvent.click(forceBtn);
         expect(invokeMock).toHaveBeenCalledWith("force_ptt_up");
+    });
+
+    test("Call controls send commands when call is active", async () => {
+        mockInvokeDefaults({ extensionConnected: true });
+        mockCallState(IN_CALL_STATE);
+
+        await mountApp();
+
+        const muteBtn = target.querySelector('button[title="Mute"]') as HTMLButtonElement;
+        const deafenBtn = target.querySelector('button[title="Deafen"]') as HTMLButtonElement;
+        const cameraBtn = target.querySelector(
+            'button[title="Turn camera on"]'
+        ) as HTMLButtonElement;
+        const screenBtn = target.querySelector('button[title="Share screen"]') as HTMLButtonElement;
+        const leaveBtn = target.querySelector('button[title="Leave call"]') as HTMLButtonElement;
+        const goToCallBtn = screen.getByRole("button", {
+            name: /go to call/i
+        }) as HTMLButtonElement;
+
+        expect(target.querySelector(".call-inactive")).toBeNull();
+        expect(muteBtn.disabled).toBe(false);
+        expect(deafenBtn.disabled).toBe(false);
+        expect(cameraBtn.disabled).toBe(false);
+        expect(screenBtn.disabled).toBe(false);
+        expect(leaveBtn.disabled).toBe(false);
+
+        await userEvent.click(muteBtn);
+        await userEvent.click(deafenBtn);
+        await userEvent.click(cameraBtn);
+        await userEvent.click(screenBtn);
+        await userEvent.click(goToCallBtn);
+        await userEvent.click(leaveBtn);
+
+        expect(sendCallCommandMock).toHaveBeenNthCalledWith(1, CallCommand.SetMute, true);
+        expect(sendCallCommandMock).toHaveBeenNthCalledWith(2, CallCommand.SetDeaf, true);
+        expect(sendCallCommandMock).toHaveBeenNthCalledWith(3, CallCommand.SetCamera, true);
+        expect(sendCallCommandMock).toHaveBeenNthCalledWith(4, CallCommand.SetScreen, true);
+        expect(sendCallCommandMock).toHaveBeenNthCalledWith(5, CallCommand.FocusCallTab, undefined);
+        expect(sendCallCommandMock).toHaveBeenNthCalledWith(6, CallCommand.LeaveCall, undefined);
+    });
+
+    test("Call controls stay disabled while call state is syncing", async () => {
+        mockInvokeDefaults({ extensionConnected: true });
+        mockCallState({
+            ...IN_CALL_STATE,
+            hasState: false
+        });
+
+        await mountApp();
+
+        const callStatus = target.querySelector(".call-status") as HTMLSpanElement;
+        const muteBtn = target.querySelector('button[title="Mute"]') as HTMLButtonElement;
+        const leaveBtn = target.querySelector('button[title="Leave call"]') as HTMLButtonElement;
+
+        expect(callStatus.textContent).toBe("Syncing call state...");
+        expect(muteBtn.disabled).toBe(true);
+        expect(leaveBtn.disabled).toBe(true);
+
+        await userEvent.click(muteBtn);
+        expect(sendCallCommandMock).not.toHaveBeenCalled();
     });
 
     test("Reload WS button triggers update_ws_port", async () => {
         await mountApp();
 
         // Navigate to settings page
-        const settingsBtn = target.querySelector(".settings-btn") as HTMLButtonElement;
+        const settingsBtn = screen.getByRole("button", { name: /settings/i }) as HTMLButtonElement;
         expect(settingsBtn).toBeTruthy();
-        await settingsBtn.click();
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await userEvent.click(settingsBtn);
 
         const reloadBtn = target.querySelector(".reload-btn") as HTMLButtonElement;
         const portInput = target.querySelector("#ws-port") as HTMLInputElement;
@@ -163,7 +231,7 @@ describe("Companion Component Interactions", () => {
         portInput.value = "55555";
         portInput.dispatchEvent(new Event("input"));
 
-        await reloadBtn.click();
+        await userEvent.click(reloadBtn);
         expect(updateWsPortMock).toHaveBeenCalledWith(55555);
     });
 });
