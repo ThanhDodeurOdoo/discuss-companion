@@ -19,7 +19,12 @@
             </div>
         </div>
         <div class="view-controls">
-             <button class="btn btn--icon settings-btn" t-att-class="{ 'active': this.app.showSettings() }" t-on-click="() => this.app.toggleSettings()">
+             <button
+                class="btn btn--icon settings-btn"
+                aria-label="Settings"
+                title="Settings"
+                t-att-class="{ 'active': this.app.showSettings() }"
+                t-on-click="() => this.app.toggleSettings()">
                 <span class="icon" aria-hidden="true">settings</span>
             </button>
         </div>

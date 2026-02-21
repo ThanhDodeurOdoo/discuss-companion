@@ -1,5 +1,7 @@
 import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globals";
-import { App as OwlApp } from "@odoo/owl";
+import type { App as OwlApp } from "@odoo/owl";
+import type { AppPlugin as AppPluginType } from "../app_plugin.ts";
+import { cleanupOwl, createOwlTestApp } from "@root/tests/utils/owl_test_utils";
 
 jest.unstable_mockModule("@tauri-apps/api/core", () => ({
     __esModule: true,
@@ -34,17 +36,17 @@ const mockedSetupChannel = setupChannel as jest.MockedFunction<typeof setupChann
 const mockedSendCallCommand = sendCallCommand as jest.MockedFunction<typeof sendCallCommand>;
 
 describe("AppPlugin", () => {
-    let plugin: InstanceType<typeof AppPlugin>;
+    let plugin: AppPluginType;
     let owlApp: OwlApp;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        owlApp = new OwlApp({ test: true });
+        owlApp = createOwlTestApp();
         plugin = new AppPlugin(owlApp.pluginManager);
     });
 
     afterEach(() => {
-        owlApp.destroy();
+        cleanupOwl();
     });
 
     test("formatKeyBinding returns correct names", () => {

@@ -8,6 +8,8 @@ export default {
     },
     moduleNameMapper: {
         "^@odoo/owl$": "<rootDir>/node_modules/@odoo/owl/dist/owl.es.js",
+        "^@root/(.*)\\.js$": "<rootDir>/$1",
+        "^@root/(.*)$": "<rootDir>/$1",
         "^@extension/(.*)\\.js$": "<rootDir>/extension/$1",
         "^@extension/(.*)$": "<rootDir>/extension/$1",
         // Map .js imports to .ts for FlatBuffers generated code
