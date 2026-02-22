@@ -1,8 +1,9 @@
-# Discuss PTT Agent Extension
+# Extension
 
 ![Extension Example](../assets/extension.jpg)
 
-Standalone Browser Extension for Odoo Discuss Push-to-Talk.
+Offers most of the features stand-alone, but ideally used in combination with the
+companion app for system-wide push-to-talk and other features.
 
 The extension is derived from Odoo's own extension for Push-to-Talk.
 
@@ -12,7 +13,7 @@ The extension is derived from Odoo's own extension for Push-to-Talk.
 
 ### When running standalone:
 
-- Extension shortcut push-to-talk (not system wide on macOS)
+- Extension shortcut push-to-talk (only on Chrome, and not system-wide on macOS)
 - Mute/Unmute/camera/share-screen/leave-call
 - Quick access to the call tab and activation of picture-in-picture.
 - Voice activation toggle
