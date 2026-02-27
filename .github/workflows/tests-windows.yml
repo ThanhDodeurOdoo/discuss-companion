@@ -1,0 +1,73 @@
+name: Tests:Windows
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Windows Lint
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.92.0
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/backend/target
+          key: ${{ runner.os }}-cargo-systems-lint-${{ hashFiles('app/backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-systems-lint-
+
+      - name: Check formatting
+        run: cargo fmt --check
+        working-directory: app/backend
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+        working-directory: app/backend
+
+  test:
+    name: Windows Tests
+    needs: lint
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.92.0
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/backend/target
+          key: ${{ runner.os }}-cargo-systems-test-${{ hashFiles('app/backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-systems-test-
+
+      - name: Run supported rust tests
+        run: cargo test --lib --bins --verbose
+        working-directory: app/backend

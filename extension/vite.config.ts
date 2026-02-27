@@ -1,12 +1,14 @@
 import { readFileSync } from "node:fs";
-import { defineConfig } from "vite";
 import { resolve } from "path";
+import { defineConfig, normalizePath } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import owlXmlPlugin from "./vite-plugin-owl-xml";
 
 export default defineConfig(({ mode }) => {
-    const target = process.env.TARGET || "chrome";
+    const target = mode === "firefox" ? "firefox" : "chrome";
     const outDir = `extension/dist/${target}`;
+    const iconsSrc = normalizePath(resolve(__dirname, "../assets/icons/**/*"));
+    const fontsSrc = normalizePath(resolve(__dirname, "../common/fonts/**/*"));
     const manifestSrc =
         target === "firefox" ? "extension/manifest.firefox.json" : "extension/manifest.json";
     const manifestPath = resolve(__dirname, "..", manifestSrc);
@@ -54,11 +56,11 @@ export default defineConfig(({ mode }) => {
                     },
 
                     {
-                        src: resolve(__dirname, "../assets/icons"),
-                        dest: "assets"
+                        src: iconsSrc,
+                        dest: "assets/icons"
                     },
                     {
-                        src: resolve(__dirname, "../common/fonts"),
+                        src: fontsSrc,
                         dest: "fonts"
                     },
                     {

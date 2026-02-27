@@ -34,7 +34,8 @@ Ths covers the desktop app runtime in `app/`:
    - CoreGraphics-based global key event capture.
 2. Linux (X11):
    - X11/XRecord path for global input capture.
-3. Windows TODO.
+3. Windows:
+   - Win32 low-level keyboard hook path for global input capture.
 
 ## Tray, Dock, and Window Lifecycle
 1. Tray icon state:
