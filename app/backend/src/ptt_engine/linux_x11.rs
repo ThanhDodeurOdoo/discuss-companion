@@ -24,6 +24,7 @@ use x11::{
 use crate::{
     protocol::{
         KEYCODE_SPACE, KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
+        universal::keyboard as kb,
     },
     ptt_engine::PttEngine,
 };
@@ -361,84 +362,87 @@ fn map_x11_modifiers(state: u32) -> u8 {
 /// X11 keycode (evdev+8) to macOS virtual keycode (US layout)
 fn x11_to_macos_keycode(x11_code: u16) -> u16 {
     match x11_code {
-        9 => 53,         // Esc
-        67 => 122,       // F1
-        68 => 120,       // F2
-        69 => 99,        // F3
-        70 => 118,       // F4
-        71 => 96,        // F5
-        72 => 97,        // F6
-        73 => 98,        // F7
-        74 => 100,       // F8
-        75 => 101,       // F9
-        76 => 109,       // F10
-        95 => 103,       // F11
-        96 => 111,       // F12
-        49 => 50,        // `~
-        10 => 18,        // 1
-        11 => 19,        // 2
-        12 => 20,        // 3
-        13 => 21,        // 4
-        14 => 23,        // 5
-        15 => 22,        // 6
-        16 => 26,        // 7
-        17 => 28,        // 8
-        18 => 25,        // 9
-        19 => 29,        // 0
-        20 => 27,        // -_
-        21 => 24,        // =+
-        22 => 51,        // Backspace
-        23 => 48,        // Tab
-        24 => 12,        // Q
-        25 => 13,        // W
-        26 => 14,        // E
-        27 => 15,        // R
-        28 => 17,        // T
-        29 => 16,        // Y
-        30 => 32,        // U
-        31 => 34,        // I
-        32 => 31,        // O
-        33 => 35,        // P
-        34 => 33,        // [{
-        35 => 30,        // ]}
-        36 => 36,        // Return
-        38 => 0,         // A
-        39 => 1,         // S
-        40 => 2,         // D
-        41 => 3,         // F
-        42 => 5,         // G
-        43 => 4,         // H
-        44 => 38,        // J
-        45 => 40,        // K
-        46 => 37,        // L
-        47 => 41,        // ;:
-        48 => 39,        // '"
-        51 => 42,        // \|
-        50 | 62 => 56,   // Shift
-        52 => 6,         // Z
-        53 => 7,         // X
-        54 => 8,         // C
-        55 => 9,         // V
-        56 => 11,        // B
-        57 => 45,        // N
-        58 => 46,        // M
-        59 => 43,        // ,<
-        60 => 47,        // .>
-        61 => 44,        // /?
-        37 | 105 => 59,  // Ctrl
-        64 | 108 => 58,  // Alt
-        65 => 49,        // Space
-        133 | 134 => 55, // Super
-        111 => 126,      // Up
-        116 => 125,      // Down
-        113 => 123,      // Left
-        114 => 124,      // Right
+        9 => kb::KEY_ESCAPE,
+        67 => kb::KEY_F1,
+        68 => kb::KEY_F2,
+        69 => kb::KEY_F3,
+        70 => kb::KEY_F4,
+        71 => kb::KEY_F5,
+        72 => kb::KEY_F6,
+        73 => kb::KEY_F7,
+        74 => kb::KEY_F8,
+        75 => kb::KEY_F9,
+        76 => kb::KEY_F10,
+        95 => kb::KEY_F11,
+        96 => kb::KEY_F12,
+        49 => kb::KEY_GRAVE,
+        10 => kb::KEY_1,
+        11 => kb::KEY_2,
+        12 => kb::KEY_3,
+        13 => kb::KEY_4,
+        14 => kb::KEY_5,
+        15 => kb::KEY_6,
+        16 => kb::KEY_7,
+        17 => kb::KEY_8,
+        18 => kb::KEY_9,
+        19 => kb::KEY_0,
+        20 => kb::KEY_MINUS,
+        21 => kb::KEY_EQUAL,
+        22 => kb::KEY_BACKSPACE,
+        23 => kb::KEY_TAB,
+        24 => kb::KEY_Q,
+        25 => kb::KEY_W,
+        26 => kb::KEY_E,
+        27 => kb::KEY_R,
+        28 => kb::KEY_T,
+        29 => kb::KEY_Y,
+        30 => kb::KEY_U,
+        31 => kb::KEY_I,
+        32 => kb::KEY_O,
+        33 => kb::KEY_P,
+        34 => kb::KEY_LEFT_BRACKET,
+        35 => kb::KEY_RIGHT_BRACKET,
+        36 => kb::KEY_RETURN,
+        38 => kb::KEY_A,
+        39 => kb::KEY_S,
+        40 => kb::KEY_D,
+        41 => kb::KEY_F,
+        42 => kb::KEY_G,
+        43 => kb::KEY_H,
+        44 => kb::KEY_J,
+        45 => kb::KEY_K,
+        46 => kb::KEY_L,
+        47 => kb::KEY_SEMICOLON,
+        48 => kb::KEY_QUOTE,
+        51 => kb::KEY_BACKSLASH,
+        50 | 62 => kb::KEY_SHIFT,
+        52 => kb::KEY_Z,
+        53 => kb::KEY_X,
+        54 => kb::KEY_C,
+        55 => kb::KEY_V,
+        56 => kb::KEY_B,
+        57 => kb::KEY_N,
+        58 => kb::KEY_M,
+        59 => kb::KEY_COMMA,
+        60 => kb::KEY_PERIOD,
+        61 => kb::KEY_SLASH,
+        37 | 105 => kb::KEY_CONTROL,
+        64 | 108 => kb::KEY_ALT,
+        65 => kb::KEY_SPACE,
+        133 | 134 => kb::KEY_META,
+        111 => kb::KEY_UP,
+        116 => kb::KEY_DOWN,
+        113 => kb::KEY_LEFT,
+        114 => kb::KEY_RIGHT,
         _ => x11_code,
     }
 }
 
 fn is_modifier_key(macos_keycode: u16) -> bool {
-    matches!(macos_keycode, 55 | 56 | 58 | 59)
+    matches!(
+        macos_keycode,
+        kb::KEY_META | kb::KEY_SHIFT | kb::KEY_ALT | kb::KEY_CONTROL
+    )
 }
 
 const MOD_MASK_SHIFT: u8 = 1 << 0;

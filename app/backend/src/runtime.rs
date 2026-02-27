@@ -33,7 +33,7 @@ pub fn build_app(
     let ws_tx_clone = ws_tx.clone();
     let ws_shutdown_tx_clone = ws_shutdown_tx.clone();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(move |app| {
@@ -158,7 +158,12 @@ pub fn build_app(
                 }
             }
             _ => {}
-        })
+        });
+
+    #[cfg(target_os = "windows")]
+    let builder = builder.device_event_filter(tauri::DeviceEventFilter::Always);
+
+    builder
 }
 
 pub(crate) fn handle_ws_server(

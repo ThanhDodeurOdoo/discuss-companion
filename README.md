@@ -5,12 +5,13 @@
 [![API Tests](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-api.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-api.yml)
 
 [![macOS](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-macOS.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-macOS.yml)
+[![Windows](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-windows.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-windows.yml)
 [![Ubuntu](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-ubuntu.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-ubuntu.yml)
 [![Debian](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-debian.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-debian.yml)
 
 [![CodeQuality](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/github-code-scanning/codeql)
 
-The Discuss Companion is a companion app for Odoo Discuss, currently supporting macOS and Linux (X11). It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus, along with convenient quick-access call control features when in a call in Odoo Discuss. This also requires the extension to be installed in a compatible browser (chromium / firefox).
+The Discuss Companion is a companion app for Odoo Discuss, currently supporting macOS, Windows, and Linux (X11). It provides system-wide Push-to-Talk (PTT) capabilities, allowing you to use your PTT key even when the browser is not in focus, along with convenient quick-access call control features when in a call in Odoo Discuss. This also requires the extension to be installed in a compatible browser (chromium / firefox).
 
 ![Discuss Companion Example](assets/example.gif)
 
@@ -41,7 +42,7 @@ Read [CONTRIBUTING.md](https://github.com/ThanhDodeurOdoo/discuss-companion/blob
 
 #### Users:
 -  **Browser**: Google Chrome or Mozilla Firefox required for the extension.
--  **OS**: macOS or Linux (X11 only, Wayland not yet supported).
+-  **OS**: macOS, Windows, or Linux (X11 only, Wayland not yet supported).
 
 
 ### Running Locally
@@ -108,6 +109,7 @@ The packed extensions are generated at `extension/dist/chrome.zip` and `extensio
 The application automatically detects the target OS based on the build environment. If you want to build for a specific target manually using Cargo:
 
 - **macOS**: `npm run tauri build -- --target aarch64-apple-darwin`
+- **Windows**: `npm run tauri build -- --target x86_64-pc-windows-msvc`
 - **Linux (X11)**: `npm run tauri build -- --target x86_64-unknown-linux-gnu -- --features x11`
 
 > [!NOTE]
@@ -124,7 +126,7 @@ The project includes three main GitHub Actions suites that run on every push and
 - **UI**: app front-end lint + tests
 - **Extension**: extension lint + test
 - **API Tests**: integration testing for both IPC and WebSocket APIs.
-And full baclkend tests that run on specific platforms (macOS, Debian X11 and Ubuntu Wayland).
+And full backend tests that run on specific platforms (macOS, Windows, Debian X11, and Ubuntu).
 
 ---
 
@@ -133,7 +135,7 @@ And full baclkend tests that run on specific platforms (macOS, Debian X11 and Ub
 2.  Ensure the status indicator says **"Accessibility Granted"** (on macOS you need to give both "Accessibility" and "Input Monitoring" permissions).
 3.  On the extension, press the gear iconn and check "use discuss companion"
 4.  In Odoo Discuss, enter a voice call.
-5.  Use the **System Tray** icon (top right of your macOS bar) to Show/Hide the monitoring window or Quit the app.
+5.  Use the **System Tray** icon to Show/Hide the monitoring window or Quit the app.
 
 ---
 
