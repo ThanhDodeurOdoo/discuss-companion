@@ -36,6 +36,5 @@ Discuss Companion provide a desktop control surface for Odoo Discuss calls. It c
    - X11 is supported; Wayland is not currently supported.
 
 ## Related Docs
-- [App Architecture](./ARCHITECTURE.md)
 - [Repository Architecture Overview](../ARCHITECTURE.md)
 - [Extension Architecture](../extension/src/ARCHITECTURE.md)

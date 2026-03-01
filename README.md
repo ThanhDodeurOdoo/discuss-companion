@@ -1,4 +1,4 @@
-# Discuss Companion [![GitHub version](https://badge.fury.io/gh/ThanhDodeurOdoo%2Fdiscuss-companion.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion)
+# Discuss Companion
 
 [![UI](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-ui.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-ui.yml)
 [![Extension](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-extension.yml/badge.svg)](https://github.com/ThanhDodeurOdoo/discuss-companion/actions/workflows/tests-extension.yml)
@@ -16,15 +16,6 @@ The Discuss Companion is a companion app for Odoo Discuss, currently supporting 
 ![Discuss Companion Example](assets/example.gif)
 
 The app backend is written in Rust, the app frontend (and the extension) is written in TypeScript using [Owl v3](https://github.com/odoo/owl) as the framework.
-
-## Doc
-
-- [Architecture overview](./ARCHITECTURE.md)
-- [App architecture](./app/ARCHITECTURE.md)
-- [App features guide](./app/README.md)
-- [Extension architecture](./extension/src/ARCHITECTURE.md)
-- [Extension usage](./extension/README.md)
-
 
 ## Development
 
@@ -92,7 +83,6 @@ To link the app with Odoo:
 
     Refresh your Odoo tab after loading.
 
----
 
 ## Deployment & Distribution
 
@@ -128,7 +118,6 @@ The project includes three main GitHub Actions suites that run on every push and
 - **API Tests**: integration testing for both IPC and WebSocket APIs.
 And full backend tests that run on specific platforms (macOS, Windows, Debian X11, and Ubuntu).
 
----
 
 ## Usage
 1.  Launch the **Discuss Companion**.
@@ -137,14 +126,12 @@ And full backend tests that run on specific platforms (macOS, Windows, Debian X1
 4.  In Odoo Discuss, enter a voice call.
 5.  Use the **System Tray** icon to Show/Hide the monitoring window or Quit the app.
 
----
 
 ## Configuration
 The WebSocket port (default: 49152) can be configured if needed (e.g. to avoid conflicts):
 -   **App**: Change it directly in the main interface and click "Reload".
 -   **Extension**: click the extension icon -> Options -> when "use discuss companion" is checked, an option to change the posrt is available.
 
----
 
 ## Security & Privacy
 -   The "Event Tap" only listens for the specific key codes configured for PTT.
