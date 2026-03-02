@@ -120,10 +120,6 @@ pub mod universal {
     }
 }
 
-/// macOS virtual keycode for the Space key.
-/// Used as the default PTT binding.
-pub const KEYCODE_SPACE: u16 = universal::keyboard::KEY_SPACE;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum Modifier {
@@ -347,7 +343,7 @@ pub struct KeyBinding {
 impl Default for KeyBinding {
     fn default() -> Self {
         Self {
-            code: KEYCODE_SPACE,
+            code: universal::keyboard::KEY_SPACE,
             modifiers: Modifiers::empty(),
         }
     }

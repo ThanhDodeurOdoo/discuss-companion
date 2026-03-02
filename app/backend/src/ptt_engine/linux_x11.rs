@@ -23,7 +23,7 @@ use x11::{
 
 use crate::{
     protocol::{
-        KEYCODE_SPACE, KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
+        KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
         universal::keyboard as kb,
     },
     ptt_engine::PttEngine,
@@ -41,7 +41,7 @@ pub struct LinuxX11Engine;
     clippy::as_conversions,
     reason = "const packed binding needs a safe widening cast"
 )]
-const DEFAULT_BINDING_PACKED: u32 = (KEYCODE_SPACE as u32) << 8;
+const DEFAULT_BINDING_PACKED: u32 = (kb::KEY_SPACE as u32) << 8;
 
 // X11 Key masks (from X.h / Xlib.h)
 const SHIFT_MASK: u32 = 1 << 0;
@@ -150,7 +150,7 @@ fn pack_binding(binding: KeyBinding) -> u32 {
 }
 
 fn unpack_binding(packed: u32) -> (u16, u8) {
-    let code = u16::try_from(packed >> 8).unwrap_or(KEYCODE_SPACE);
+    let code = u16::try_from(packed >> 8).unwrap_or(kb::KEY_SPACE);
     let mask = u8::try_from(packed & 0xFF).unwrap_or(0);
     (code, mask)
 }
