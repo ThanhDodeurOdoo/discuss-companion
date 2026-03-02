@@ -27,7 +27,7 @@ use windows_sys::Win32::{
 
 use crate::{
     protocol::{
-        KEYCODE_SPACE, KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
+        KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
         universal::keyboard as kb,
     },
     ptt_engine::PttEngine,
@@ -44,7 +44,7 @@ static PRIMARY_KEY_HELD: AtomicBool = AtomicBool::new(false);
     clippy::as_conversions,
     reason = "const packed binding needs a safe widening cast"
 )]
-const DEFAULT_BINDING_PACKED: u32 = (KEYCODE_SPACE as u32) << 8;
+const DEFAULT_BINDING_PACKED: u32 = (kb::KEY_SPACE as u32) << 8;
 
 const MOD_MASK_SHIFT: u8 = 1 << 0;
 const MOD_MASK_CONTROL: u8 = 1 << 1;
@@ -123,7 +123,7 @@ fn pack_binding(binding: KeyBinding) -> u32 {
 }
 
 fn unpack_binding(packed: u32) -> (u16, u8) {
-    let code = u16::try_from(packed >> 8).unwrap_or(KEYCODE_SPACE);
+    let code = u16::try_from(packed >> 8).unwrap_or(kb::KEY_SPACE);
     let mask = u8::try_from(packed & 0xFF).unwrap_or(0);
     (code, mask)
 }

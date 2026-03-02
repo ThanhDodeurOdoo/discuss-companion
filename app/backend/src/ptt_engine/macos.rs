@@ -26,7 +26,8 @@ use tracing::{debug, error, info};
 
 use crate::{
     protocol::{
-        KEYCODE_SPACE, KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
+        KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
+        universal::keyboard as kb,
     },
     ptt_engine::PttEngine,
 };
@@ -98,7 +99,7 @@ const K_CG_EVENT_TAP_DISABLED_BY_USER_INTEREST: u32 = 0xFFFF_FFFF;
     clippy::as_conversions,
     reason = "const packed binding needs a safe widening cast"
 )]
-const DEFAULT_BINDING_PACKED: u32 = (KEYCODE_SPACE as u32) << 8;
+const DEFAULT_BINDING_PACKED: u32 = (kb::KEY_SPACE as u32) << 8;
 
 static HELD: AtomicBool = AtomicBool::new(false);
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
@@ -491,7 +492,7 @@ fn pack_binding(binding: KeyBinding) -> u32 {
 }
 
 fn unpack_binding(packed: u32) -> (u16, u8) {
-    let code = u16::try_from(packed >> 8).unwrap_or(KEYCODE_SPACE);
+    let code = u16::try_from(packed >> 8).unwrap_or(kb::KEY_SPACE);
     let mask = u8::try_from(packed & 0xFF).unwrap_or(0);
     (code, mask)
 }
