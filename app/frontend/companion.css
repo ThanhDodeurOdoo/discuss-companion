@@ -4,7 +4,7 @@
 
 main {
     flex: 1;
-    background: var(--color-border-strong);
+    background: var(--color-bg);
     overflow: hidden;
     transition: background var(--transition-slow);
 }
@@ -12,9 +12,13 @@ main {
 main:not(.settings-view) {
     display: grid;
     grid-template-columns: 350px 1fr;
+    gap: 1px;
+    background: var(--color-border);
 }
 
 main.settings-view {
-    background: var(--color-bg);
+    background:
+        linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-muted) 100%);
     overflow-y: auto;
+    padding: var(--space-5);
 }

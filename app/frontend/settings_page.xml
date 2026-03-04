@@ -52,7 +52,9 @@
             <span class="setting-desc">Choose where the app appears when no window is open</span>
         </div>
         <div class="setting-options">
-            <label class="setting-option">
+            <label
+                class="setting-option setting-option--choice"
+                t-att-class="{ 'is-selected': this.app.appVisibilityMode() === this.app.appVisibilityModes.TrayAndDockWhenWindowOpen }">
                 <input
                     type="radio"
                     name="app-visibility-mode"
@@ -64,7 +66,9 @@
                     <span class="setting-option__desc">Keep the tray icon; dock icon appears only when the window is open.</span>
                 </div>
             </label>
-            <label class="setting-option">
+            <label
+                class="setting-option setting-option--choice"
+                t-att-class="{ 'is-selected': this.app.appVisibilityMode() === this.app.appVisibilityModes.TrayAndDockAlways }">
                 <input
                     type="radio"
                     name="app-visibility-mode"
@@ -76,7 +80,9 @@
                     <span class="setting-option__desc">Show both tray and dock even when the window is closed.</span>
                 </div>
             </label>
-            <label class="setting-option">
+            <label
+                class="setting-option setting-option--choice"
+                t-att-class="{ 'is-selected': this.app.appVisibilityMode() === this.app.appVisibilityModes.DockOnly }">
                 <input
                     type="radio"
                     name="app-visibility-mode"
