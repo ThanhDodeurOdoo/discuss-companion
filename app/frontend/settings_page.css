@@ -166,3 +166,26 @@
     outline: none;
     box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
+
+.settings-action-btn {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-inset);
+    color: var(--color-text-muted);
+}
+
+.settings-action-btn:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
+}
+
+.settings-action-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.settings-action-btn--danger:hover:not(:disabled) {
+    border-color: var(--color-danger);
+    background: var(--color-danger-muted);
+    color: var(--color-danger);
+}
