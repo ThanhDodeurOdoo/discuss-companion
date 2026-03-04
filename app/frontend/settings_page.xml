@@ -113,4 +113,16 @@
             </button>
         </div>
     </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span class="setting-title prevent-select">Event log</span>
+            <span class="setting-desc">Clear the activity log shown in the main view</span>
+        </div>
+        <button
+            class="text-btn std-btn settings-action-btn settings-action-btn--danger prevent-select"
+            t-on-click="() => this.app.clearLogs()">
+            Clear Logs
+        </button>
+    </div>
 </div>

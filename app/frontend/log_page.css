@@ -6,23 +6,7 @@
     background: var(--color-bg);
     padding: var(--space-6);
     display: flex;
-    flex-direction: column;
     overflow: hidden;
-}
-
-.logs-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-4);
-}
-
-.logs-header h2 {
-    font-size: 1rem;
-    color: var(--color-text-subtle);
-    text-transform: uppercase;
-    font-weight: 600;
-    letter-spacing: 0.06em;
 }
 
 .logs-container {
