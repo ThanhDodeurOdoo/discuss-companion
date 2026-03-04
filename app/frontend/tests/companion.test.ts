@@ -133,6 +133,17 @@ describe("Companion Component Interactions", () => {
         expect(setRecordingModeMock).toHaveBeenCalledWith(false);
     });
 
+    test("header keeps only the extension dot when permission is granted", async () => {
+        await mountApp();
+
+        const connectionIndicator = target.querySelector(
+            ".header-connection-indicator"
+        ) as HTMLSpanElement;
+
+        expect(connectionIndicator.title).toBe("Extension disconnected");
+        expect(target.querySelector(".status-item")).toBeNull();
+    });
+
     test("PTT UI is hidden when feature is disabled", async () => {
         mockInvokeDefaults({
             features: { ptt: false, callControlsTray: false }

@@ -1,22 +1,22 @@
 <header class="prevent-select">
-    <h1>Discuss Companion</h1>
+    <div class="header-title">
+        <h1>Discuss Companion</h1>
+        <span
+            class="header-connection-indicator"
+            t-att-class="this.app.extensionConnected() ? 'is-connected' : 'is-disconnected'"
+            t-att-title="this.app.extensionConnected() ? 'Extension connected' : 'Extension disconnected'"
+            t-att-aria-label="this.app.extensionConnected() ? 'Extension connected' : 'Extension disconnected'"></span>
+    </div>
     <div class="header-controls">
-        <div class="status-indicators">
-            <div
-                t-if="this.app.features()?.ptt"
-                class="status-item"
-                t-att-class="this.app.permissionGranted() ? 'granted' : ''"
-                t-att-title="'Whether the accessibility permission is granted'">
-                <div class="status-dot"></div>
-                <span t-out="this.app.permissionGranted() ? 'Accessibility Granted' : 'Permission Required'"/>
-                <button t-if="!this.app.permissionGranted()" class="retry-btn" t-on-click="() => this.app.checkPermission()">
-                    Retry
-                </button>
-            </div>
-            <div class="status-item" t-att-class="this.app.extensionConnected() ? 'connected' : ''" t-att-title="'Whether the extension WebSocket is connected'">
-                <div class="status-dot"></div>
-                <span t-out="this.app.extensionConnected() ? 'Ext. Connected' : 'Ext. Disconnected'"/>
-            </div>
+        <div
+            t-if="this.app.features()?.ptt &amp;&amp; !this.app.permissionGranted()"
+            class="status-item"
+            title="Accessibility permission required for push to talk">
+            <div class="status-dot"></div>
+            <span>Permission Required</span>
+            <button class="retry-btn" t-on-click="() => this.app.checkPermission()">
+                Retry
+            </button>
         </div>
         <div class="view-controls">
              <button

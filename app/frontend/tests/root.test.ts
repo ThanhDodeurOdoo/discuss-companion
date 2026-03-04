@@ -62,7 +62,12 @@ describe("Root Integration Tests", () => {
         const title = target.querySelector("h1");
         expect(title?.textContent).toBe("Discuss Companion");
 
-        const permStatus = target.querySelectorAll(".status-item")[0];
+        const connectionIndicator = target.querySelector(
+            ".header-connection-indicator"
+        ) as HTMLSpanElement;
+        expect(connectionIndicator.title).toBe("Extension disconnected");
+
+        const permStatus = target.querySelector(".status-item");
         expect(permStatus?.textContent).toContain("Permission Required");
     });
 
