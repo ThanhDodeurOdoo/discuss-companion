@@ -1,5 +1,10 @@
 # Contributing to Discuss Companion
 
+> [!WARNING]  
+> Pull requests written with AI may be rejected at the discretion of the maintainers.
+> They MUST have the "AI" tag, and comment in the PR should explain the AI's role in the PR.
+>
+
 ### General Rules
 
 - **No Low-Value Comments**: Avoid trivial comments that describe obvious code or that is just a rephrase of a function/varbiable name. Only write comments for necessary complex logic or obscure implementation. Or the standard docstring.

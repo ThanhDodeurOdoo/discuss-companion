@@ -137,5 +137,9 @@ The WebSocket port (default: 49152) can be configured if needed (e.g. to avoid c
 -   The "Event Tap" only listens for the specific key codes configured for PTT.
 -   The WebSocket server runs on `localhost` (configurable) and does not accept external connections.
 
+## AI
+- Documentation was written with the help of AI.
+- Considering implementing AI-assisted code review when I have time.
+
 ## Contributing
 Interested in contributing? Please see our [CONTRIBUTING.md](.github/CONTRIBUTING.md) for guidelines on code style, testing, and more.
