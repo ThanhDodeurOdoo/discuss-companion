@@ -81,5 +81,5 @@ Detailed module-level behavior is documented in the extension architecture refer
 3. Both protocols use FlatBuffers for binary framing and shared schema contracts.
 
 ## Where to Read More
-- [Extension Architecture](./extension/src/ARCHITECTURE.md)
-- [App Features Guide](./app/README.md)
+- [Extension Architecture](./doc/extension.md)
+- [App Features Guide](./doc/app.md)
