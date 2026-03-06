@@ -55,7 +55,7 @@ Read [CONTRIBUTING.md](https://github.com/ThanhDodeurOdoo/discuss-companion/blob
 
 ## Extension
 
-see [Extension's Readme](./extension/README.md)
+see [Extension's Readme](./doc/extension.md)
 
 > [!WARNING]  
 > The extension is not compatible with the Odoo Discuss extension
@@ -138,4 +138,4 @@ The WebSocket port (default: 49152) can be configured if needed (e.g. to avoid c
 -   The WebSocket server runs on `localhost` (configurable) and does not accept external connections.
 
 ## Contributing
-Interested in contributing? Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on code style, testing, and more.
+Interested in contributing? Please see our [CONTRIBUTING.md](.github/CONTRIBUTING.md) for guidelines on code style, testing, and more.
