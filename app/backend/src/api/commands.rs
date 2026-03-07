@@ -2,7 +2,7 @@ use std::sync::atomic::Ordering;
 
 use tauri::{
     Emitter, Manager, Runtime, State,
-    ipc::{Channel, InvokeBody},
+    ipc::{Channel, InvokeBody, Request},
 };
 use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
@@ -79,9 +79,9 @@ pub fn set_app_visibility_mode(
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 #[allow(clippy::collapsible_if, reason = "nested if let")]
-pub fn update_binding(app_handle: tauri::AppHandle, request: tauri::ipc::Request) {
+pub fn update_binding(app_handle: tauri::AppHandle, request: Request<'_>) {
     if let InvokeBody::Raw(data) = request.body()
-        && let Ok(binding) = flatbuffers::root::<PttBinding>(data)
+        && let Ok(binding) = flatbuffers::root::<PttBinding<'_>>(data)
     {
         let key_binding: KeyBinding = binding.into();
         set_binding(key_binding);
@@ -100,9 +100,9 @@ pub fn update_binding(app_handle: tauri::AppHandle, request: tauri::ipc::Request
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 #[allow(clippy::collapsible_if, reason = "nested if let")]
-pub fn set_recording_mode(request: tauri::ipc::Request) {
+pub fn set_recording_mode(request: Request<'_>) {
     if let InvokeBody::Raw(data) = request.body()
-        && let Ok(msg) = flatbuffers::root::<SetRecordingMode>(data)
+        && let Ok(msg) = flatbuffers::root::<SetRecordingMode<'_>>(data)
     {
         set_recording(msg.recording());
     }
@@ -171,10 +171,10 @@ pub fn get_ws_port(state: State<'_, WsState>) -> u16 {
 pub fn update_ws_port(
     app_handle: tauri::AppHandle,
     state: State<'_, WsState>,
-    request: tauri::ipc::Request,
+    request: Request<'_>,
 ) {
     if let InvokeBody::Raw(data) = request.body()
-        && let Ok(msg) = flatbuffers::root::<SetWsPort>(data)
+        && let Ok(msg) = flatbuffers::root::<SetWsPort<'_>>(data)
     {
         let port = msg.port();
         info!("Updating WS port to: {}", port);
