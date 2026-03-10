@@ -1,21 +1,42 @@
 # Contributing to Discuss Companion
 
+## Learning resources
+
+### Rust
+- [The Rust Programming Language](https://doc.rust-lang.org/book/)
+- [The Rustonomicon (unsafe/advanced)](https://doc.rust-lang.org/nomicon/)
+- [Rust by Example](https://doc.rust-lang.org/rust-by-example/)
+- [Rust Cookbook](https://github.com/rust-lang-nursery/rust-cookbook/)
+- [Idiomatic Rust snippets](https://idiomatic-rust-snippets.org/)
+- [Living with Rust Long-Term by Jon Gjengset (video)](https://youtu.be/r35cBkPRNMI)
+
+### OWL (v3)
+- [odoo/owl](https://github.com/odoo/owl)
+- [Owl v3.0 technical notes](https://gist.github.com/ged-odoo/3d13eafc8ad19b79c4265adcc426ed98)
+- [Odoo frontend documentation](https://gist.github.com/ged-odoo/93a47772b670e767d378789e48734769) (may be outdated)
+
+
+## General Rules
+
 > [!WARNING]  
 > Pull requests written with AI may be rejected at the discretion of the maintainers.
-> They MUST have the "AI" tag, and comment in the PR should explain the AI's role in the PR.
+> They MUST have the `AI` tag, and comment in the PR should explain the AI's role in the PR.
 >
-
-### General Rules
+> Documentation or docstring written with AI is acceptable but
+> must also be marked with the `AI` tag.
+>
 
 - **No Low-Value Comments**: Avoid trivial comments that describe obvious code or that is just a rephrase of a function/varbiable name. Only write comments for necessary complex logic or obscure implementation. Or the standard docstring.
 - **Justify Overrides**: Any override of a linter rule (ESLint, Clippy) or the use of `unsafe` code MUST be justified with a descriptive comment.
+- **Avoid literals**: use constants/enums with a meaningful name instead.
+- **Document unhandled errors**: Errors that are thrown (or Result types in rust) must have their errors documented.
 
 ### Rust (Backend)
 
 The backend is located in `app/backend`. We follow standard Rust idioms and enforce strict safety.
 
 - **Formatting**: Always run `cargo fmt` before committing.
-- **Linting**: We use Clippy with warnings denied (`cargo clippy -- -D warnings`).
+- **Linting**: We use Clippy with warnings denied (`cargo clippy -- -D warnings`), the enfourced rules can be found in the [cargo.toml](../app/backend/cargo.toml), see the [Clippy documentation](https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html) for explanations.
 - **Unsafe Code**: Use of `unsafe` is discouraged. If absolutely necessary, it must be locally scoped and justified.
   ```rs
   #[allow(
@@ -43,9 +64,10 @@ The backend is located in `app/backend`. We follow standard Rust idioms and enfo
 
 The frontend uses Owl v3 and is in `app/frontend`. The extension is in the `extension` folder.
 
-- **No `any` (or lazy typing)**: The use of the `any` type is strictly forbidden. Use proper interfaces or types.
-- **Type Assertions**: Avoid `as unknown as...`. If you must use it, provide a justifying comment.
-- **Defined Assertions**: Use the `!` operator only when you are absolutely certain the value is neither `null` nor `undefined`.
+- **No lazy typing**: The use of the `any` type is strictly forbidden. Use proper interfaces or types.
+- **No double Assertions**: Avoid `as unknown as`. If you must use it, provide a justifying comment (it id jusifiable when the type is really unknown (eg: external API)).
+- **Defined Assertions**: Use the `!` operator only when you are absolutely certain the value is neither `null` nor `undefined`. It may require a comment.
+- **Enforce immutability**: When possible, enforce immutability (`as const` / `readonly`).
 
 ## What do to when you modify something:
 
