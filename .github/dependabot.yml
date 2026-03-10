@@ -6,8 +6,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    labels:
+      - "AI"
 
   - package-ecosystem: "cargo"
     directory: "/app/backend"
     schedule:
       interval: "weekly"
+    labels:
+      - "AI"

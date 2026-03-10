@@ -13,7 +13,7 @@
 ### OWL (v3)
 - [odoo/owl](https://github.com/odoo/owl)
 - [Owl v3.0 technical notes](https://gist.github.com/ged-odoo/3d13eafc8ad19b79c4265adcc426ed98)
-- [Odoo frontend documentation](https://gist.github.com/ged-odoo/93a47772b670e767d378789e48734769) (may be outdated)
+- [Odoo frontend documentation](https://www.odoo.com/documentation/19.0/developer/reference/frontend/owl_components.html) (may be outdated)
 
 
 ## General Rules
