@@ -134,7 +134,7 @@ struct TrayMasks {
 
 impl TrayMasks {
     fn load() -> tauri::Result<Self> {
-        // TODO: maybe later use some kind of oncecell/lazycell to act as static and lazyload if not initialized
+        // TODO: maybe later use LazyLock to act as static and lazyload if not initialized
         Ok(Self {
             deaf: MaskImage::from_png(MASK_DEAF)?,
             mute: MaskImage::from_png(MASK_MUTE)?,
