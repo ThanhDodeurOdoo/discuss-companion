@@ -140,6 +140,7 @@ The WebSocket port (default: 49152) can be configured if needed (e.g. to avoid c
 ## AI
 - Documentation was written with the help of AI.
 - Considering implementing AI-assisted code review when I have time.
+- [Link to the AI policy](.github/CONTRIBUTING.md#general-rules).
 
 ## Contributing
 Interested in contributing? Please see our [CONTRIBUTING.md](.github/CONTRIBUTING.md) for guidelines on code style, testing, and more.
