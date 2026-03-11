@@ -4,9 +4,6 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { KeyBinding } from '@extension/src/discuss/ws-protocol/key-binding.js';
-
-
 export class PttDown {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
@@ -30,30 +27,21 @@ ts():bigint {
   return offset ? this.bb!.readUint64(this.bb_pos + offset) : BigInt('0');
 }
 
-key(obj?:KeyBinding):KeyBinding|null {
-  const offset = this.bb!.__offset(this.bb_pos, 6);
-  return offset ? (obj || new KeyBinding()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
-}
-
 isRepeat():boolean {
-  const offset = this.bb!.__offset(this.bb_pos, 8);
+  const offset = this.bb!.__offset(this.bb_pos, 6);
   return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
 }
 
 static startPttDown(builder:flatbuffers.Builder) {
-  builder.startObject(3);
+  builder.startObject(2);
 }
 
 static addTs(builder:flatbuffers.Builder, ts:bigint) {
   builder.addFieldInt64(0, ts, BigInt('0'));
 }
 
-static addKey(builder:flatbuffers.Builder, keyOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(1, keyOffset, 0);
-}
-
 static addIsRepeat(builder:flatbuffers.Builder, isRepeat:boolean) {
-  builder.addFieldInt8(2, +isRepeat, +false);
+  builder.addFieldInt8(1, +isRepeat, +false);
 }
 
 static endPttDown(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -61,4 +49,10 @@ static endPttDown(builder:flatbuffers.Builder):flatbuffers.Offset {
   return offset;
 }
 
+static createPttDown(builder:flatbuffers.Builder, ts:bigint, isRepeat:boolean):flatbuffers.Offset {
+  PttDown.startPttDown(builder);
+  PttDown.addTs(builder, ts);
+  PttDown.addIsRepeat(builder, isRepeat);
+  return PttDown.endPttDown(builder);
+}
 }

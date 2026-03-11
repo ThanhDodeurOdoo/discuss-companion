@@ -12,10 +12,7 @@ import {
     BackendError,
     WsMessageEvent,
     IncomingMessageUnion,
-    IncomingSetBinding,
     ConnectionStatus
-    // IncomingGetBinding,
-    // IncomingShutdown
 } from "./flatbuffers/discuss/ipc-protocol";
 import type { CallCommand } from "./call_commands";
 import { ChannelEventType, type ChannelEvent, type CallStatePayload } from "./ipc_types";
@@ -144,30 +141,6 @@ export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
                 const msgType = wsEvent.messageType();
 
                 switch (msgType) {
-                    case IncomingMessageUnion.IncomingSetBinding: {
-                        const bindingMsg = wsEvent.message(
-                            new IncomingSetBinding()
-                        ) as IncomingSetBinding;
-                        const binding = bindingMsg.binding();
-                        if (binding) {
-                            onEvent({
-                                type: ChannelEventType.WsMessage,
-                                payload: {
-                                    SetBinding: {
-                                        binding: {
-                                            code: binding.code(),
-                                            modifiers: Array.from(binding.modifiersArray() || [])
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                        break;
-                    }
-                    case IncomingMessageUnion.IncomingGetBinding: {
-                        onEvent({ type: ChannelEventType.WsMessage, payload: { GetBinding: {} } });
-                        break;
-                    }
                     case IncomingMessageUnion.IncomingShutdown: {
                         onEvent({ type: ChannelEventType.WsMessage, payload: { Shutdown: {} } });
                         break;

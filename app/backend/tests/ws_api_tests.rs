@@ -209,93 +209,6 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn test_set_binding_message_handling() {
-        use ws_protocol::{
-            Message as FBMessage, MessageArgs, MessageBody, SetBinding, SetBindingArgs,
-        };
-
-        ws_server::reset_connection_count();
-        let (tx, _) = broadcast::channel(10);
-        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
-        let app_handle = app.handle().clone();
-
-        let received_events: Arc<Mutex<Vec<Vec<u8>>>> = Arc::new(Mutex::new(Vec::new()));
-        let handler_received = Arc::clone(&received_events);
-        let (server_shutdown_tx, _) = broadcast::channel(1);
-        let (conn_tx_state, _) = crossbeam_channel::unbounded();
-
-        let channel = Channel::new(move |msg| {
-            if let InvokeResponseBody::Raw(data) = msg {
-                handler_received.lock().unwrap().push(data);
-            }
-            Ok(())
-        });
-
-        app.manage(WsState {
-            port: AtomicU16::new(0),
-            ws_tx: tx.clone(),
-            server_shutdown_tx: Mutex::new(server_shutdown_tx),
-            conn_tx: conn_tx_state,
-            event_channels: RwLock::new(vec![channel]),
-            call_state: RwLock::new(None),
-        });
-
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let port = addr.port();
-        drop(listener);
-
-        let (conn_tx, _) = crossbeam_channel::unbounded();
-        tokio::spawn(async move {
-            start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
-        });
-
-        let mut ws = connect_ws(addr).await;
-
-        let mut builder = FlatBufferBuilder::new();
-        let mods_vec = vec![ws_protocol::Modifier::Shift];
-        let mods_vec = builder.create_vector(&mods_vec);
-        let key_binding = ws_protocol::KeyBinding::create(
-            &mut builder,
-            &ws_protocol::KeyBindingArgs {
-                code: 42,
-                modifiers: Some(mods_vec),
-            },
-        );
-        let set_binding = SetBinding::create(
-            &mut builder,
-            &SetBindingArgs {
-                binding: Some(key_binding),
-            },
-        );
-        let msg_offset = FBMessage::create(
-            &mut builder,
-            &MessageArgs {
-                body_type: MessageBody::SetBinding,
-                body: Some(set_binding.as_union_value()),
-            },
-        );
-        builder.finish(msg_offset, None);
-        let bin = builder.finished_data().to_vec();
-
-        ws.send(Binary(bin.into())).await.unwrap();
-
-        // Wait for WsMessageEvent (not WsConnection)
-        let payload_bytes =
-            wait_for_event_type(&received_events, ipc_protocol::ToFrontend::WsMessageEvent).await;
-
-        let message = ipc_protocol::root_as_to_frontend_message(&payload_bytes).unwrap();
-        assert_eq!(
-            message.event_type(),
-            ipc_protocol::ToFrontend::WsMessageEvent
-        );
-
-        let _ = shutdown_tx.send(());
-    }
-
-    #[tokio::test]
-    #[serial]
     async fn test_shutdown_message_handling() {
         use ws_protocol::{Message as FBMessage, MessageArgs, MessageBody, Shutdown, ShutdownArgs};
 
@@ -651,82 +564,6 @@ mod tests {
         let _ = h2.await;
     }
 
-    /// Tests that `GetBinding` messages from extension are forwarded to frontend.
-    /// Feature: Extension can request current PTT binding configuration.
-    #[tokio::test]
-    #[serial]
-    async fn test_get_binding_message_forwarded_to_frontend() {
-        use ws_protocol::{
-            GetBinding, GetBindingArgs, Message as FBMessage, MessageArgs, MessageBody,
-        };
-
-        ws_server::reset_connection_count();
-        let (tx, _) = broadcast::channel(10);
-        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
-        let app_handle = app.handle().clone();
-
-        let received_events: Arc<Mutex<Vec<Vec<u8>>>> = Arc::new(Mutex::new(Vec::new()));
-        let handler_received = Arc::clone(&received_events);
-        let (server_shutdown_tx, _) = broadcast::channel(1);
-        let (conn_tx_state, _) = crossbeam_channel::unbounded();
-
-        let channel = Channel::new(move |msg| {
-            if let InvokeResponseBody::Raw(data) = msg {
-                handler_received.lock().unwrap().push(data);
-            }
-            Ok(())
-        });
-
-        app.manage(WsState {
-            port: AtomicU16::new(0),
-            ws_tx: tx.clone(),
-            server_shutdown_tx: Mutex::new(server_shutdown_tx),
-            conn_tx: conn_tx_state,
-            event_channels: RwLock::new(vec![channel]),
-            call_state: RwLock::new(None),
-        });
-
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let port = addr.port();
-        drop(listener);
-
-        let (conn_tx, _) = crossbeam_channel::unbounded();
-        tokio::spawn(async move {
-            start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
-        });
-
-        let mut ws = connect_ws(addr).await;
-
-        // Construct GetBinding flatbuffer
-        let mut builder = FlatBufferBuilder::new();
-        let get_binding_body = GetBinding::create(&mut builder, &GetBindingArgs {});
-        let msg_offset = FBMessage::create(
-            &mut builder,
-            &MessageArgs {
-                body_type: MessageBody::GetBinding,
-                body: Some(get_binding_body.as_union_value()),
-            },
-        );
-        builder.finish(msg_offset, None);
-        let bin = builder.finished_data().to_vec();
-
-        ws.send(Binary(bin.into())).await.unwrap();
-
-        // Wait for event to be processed
-        let payload_bytes =
-            wait_for_event_type(&received_events, ipc_protocol::ToFrontend::WsMessageEvent).await;
-
-        let message = ipc_protocol::root_as_to_frontend_message(&payload_bytes).unwrap();
-        assert_eq!(
-            message.event_type(),
-            ipc_protocol::ToFrontend::WsMessageEvent
-        );
-
-        let _ = shutdown_tx.send(());
-    }
-
     /// Tests that multiple connected clients all receive broadcast messages.
     /// Feature: PTT events reach all browser extension instances.
     #[tokio::test]
@@ -788,7 +625,7 @@ mod tests {
     async fn test_ptt_down_event_reaches_extension() {
         use discuss_companion_lib::{
             flatbuffers::ws_protocol_generated::discuss::ws_protocol::root_as_message,
-            protocol::{KeyBinding, Modifier, OutgoingMessage},
+            protocol::{KeyBinding, OutgoingMessage},
         };
 
         ws_server::reset_connection_count();
@@ -813,10 +650,7 @@ mod tests {
         // Simulate PTT down event (as would be sent by backend when key is pressed)
         let ptt_down = OutgoingMessage::PttDown {
             ts: 1_234_567_890,
-            key: KeyBinding {
-                code: 49, // Space
-                modifiers: [Modifier::Control].into_iter().collect(),
-            },
+            key: KeyBinding::default(),
             is_repeat: false,
         };
         tx.send(ptt_down.to_flatbuffer()).unwrap();
@@ -838,8 +672,6 @@ mod tests {
             let body = message.body_as_ptt_down().expect("PttDown body");
             assert_eq!(body.ts(), 1_234_567_890);
             assert!(!body.is_repeat());
-            let key = body.key().expect("key present");
-            assert_eq!(key.code(), 49);
         } else {
             panic!("Expected binary message");
         }

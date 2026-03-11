@@ -4,9 +4,6 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { KeyBinding } from '@extension/src/discuss/ws-protocol/key-binding.js';
-
-
 export class PttUp {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
@@ -30,21 +27,12 @@ ts():bigint {
   return offset ? this.bb!.readUint64(this.bb_pos + offset) : BigInt('0');
 }
 
-key(obj?:KeyBinding):KeyBinding|null {
-  const offset = this.bb!.__offset(this.bb_pos, 6);
-  return offset ? (obj || new KeyBinding()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
-}
-
 static startPttUp(builder:flatbuffers.Builder) {
-  builder.startObject(2);
+  builder.startObject(1);
 }
 
 static addTs(builder:flatbuffers.Builder, ts:bigint) {
   builder.addFieldInt64(0, ts, BigInt('0'));
-}
-
-static addKey(builder:flatbuffers.Builder, keyOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(1, keyOffset, 0);
 }
 
 static endPttUp(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -52,4 +40,9 @@ static endPttUp(builder:flatbuffers.Builder):flatbuffers.Offset {
   return offset;
 }
 
+static createPttUp(builder:flatbuffers.Builder, ts:bigint):flatbuffers.Offset {
+  PttUp.startPttUp(builder);
+  PttUp.addTs(builder, ts);
+  return PttUp.endPttUp(builder);
+}
 }

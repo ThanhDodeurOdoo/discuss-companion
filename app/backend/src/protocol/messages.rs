@@ -31,10 +31,6 @@ pub enum OutgoingMessage {
         ts: u64,
         message: String,
     },
-    BindingInfo {
-        ts: u64,
-        binding: KeyBinding,
-    },
     Pong {
         ts: u64,
     },
@@ -61,22 +57,11 @@ impl OutgoingMessage {
     pub fn to_flatbuffer(&self) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
         let message_offset = match self {
-            OutgoingMessage::PttDown { ts, key, is_repeat } => {
-                let modifiers: Vec<ws_protocol::Modifier> =
-                    key.modifiers.iter().map(Into::into).collect();
-                let modifiers_offset = builder.create_vector(&modifiers);
-                let key_offset = ws_protocol::KeyBinding::create(
-                    &mut builder,
-                    &ws_protocol::KeyBindingArgs {
-                        code: key.code,
-                        modifiers: Some(modifiers_offset),
-                    },
-                );
+            OutgoingMessage::PttDown { ts, is_repeat, .. } => {
                 let body_offset = ws_protocol::PttDown::create(
                     &mut builder,
                     &ws_protocol::PttDownArgs {
                         ts: *ts,
-                        key: Some(key_offset),
                         is_repeat: *is_repeat,
                     },
                 );
@@ -88,24 +73,9 @@ impl OutgoingMessage {
                     },
                 )
             }
-            OutgoingMessage::PttUp { ts, key } => {
-                let modifiers: Vec<ws_protocol::Modifier> =
-                    key.modifiers.iter().map(Into::into).collect();
-                let modifiers_offset = builder.create_vector(&modifiers);
-                let key_offset = ws_protocol::KeyBinding::create(
-                    &mut builder,
-                    &ws_protocol::KeyBindingArgs {
-                        code: key.code,
-                        modifiers: Some(modifiers_offset),
-                    },
-                );
-                let body_offset = ws_protocol::PttUp::create(
-                    &mut builder,
-                    &ws_protocol::PttUpArgs {
-                        ts: *ts,
-                        key: Some(key_offset),
-                    },
-                );
+            OutgoingMessage::PttUp { ts, .. } => {
+                let body_offset =
+                    ws_protocol::PttUp::create(&mut builder, &ws_protocol::PttUpArgs { ts: *ts });
                 ws_protocol::Message::create(
                     &mut builder,
                     &ws_protocol::MessageArgs {
@@ -150,32 +120,6 @@ impl OutgoingMessage {
                     },
                 )
             }
-            OutgoingMessage::BindingInfo { ts, binding } => {
-                let modifiers: Vec<ws_protocol::Modifier> =
-                    binding.modifiers.iter().map(Into::into).collect();
-                let modifiers_offset = builder.create_vector(&modifiers);
-                let key_offset = ws_protocol::KeyBinding::create(
-                    &mut builder,
-                    &ws_protocol::KeyBindingArgs {
-                        code: binding.code,
-                        modifiers: Some(modifiers_offset),
-                    },
-                );
-                let body_offset = ws_protocol::BindingInfo::create(
-                    &mut builder,
-                    &ws_protocol::BindingInfoArgs {
-                        ts: *ts,
-                        binding: Some(key_offset),
-                    },
-                );
-                ws_protocol::Message::create(
-                    &mut builder,
-                    &ws_protocol::MessageArgs {
-                        body_type: ws_protocol::MessageBody::BindingInfo,
-                        body: Some(body_offset.as_union_value()),
-                    },
-                )
-            }
             OutgoingMessage::Pong { ts } => {
                 let body_offset =
                     ws_protocol::Pong::create(&mut builder, &ws_protocol::PongArgs { ts: *ts });
@@ -193,79 +137,30 @@ impl OutgoingMessage {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum IncomingMessage {
-    SetBinding { binding: KeyBinding },
-    GetBinding,
-    Shutdown,
-}
+#[must_use]
+pub fn encode_ws_shutdown_event() -> Vec<u8> {
+    let mut builder = FlatBufferBuilder::new();
+    let incoming_offset = ipc_protocol::IncomingShutdown::create(
+        &mut builder,
+        &ipc_protocol::IncomingShutdownArgs {},
+    );
+    let ws_message_offset = ipc_protocol::WsMessageEvent::create(
+        &mut builder,
+        &ipc_protocol::WsMessageEventArgs {
+            message_type: ipc_protocol::IncomingMessageUnion::IncomingShutdown,
+            message: Some(incoming_offset.as_union_value()),
+        },
+    );
+    let event_offset = ipc_protocol::ToFrontendMessage::create(
+        &mut builder,
+        &ipc_protocol::ToFrontendMessageArgs {
+            event_type: ipc_protocol::ToFrontend::WsMessageEvent,
+            event: Some(ws_message_offset.as_union_value()),
+        },
+    );
 
-impl IncomingMessage {
-    #[must_use]
-    pub fn to_ipc_flatbuffer(&self) -> Vec<u8> {
-        let mut builder = FlatBufferBuilder::new();
-        let union_offset = match self {
-            Self::SetBinding { binding } => {
-                let modifiers: Vec<ipc_protocol::Modifier> =
-                    binding.modifiers.iter().map(Into::into).collect();
-                let modifiers_offset = builder.create_vector(&modifiers);
-                let binding_offset = ipc_protocol::PttBinding::create(
-                    &mut builder,
-                    &ipc_protocol::PttBindingArgs {
-                        code: binding.code,
-                        modifiers: Some(modifiers_offset),
-                    },
-                );
-                let incoming_offset = ipc_protocol::IncomingSetBinding::create(
-                    &mut builder,
-                    &ipc_protocol::IncomingSetBindingArgs {
-                        binding: Some(binding_offset),
-                    },
-                );
-                incoming_offset.as_union_value()
-            }
-            Self::GetBinding => {
-                let incoming_offset = ipc_protocol::IncomingGetBinding::create(
-                    &mut builder,
-                    &ipc_protocol::IncomingGetBindingArgs {},
-                );
-                incoming_offset.as_union_value()
-            }
-            Self::Shutdown => {
-                let incoming_offset = ipc_protocol::IncomingShutdown::create(
-                    &mut builder,
-                    &ipc_protocol::IncomingShutdownArgs {},
-                );
-                incoming_offset.as_union_value()
-            }
-        };
-
-        let message_type = match self {
-            Self::SetBinding { .. } => ipc_protocol::IncomingMessageUnion::IncomingSetBinding,
-            Self::GetBinding => ipc_protocol::IncomingMessageUnion::IncomingGetBinding,
-            Self::Shutdown => ipc_protocol::IncomingMessageUnion::IncomingShutdown,
-        };
-
-        let ws_message_offset = ipc_protocol::WsMessageEvent::create(
-            &mut builder,
-            &ipc_protocol::WsMessageEventArgs {
-                message_type,
-                message: Some(union_offset),
-            },
-        );
-
-        let event_offset = ipc_protocol::ToFrontendMessage::create(
-            &mut builder,
-            &ipc_protocol::ToFrontendMessageArgs {
-                event_type: ipc_protocol::ToFrontend::WsMessageEvent,
-                event: Some(ws_message_offset.as_union_value()),
-            },
-        );
-
-        builder.finish(event_offset, None);
-        builder.finished_data().to_vec()
-    }
+    builder.finish(event_offset, None);
+    builder.finished_data().to_vec()
 }
 
 #[must_use]
@@ -386,7 +281,6 @@ pub fn current_timestamp() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::types::Modifier;
 
     #[test]
     fn test_current_timestamp() {
@@ -398,10 +292,7 @@ mod tests {
     fn test_ptt_down_flatbuffer() {
         let msg = OutgoingMessage::PttDown {
             ts: 123_456_789,
-            key: KeyBinding {
-                code: 1,
-                modifiers: [Modifier::Shift].into_iter().collect(),
-            },
+            key: KeyBinding::default(),
             is_repeat: true,
         };
         let bin = msg.to_flatbuffer();
@@ -410,11 +301,6 @@ mod tests {
         let body = decoded.body_as_ptt_down().expect("Body is PttDown");
         assert_eq!(body.ts(), 123_456_789);
         assert!(body.is_repeat());
-        let key = body.key().expect("Key present");
-        assert_eq!(key.code(), 1);
-        let mods = key.modifiers().expect("Modifiers present");
-        assert_eq!(mods.len(), 1);
-        assert_eq!(mods.get(0), ws_protocol::Modifier::Shift);
     }
 
     #[test]
@@ -444,26 +330,6 @@ mod tests {
         assert_eq!(body.ts(), 111);
         assert_eq!(body.state(), Some("active"));
         assert_eq!(body.version(), Some("1.2.3"));
-    }
-
-    #[test]
-    fn test_binding_info_flatbuffer() {
-        let msg = OutgoingMessage::BindingInfo {
-            ts: 222,
-            binding: KeyBinding {
-                code: 56,
-                modifiers: [Modifier::Control, Modifier::Alt].into_iter().collect(),
-            },
-        };
-        let bin = msg.to_flatbuffer();
-        let decoded = ws_protocol::root_as_message(&bin).expect("Valid flatbuffer");
-        assert_eq!(decoded.body_type(), ws_protocol::MessageBody::BindingInfo);
-        let body = decoded.body_as_binding_info().expect("Body is BindingInfo");
-        assert_eq!(body.ts(), 222);
-        let key = body.binding().expect("Binding present");
-        assert_eq!(key.code(), 56);
-        let mods = key.modifiers().expect("Modifiers present");
-        assert_eq!(mods.len(), 2);
     }
 
     #[test]

@@ -31,13 +31,9 @@ table WsMessage {
     message_type: string;
 }
 
-table IncomingSetBinding {
-    binding: PttBinding;
-}
-table IncomingGetBinding {}
 table IncomingShutdown {}
 
-union IncomingMessageUnion { IncomingSetBinding, IncomingGetBinding, IncomingShutdown }
+union IncomingMessageUnion { IncomingShutdown }
 
 table WsMessageEvent {
     message: IncomingMessageUnion;

@@ -5,9 +5,7 @@
 export { BackendError } from './ipc-protocol/backend-error.js';
 export { CallState } from './ipc-protocol/call-state.js';
 export { ConnectionStatus } from './ipc-protocol/connection-status.js';
-export { IncomingGetBinding } from './ipc-protocol/incoming-get-binding.js';
 export { IncomingMessageUnion } from './ipc-protocol/incoming-message-union.js';
-export { IncomingSetBinding } from './ipc-protocol/incoming-set-binding.js';
 export { IncomingShutdown } from './ipc-protocol/incoming-shutdown.js';
 export { Modifier } from './ipc-protocol/modifier.js';
 export { PttBinding } from './ipc-protocol/ptt-binding.js';

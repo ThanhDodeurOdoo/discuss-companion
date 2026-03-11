@@ -11,104 +11,12 @@ pub mod ws_protocol {
 
 
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MIN_MODIFIER: u8 = 0;
-#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MAX_MODIFIER: u8 = 3;
-#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-#[allow(non_camel_case_types)]
-pub const ENUM_VALUES_MODIFIER: [Modifier; 4] = [
-  Modifier::Shift,
-  Modifier::Control,
-  Modifier::Alt,
-  Modifier::Meta,
-];
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-#[repr(transparent)]
-pub struct Modifier(pub u8);
-#[allow(non_upper_case_globals)]
-impl Modifier {
-  pub const Shift: Self = Self(0);
-  pub const Control: Self = Self(1);
-  pub const Alt: Self = Self(2);
-  pub const Meta: Self = Self(3);
-
-  pub const ENUM_MIN: u8 = 0;
-  pub const ENUM_MAX: u8 = 3;
-  pub const ENUM_VALUES: &'static [Self] = &[
-    Self::Shift,
-    Self::Control,
-    Self::Alt,
-    Self::Meta,
-  ];
-  /// Returns the variant's name or "" if unknown.
-  pub fn variant_name(self) -> Option<&'static str> {
-    match self {
-      Self::Shift => Some("Shift"),
-      Self::Control => Some("Control"),
-      Self::Alt => Some("Alt"),
-      Self::Meta => Some("Meta"),
-      _ => None,
-    }
-  }
-}
-impl ::core::fmt::Debug for Modifier {
-  fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-    if let Some(name) = self.variant_name() {
-      f.write_str(name)
-    } else {
-      f.write_fmt(format_args!("<UNKNOWN {:?}>", self.0))
-    }
-  }
-}
-impl<'a> ::flatbuffers::Follow<'a> for Modifier {
-  type Inner = Self;
-  #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    let b = unsafe { ::flatbuffers::read_scalar_at::<u8>(buf, loc) };
-    Self(b)
-  }
-}
-
-impl ::flatbuffers::Push for Modifier {
-    type Output = Modifier;
-    #[inline]
-    unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {
-        unsafe { ::flatbuffers::emplace_scalar::<u8>(dst, self.0) };
-    }
-}
-
-impl ::flatbuffers::EndianScalar for Modifier {
-  type Scalar = u8;
-  #[inline]
-  fn to_little_endian(self) -> u8 {
-    self.0.to_le()
-  }
-  #[inline]
-  #[allow(clippy::wrong_self_convention)]
-  fn from_little_endian(v: u8) -> Self {
-    let b = u8::from_le(v);
-    Self(b)
-  }
-}
-
-impl<'a> ::flatbuffers::Verifiable for Modifier {
-  #[inline]
-  fn run_verifier(
-    v: &mut ::flatbuffers::Verifier, pos: usize
-  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
-    u8::run_verifier(v, pos)
-  }
-}
-
-impl ::flatbuffers::SimpleToVerifyInSlice for Modifier {}
-#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 pub const ENUM_MIN_MESSAGE_BODY: u8 = 0;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MAX_MESSAGE_BODY: u8 = 11;
+pub const ENUM_MAX_MESSAGE_BODY: u8 = 8;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 #[allow(non_camel_case_types)]
-pub const ENUM_VALUES_MESSAGE_BODY: [MessageBody; 12] = [
+pub const ENUM_VALUES_MESSAGE_BODY: [MessageBody; 9] = [
   MessageBody::NONE,
   MessageBody::Ping,
   MessageBody::Pong,
@@ -117,9 +25,6 @@ pub const ENUM_VALUES_MESSAGE_BODY: [MessageBody; 12] = [
   MessageBody::Status,
   MessageBody::CallState,
   MessageBody::Error,
-  MessageBody::BindingInfo,
-  MessageBody::SetBinding,
-  MessageBody::GetBinding,
   MessageBody::Shutdown,
 ];
 
@@ -136,13 +41,10 @@ impl MessageBody {
   pub const Status: Self = Self(5);
   pub const CallState: Self = Self(6);
   pub const Error: Self = Self(7);
-  pub const BindingInfo: Self = Self(8);
-  pub const SetBinding: Self = Self(9);
-  pub const GetBinding: Self = Self(10);
-  pub const Shutdown: Self = Self(11);
+  pub const Shutdown: Self = Self(8);
 
   pub const ENUM_MIN: u8 = 0;
-  pub const ENUM_MAX: u8 = 11;
+  pub const ENUM_MAX: u8 = 8;
   pub const ENUM_VALUES: &'static [Self] = &[
     Self::NONE,
     Self::Ping,
@@ -152,9 +54,6 @@ impl MessageBody {
     Self::Status,
     Self::CallState,
     Self::Error,
-    Self::BindingInfo,
-    Self::SetBinding,
-    Self::GetBinding,
     Self::Shutdown,
   ];
   /// Returns the variant's name or "" if unknown.
@@ -168,9 +67,6 @@ impl MessageBody {
       Self::Status => Some("Status"),
       Self::CallState => Some("CallState"),
       Self::Error => Some("Error"),
-      Self::BindingInfo => Some("BindingInfo"),
-      Self::SetBinding => Some("SetBinding"),
-      Self::GetBinding => Some("GetBinding"),
       Self::Shutdown => Some("Shutdown"),
       _ => None,
     }
@@ -228,119 +124,6 @@ impl<'a> ::flatbuffers::Verifiable for MessageBody {
 impl ::flatbuffers::SimpleToVerifyInSlice for MessageBody {}
 pub struct MessageBodyUnionTableOffset {}
 
-pub enum KeyBindingOffset {}
-#[derive(Copy, Clone, PartialEq)]
-
-pub struct KeyBinding<'a> {
-  pub _tab: ::flatbuffers::Table<'a>,
-}
-
-impl<'a> ::flatbuffers::Follow<'a> for KeyBinding<'a> {
-  type Inner = KeyBinding<'a>;
-  #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
-  }
-}
-
-impl<'a> KeyBinding<'a> {
-  pub const VT_CODE: ::flatbuffers::VOffsetT = 4;
-  pub const VT_MODIFIERS: ::flatbuffers::VOffsetT = 6;
-
-  #[inline]
-  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
-    KeyBinding { _tab: table }
-  }
-  #[allow(unused_mut)]
-  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
-    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
-    args: &'args KeyBindingArgs<'args>
-  ) -> ::flatbuffers::WIPOffset<KeyBinding<'bldr>> {
-    let mut builder = KeyBindingBuilder::new(_fbb);
-    if let Some(x) = args.modifiers { builder.add_modifiers(x); }
-    builder.add_code(args.code);
-    builder.finish()
-  }
-
-
-  #[inline]
-  pub fn code(&self) -> u16 {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<u16>(KeyBinding::VT_CODE, Some(0)).unwrap()}
-  }
-  #[inline]
-  pub fn modifiers(&self) -> Option<::flatbuffers::Vector<'a, Modifier>> {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'a, Modifier>>>(KeyBinding::VT_MODIFIERS, None)}
-  }
-}
-
-impl ::flatbuffers::Verifiable for KeyBinding<'_> {
-  #[inline]
-  fn run_verifier(
-    v: &mut ::flatbuffers::Verifier, pos: usize
-  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
-    v.visit_table(pos)?
-     .visit_field::<u16>("code", Self::VT_CODE, false)?
-     .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, Modifier>>>("modifiers", Self::VT_MODIFIERS, false)?
-     .finish();
-    Ok(())
-  }
-}
-pub struct KeyBindingArgs<'a> {
-    pub code: u16,
-    pub modifiers: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, Modifier>>>,
-}
-impl<'a> Default for KeyBindingArgs<'a> {
-  #[inline]
-  fn default() -> Self {
-    KeyBindingArgs {
-      code: 0,
-      modifiers: None,
-    }
-  }
-}
-
-pub struct KeyBindingBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
-  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
-  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
-}
-impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> KeyBindingBuilder<'a, 'b, A> {
-  #[inline]
-  pub fn add_code(&mut self, code: u16) {
-    self.fbb_.push_slot::<u16>(KeyBinding::VT_CODE, code, 0);
-  }
-  #[inline]
-  pub fn add_modifiers(&mut self, modifiers: ::flatbuffers::WIPOffset<::flatbuffers::Vector<'b , Modifier>>) {
-    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(KeyBinding::VT_MODIFIERS, modifiers);
-  }
-  #[inline]
-  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> KeyBindingBuilder<'a, 'b, A> {
-    let start = _fbb.start_table();
-    KeyBindingBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
-  }
-  #[inline]
-  pub fn finish(self) -> ::flatbuffers::WIPOffset<KeyBinding<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    ::flatbuffers::WIPOffset::new(o.value())
-  }
-}
-
-impl ::core::fmt::Debug for KeyBinding<'_> {
-  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-    let mut ds = f.debug_struct("KeyBinding");
-      ds.field("code", &self.code());
-      ds.field("modifiers", &self.modifiers());
-      ds.finish()
-  }
-}
 pub enum PttDownOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -358,8 +141,7 @@ impl<'a> ::flatbuffers::Follow<'a> for PttDown<'a> {
 
 impl<'a> PttDown<'a> {
   pub const VT_TS: ::flatbuffers::VOffsetT = 4;
-  pub const VT_KEY: ::flatbuffers::VOffsetT = 6;
-  pub const VT_IS_REPEAT: ::flatbuffers::VOffsetT = 8;
+  pub const VT_IS_REPEAT: ::flatbuffers::VOffsetT = 6;
 
   #[inline]
   pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -368,11 +150,10 @@ impl<'a> PttDown<'a> {
   #[allow(unused_mut)]
   pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
     _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
-    args: &'args PttDownArgs<'args>
+    args: &'args PttDownArgs
   ) -> ::flatbuffers::WIPOffset<PttDown<'bldr>> {
     let mut builder = PttDownBuilder::new(_fbb);
     builder.add_ts(args.ts);
-    if let Some(x) = args.key { builder.add_key(x); }
     builder.add_is_repeat(args.is_repeat);
     builder.finish()
   }
@@ -384,13 +165,6 @@ impl<'a> PttDown<'a> {
     // Created from valid Table for this object
     // which contains a valid value in this slot
     unsafe { self._tab.get::<u64>(PttDown::VT_TS, Some(0)).unwrap()}
-  }
-  #[inline]
-  pub fn key(&self) -> Option<KeyBinding<'a>> {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<KeyBinding>>(PttDown::VT_KEY, None)}
   }
   #[inline]
   pub fn is_repeat(&self) -> bool {
@@ -408,23 +182,20 @@ impl ::flatbuffers::Verifiable for PttDown<'_> {
   ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
     v.visit_table(pos)?
      .visit_field::<u64>("ts", Self::VT_TS, false)?
-     .visit_field::<::flatbuffers::ForwardsUOffset<KeyBinding>>("key", Self::VT_KEY, false)?
      .visit_field::<bool>("is_repeat", Self::VT_IS_REPEAT, false)?
      .finish();
     Ok(())
   }
 }
-pub struct PttDownArgs<'a> {
+pub struct PttDownArgs {
     pub ts: u64,
-    pub key: Option<::flatbuffers::WIPOffset<KeyBinding<'a>>>,
     pub is_repeat: bool,
 }
-impl<'a> Default for PttDownArgs<'a> {
+impl<'a> Default for PttDownArgs {
   #[inline]
   fn default() -> Self {
     PttDownArgs {
       ts: 0,
-      key: None,
       is_repeat: false,
     }
   }
@@ -438,10 +209,6 @@ impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> PttDownBuilder<'a, 'b, A> {
   #[inline]
   pub fn add_ts(&mut self, ts: u64) {
     self.fbb_.push_slot::<u64>(PttDown::VT_TS, ts, 0);
-  }
-  #[inline]
-  pub fn add_key(&mut self, key: ::flatbuffers::WIPOffset<KeyBinding<'b >>) {
-    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<KeyBinding>>(PttDown::VT_KEY, key);
   }
   #[inline]
   pub fn add_is_repeat(&mut self, is_repeat: bool) {
@@ -466,7 +233,6 @@ impl ::core::fmt::Debug for PttDown<'_> {
   fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
     let mut ds = f.debug_struct("PttDown");
       ds.field("ts", &self.ts());
-      ds.field("key", &self.key());
       ds.field("is_repeat", &self.is_repeat());
       ds.finish()
   }
@@ -488,7 +254,6 @@ impl<'a> ::flatbuffers::Follow<'a> for PttUp<'a> {
 
 impl<'a> PttUp<'a> {
   pub const VT_TS: ::flatbuffers::VOffsetT = 4;
-  pub const VT_KEY: ::flatbuffers::VOffsetT = 6;
 
   #[inline]
   pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -497,11 +262,10 @@ impl<'a> PttUp<'a> {
   #[allow(unused_mut)]
   pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
     _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
-    args: &'args PttUpArgs<'args>
+    args: &'args PttUpArgs
   ) -> ::flatbuffers::WIPOffset<PttUp<'bldr>> {
     let mut builder = PttUpBuilder::new(_fbb);
     builder.add_ts(args.ts);
-    if let Some(x) = args.key { builder.add_key(x); }
     builder.finish()
   }
 
@@ -513,13 +277,6 @@ impl<'a> PttUp<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<u64>(PttUp::VT_TS, Some(0)).unwrap()}
   }
-  #[inline]
-  pub fn key(&self) -> Option<KeyBinding<'a>> {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<KeyBinding>>(PttUp::VT_KEY, None)}
-  }
 }
 
 impl ::flatbuffers::Verifiable for PttUp<'_> {
@@ -529,21 +286,18 @@ impl ::flatbuffers::Verifiable for PttUp<'_> {
   ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
     v.visit_table(pos)?
      .visit_field::<u64>("ts", Self::VT_TS, false)?
-     .visit_field::<::flatbuffers::ForwardsUOffset<KeyBinding>>("key", Self::VT_KEY, false)?
      .finish();
     Ok(())
   }
 }
-pub struct PttUpArgs<'a> {
+pub struct PttUpArgs {
     pub ts: u64,
-    pub key: Option<::flatbuffers::WIPOffset<KeyBinding<'a>>>,
 }
-impl<'a> Default for PttUpArgs<'a> {
+impl<'a> Default for PttUpArgs {
   #[inline]
   fn default() -> Self {
     PttUpArgs {
       ts: 0,
-      key: None,
     }
   }
 }
@@ -556,10 +310,6 @@ impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> PttUpBuilder<'a, 'b, A> {
   #[inline]
   pub fn add_ts(&mut self, ts: u64) {
     self.fbb_.push_slot::<u64>(PttUp::VT_TS, ts, 0);
-  }
-  #[inline]
-  pub fn add_key(&mut self, key: ::flatbuffers::WIPOffset<KeyBinding<'b >>) {
-    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<KeyBinding>>(PttUp::VT_KEY, key);
   }
   #[inline]
   pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> PttUpBuilder<'a, 'b, A> {
@@ -580,7 +330,6 @@ impl ::core::fmt::Debug for PttUp<'_> {
   fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
     let mut ds = f.debug_struct("PttUp");
       ds.field("ts", &self.ts());
-      ds.field("key", &self.key());
       ds.finish()
   }
 }
@@ -1199,293 +948,6 @@ impl ::core::fmt::Debug for Error<'_> {
       ds.finish()
   }
 }
-pub enum BindingInfoOffset {}
-#[derive(Copy, Clone, PartialEq)]
-
-pub struct BindingInfo<'a> {
-  pub _tab: ::flatbuffers::Table<'a>,
-}
-
-impl<'a> ::flatbuffers::Follow<'a> for BindingInfo<'a> {
-  type Inner = BindingInfo<'a>;
-  #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
-  }
-}
-
-impl<'a> BindingInfo<'a> {
-  pub const VT_TS: ::flatbuffers::VOffsetT = 4;
-  pub const VT_BINDING: ::flatbuffers::VOffsetT = 6;
-
-  #[inline]
-  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
-    BindingInfo { _tab: table }
-  }
-  #[allow(unused_mut)]
-  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
-    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
-    args: &'args BindingInfoArgs<'args>
-  ) -> ::flatbuffers::WIPOffset<BindingInfo<'bldr>> {
-    let mut builder = BindingInfoBuilder::new(_fbb);
-    builder.add_ts(args.ts);
-    if let Some(x) = args.binding { builder.add_binding(x); }
-    builder.finish()
-  }
-
-
-  #[inline]
-  pub fn ts(&self) -> u64 {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<u64>(BindingInfo::VT_TS, Some(0)).unwrap()}
-  }
-  #[inline]
-  pub fn binding(&self) -> Option<KeyBinding<'a>> {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<KeyBinding>>(BindingInfo::VT_BINDING, None)}
-  }
-}
-
-impl ::flatbuffers::Verifiable for BindingInfo<'_> {
-  #[inline]
-  fn run_verifier(
-    v: &mut ::flatbuffers::Verifier, pos: usize
-  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
-    v.visit_table(pos)?
-     .visit_field::<u64>("ts", Self::VT_TS, false)?
-     .visit_field::<::flatbuffers::ForwardsUOffset<KeyBinding>>("binding", Self::VT_BINDING, false)?
-     .finish();
-    Ok(())
-  }
-}
-pub struct BindingInfoArgs<'a> {
-    pub ts: u64,
-    pub binding: Option<::flatbuffers::WIPOffset<KeyBinding<'a>>>,
-}
-impl<'a> Default for BindingInfoArgs<'a> {
-  #[inline]
-  fn default() -> Self {
-    BindingInfoArgs {
-      ts: 0,
-      binding: None,
-    }
-  }
-}
-
-pub struct BindingInfoBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
-  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
-  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
-}
-impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> BindingInfoBuilder<'a, 'b, A> {
-  #[inline]
-  pub fn add_ts(&mut self, ts: u64) {
-    self.fbb_.push_slot::<u64>(BindingInfo::VT_TS, ts, 0);
-  }
-  #[inline]
-  pub fn add_binding(&mut self, binding: ::flatbuffers::WIPOffset<KeyBinding<'b >>) {
-    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<KeyBinding>>(BindingInfo::VT_BINDING, binding);
-  }
-  #[inline]
-  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> BindingInfoBuilder<'a, 'b, A> {
-    let start = _fbb.start_table();
-    BindingInfoBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
-  }
-  #[inline]
-  pub fn finish(self) -> ::flatbuffers::WIPOffset<BindingInfo<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    ::flatbuffers::WIPOffset::new(o.value())
-  }
-}
-
-impl ::core::fmt::Debug for BindingInfo<'_> {
-  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-    let mut ds = f.debug_struct("BindingInfo");
-      ds.field("ts", &self.ts());
-      ds.field("binding", &self.binding());
-      ds.finish()
-  }
-}
-pub enum SetBindingOffset {}
-#[derive(Copy, Clone, PartialEq)]
-
-pub struct SetBinding<'a> {
-  pub _tab: ::flatbuffers::Table<'a>,
-}
-
-impl<'a> ::flatbuffers::Follow<'a> for SetBinding<'a> {
-  type Inner = SetBinding<'a>;
-  #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
-  }
-}
-
-impl<'a> SetBinding<'a> {
-  pub const VT_BINDING: ::flatbuffers::VOffsetT = 4;
-
-  #[inline]
-  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
-    SetBinding { _tab: table }
-  }
-  #[allow(unused_mut)]
-  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
-    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
-    args: &'args SetBindingArgs<'args>
-  ) -> ::flatbuffers::WIPOffset<SetBinding<'bldr>> {
-    let mut builder = SetBindingBuilder::new(_fbb);
-    if let Some(x) = args.binding { builder.add_binding(x); }
-    builder.finish()
-  }
-
-
-  #[inline]
-  pub fn binding(&self) -> Option<KeyBinding<'a>> {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<KeyBinding>>(SetBinding::VT_BINDING, None)}
-  }
-}
-
-impl ::flatbuffers::Verifiable for SetBinding<'_> {
-  #[inline]
-  fn run_verifier(
-    v: &mut ::flatbuffers::Verifier, pos: usize
-  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
-    v.visit_table(pos)?
-     .visit_field::<::flatbuffers::ForwardsUOffset<KeyBinding>>("binding", Self::VT_BINDING, false)?
-     .finish();
-    Ok(())
-  }
-}
-pub struct SetBindingArgs<'a> {
-    pub binding: Option<::flatbuffers::WIPOffset<KeyBinding<'a>>>,
-}
-impl<'a> Default for SetBindingArgs<'a> {
-  #[inline]
-  fn default() -> Self {
-    SetBindingArgs {
-      binding: None,
-    }
-  }
-}
-
-pub struct SetBindingBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
-  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
-  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
-}
-impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> SetBindingBuilder<'a, 'b, A> {
-  #[inline]
-  pub fn add_binding(&mut self, binding: ::flatbuffers::WIPOffset<KeyBinding<'b >>) {
-    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<KeyBinding>>(SetBinding::VT_BINDING, binding);
-  }
-  #[inline]
-  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> SetBindingBuilder<'a, 'b, A> {
-    let start = _fbb.start_table();
-    SetBindingBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
-  }
-  #[inline]
-  pub fn finish(self) -> ::flatbuffers::WIPOffset<SetBinding<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    ::flatbuffers::WIPOffset::new(o.value())
-  }
-}
-
-impl ::core::fmt::Debug for SetBinding<'_> {
-  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-    let mut ds = f.debug_struct("SetBinding");
-      ds.field("binding", &self.binding());
-      ds.finish()
-  }
-}
-pub enum GetBindingOffset {}
-#[derive(Copy, Clone, PartialEq)]
-
-pub struct GetBinding<'a> {
-  pub _tab: ::flatbuffers::Table<'a>,
-}
-
-impl<'a> ::flatbuffers::Follow<'a> for GetBinding<'a> {
-  type Inner = GetBinding<'a>;
-  #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
-  }
-}
-
-impl<'a> GetBinding<'a> {
-
-  #[inline]
-  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
-    GetBinding { _tab: table }
-  }
-  #[allow(unused_mut)]
-  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
-    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
-    _args: &'args GetBindingArgs
-  ) -> ::flatbuffers::WIPOffset<GetBinding<'bldr>> {
-    let mut builder = GetBindingBuilder::new(_fbb);
-    builder.finish()
-  }
-
-}
-
-impl ::flatbuffers::Verifiable for GetBinding<'_> {
-  #[inline]
-  fn run_verifier(
-    v: &mut ::flatbuffers::Verifier, pos: usize
-  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
-    v.visit_table(pos)?
-     .finish();
-    Ok(())
-  }
-}
-pub struct GetBindingArgs {
-}
-impl<'a> Default for GetBindingArgs {
-  #[inline]
-  fn default() -> Self {
-    GetBindingArgs {
-    }
-  }
-}
-
-pub struct GetBindingBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
-  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
-  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
-}
-impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> GetBindingBuilder<'a, 'b, A> {
-  #[inline]
-  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> GetBindingBuilder<'a, 'b, A> {
-    let start = _fbb.start_table();
-    GetBindingBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
-  }
-  #[inline]
-  pub fn finish(self) -> ::flatbuffers::WIPOffset<GetBinding<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    ::flatbuffers::WIPOffset::new(o.value())
-  }
-}
-
-impl ::core::fmt::Debug for GetBinding<'_> {
-  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-    let mut ds = f.debug_struct("GetBinding");
-      ds.finish()
-  }
-}
 pub enum ShutdownOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -1720,51 +1182,6 @@ impl<'a> Message<'a> {
 
   #[inline]
   #[allow(non_snake_case)]
-  pub fn body_as_binding_info(&self) -> Option<BindingInfo<'a>> {
-    if self.body_type() == MessageBody::BindingInfo {
-      self.body().map(|t| {
-       // Safety:
-       // Created from a valid Table for this object
-       // Which contains a valid union in this slot
-       unsafe { BindingInfo::init_from_table(t) }
-     })
-    } else {
-      None
-    }
-  }
-
-  #[inline]
-  #[allow(non_snake_case)]
-  pub fn body_as_set_binding(&self) -> Option<SetBinding<'a>> {
-    if self.body_type() == MessageBody::SetBinding {
-      self.body().map(|t| {
-       // Safety:
-       // Created from a valid Table for this object
-       // Which contains a valid union in this slot
-       unsafe { SetBinding::init_from_table(t) }
-     })
-    } else {
-      None
-    }
-  }
-
-  #[inline]
-  #[allow(non_snake_case)]
-  pub fn body_as_get_binding(&self) -> Option<GetBinding<'a>> {
-    if self.body_type() == MessageBody::GetBinding {
-      self.body().map(|t| {
-       // Safety:
-       // Created from a valid Table for this object
-       // Which contains a valid union in this slot
-       unsafe { GetBinding::init_from_table(t) }
-     })
-    } else {
-      None
-    }
-  }
-
-  #[inline]
-  #[allow(non_snake_case)]
   pub fn body_as_shutdown(&self) -> Option<Shutdown<'a>> {
     if self.body_type() == MessageBody::Shutdown {
       self.body().map(|t| {
@@ -1795,9 +1212,6 @@ impl ::flatbuffers::Verifiable for Message<'_> {
           MessageBody::Status => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<Status>>("MessageBody::Status", pos),
           MessageBody::CallState => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<CallState>>("MessageBody::CallState", pos),
           MessageBody::Error => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<Error>>("MessageBody::Error", pos),
-          MessageBody::BindingInfo => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<BindingInfo>>("MessageBody::BindingInfo", pos),
-          MessageBody::SetBinding => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<SetBinding>>("MessageBody::SetBinding", pos),
-          MessageBody::GetBinding => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<GetBinding>>("MessageBody::GetBinding", pos),
           MessageBody::Shutdown => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<Shutdown>>("MessageBody::Shutdown", pos),
           _ => Ok(()),
         }
@@ -1897,27 +1311,6 @@ impl ::core::fmt::Debug for Message<'_> {
         },
         MessageBody::Error => {
           if let Some(x) = self.body_as_error() {
-            ds.field("body", &x)
-          } else {
-            ds.field("body", &"InvalidFlatbuffer: Union discriminant does not match value.")
-          }
-        },
-        MessageBody::BindingInfo => {
-          if let Some(x) = self.body_as_binding_info() {
-            ds.field("body", &x)
-          } else {
-            ds.field("body", &"InvalidFlatbuffer: Union discriminant does not match value.")
-          }
-        },
-        MessageBody::SetBinding => {
-          if let Some(x) = self.body_as_set_binding() {
-            ds.field("body", &x)
-          } else {
-            ds.field("body", &"InvalidFlatbuffer: Union discriminant does not match value.")
-          }
-        },
-        MessageBody::GetBinding => {
-          if let Some(x) = self.body_as_get_binding() {
             ds.field("body", &x)
           } else {
             ds.field("body", &"InvalidFlatbuffer: Union discriminant does not match value.")

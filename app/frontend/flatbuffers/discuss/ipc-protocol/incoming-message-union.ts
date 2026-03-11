@@ -2,26 +2,20 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import { IncomingGetBinding } from '../../discuss/ipc-protocol/incoming-get-binding.js';
-import { IncomingSetBinding } from '../../discuss/ipc-protocol/incoming-set-binding.js';
 import { IncomingShutdown } from '../../discuss/ipc-protocol/incoming-shutdown.js';
 
 
 export enum IncomingMessageUnion {
   NONE = 0,
-  IncomingSetBinding = 1,
-  IncomingGetBinding = 2,
-  IncomingShutdown = 3
+  IncomingShutdown = 1
 }
 
 export function unionToIncomingMessageUnion(
   type: IncomingMessageUnion,
-  accessor: (obj:IncomingGetBinding|IncomingSetBinding|IncomingShutdown) => IncomingGetBinding|IncomingSetBinding|IncomingShutdown|null
-): IncomingGetBinding|IncomingSetBinding|IncomingShutdown|null {
+  accessor: (obj:IncomingShutdown) => IncomingShutdown|null
+): IncomingShutdown|null {
   switch(IncomingMessageUnion[type]) {
     case 'NONE': return null; 
-    case 'IncomingSetBinding': return accessor(new IncomingSetBinding())! as IncomingSetBinding;
-    case 'IncomingGetBinding': return accessor(new IncomingGetBinding())! as IncomingGetBinding;
     case 'IncomingShutdown': return accessor(new IncomingShutdown())! as IncomingShutdown;
     default: return null;
   }
@@ -29,13 +23,11 @@ export function unionToIncomingMessageUnion(
 
 export function unionListToIncomingMessageUnion(
   type: IncomingMessageUnion, 
-  accessor: (index: number, obj:IncomingGetBinding|IncomingSetBinding|IncomingShutdown) => IncomingGetBinding|IncomingSetBinding|IncomingShutdown|null, 
+  accessor: (index: number, obj:IncomingShutdown) => IncomingShutdown|null, 
   index: number
-): IncomingGetBinding|IncomingSetBinding|IncomingShutdown|null {
+): IncomingShutdown|null {
   switch(IncomingMessageUnion[type]) {
     case 'NONE': return null; 
-    case 'IncomingSetBinding': return accessor(index, new IncomingSetBinding())! as IncomingSetBinding;
-    case 'IncomingGetBinding': return accessor(index, new IncomingGetBinding())! as IncomingGetBinding;
     case 'IncomingShutdown': return accessor(index, new IncomingShutdown())! as IncomingShutdown;
     default: return null;
   }
