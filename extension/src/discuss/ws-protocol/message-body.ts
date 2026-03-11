@@ -2,17 +2,14 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
-import { BindingInfo } from '@extension/src/discuss/ws-protocol/binding-info.js';
-import { CallState } from '@extension/src/discuss/ws-protocol/call-state.js';
-import { Error } from '@extension/src/discuss/ws-protocol/error.js';
-import { GetBinding } from '@extension/src/discuss/ws-protocol/get-binding.js';
-import { Ping } from '@extension/src/discuss/ws-protocol/ping.js';
-import { Pong } from '@extension/src/discuss/ws-protocol/pong.js';
-import { PttDown } from '@extension/src/discuss/ws-protocol/ptt-down.js';
-import { PttUp } from '@extension/src/discuss/ws-protocol/ptt-up.js';
-import { SetBinding } from '@extension/src/discuss/ws-protocol/set-binding.js';
-import { Shutdown } from '@extension/src/discuss/ws-protocol/shutdown.js';
-import { Status } from '@extension/src/discuss/ws-protocol/status.js';
+import { CallState } from '../../discuss/ws-protocol/call-state.js';
+import { Error } from '../../discuss/ws-protocol/error.js';
+import { Ping } from '../../discuss/ws-protocol/ping.js';
+import { Pong } from '../../discuss/ws-protocol/pong.js';
+import { PttDown } from '../../discuss/ws-protocol/ptt-down.js';
+import { PttUp } from '../../discuss/ws-protocol/ptt-up.js';
+import { Shutdown } from '../../discuss/ws-protocol/shutdown.js';
+import { Status } from '../../discuss/ws-protocol/status.js';
 
 
 export enum MessageBody {
@@ -24,16 +21,13 @@ export enum MessageBody {
   Status = 5,
   CallState = 6,
   Error = 7,
-  BindingInfo = 8,
-  SetBinding = 9,
-  GetBinding = 10,
-  Shutdown = 11
+  Shutdown = 8
 }
 
 export function unionToMessageBody(
   type: MessageBody,
-  accessor: (obj:BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status) => BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null
-): BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null {
+  accessor: (obj:CallState|Error|Ping|Pong|PttDown|PttUp|Shutdown|Status) => CallState|Error|Ping|Pong|PttDown|PttUp|Shutdown|Status|null
+): CallState|Error|Ping|Pong|PttDown|PttUp|Shutdown|Status|null {
   switch(MessageBody[type]) {
     case 'NONE': return null; 
     case 'Ping': return accessor(new Ping())! as Ping;
@@ -43,9 +37,6 @@ export function unionToMessageBody(
     case 'Status': return accessor(new Status())! as Status;
     case 'CallState': return accessor(new CallState())! as CallState;
     case 'Error': return accessor(new Error())! as Error;
-    case 'BindingInfo': return accessor(new BindingInfo())! as BindingInfo;
-    case 'SetBinding': return accessor(new SetBinding())! as SetBinding;
-    case 'GetBinding': return accessor(new GetBinding())! as GetBinding;
     case 'Shutdown': return accessor(new Shutdown())! as Shutdown;
     default: return null;
   }
@@ -53,9 +44,9 @@ export function unionToMessageBody(
 
 export function unionListToMessageBody(
   type: MessageBody, 
-  accessor: (index: number, obj:BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status) => BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null, 
+  accessor: (index: number, obj:CallState|Error|Ping|Pong|PttDown|PttUp|Shutdown|Status) => CallState|Error|Ping|Pong|PttDown|PttUp|Shutdown|Status|null, 
   index: number
-): BindingInfo|CallState|Error|GetBinding|Ping|Pong|PttDown|PttUp|SetBinding|Shutdown|Status|null {
+): CallState|Error|Ping|Pong|PttDown|PttUp|Shutdown|Status|null {
   switch(MessageBody[type]) {
     case 'NONE': return null; 
     case 'Ping': return accessor(index, new Ping())! as Ping;
@@ -65,9 +56,6 @@ export function unionListToMessageBody(
     case 'Status': return accessor(index, new Status())! as Status;
     case 'CallState': return accessor(index, new CallState())! as CallState;
     case 'Error': return accessor(index, new Error())! as Error;
-    case 'BindingInfo': return accessor(index, new BindingInfo())! as BindingInfo;
-    case 'SetBinding': return accessor(index, new SetBinding())! as SetBinding;
-    case 'GetBinding': return accessor(index, new GetBinding())! as GetBinding;
     case 'Shutdown': return accessor(index, new Shutdown())! as Shutdown;
     default: return null;
   }

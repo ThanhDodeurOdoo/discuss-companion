@@ -21,8 +21,8 @@ use crate::{
     },
     interface::tray,
     protocol::{
-        CallState, IncomingMessage, KeyBinding, Modifier, OutgoingMessage, current_timestamp,
-        encode_call_state, encode_ws_connection,
+        CallState, OutgoingMessage, current_timestamp, encode_call_state, encode_ws_connection,
+        encode_ws_shutdown_event,
     },
 };
 
@@ -169,35 +169,11 @@ async fn handle_connection<R: tauri::Runtime>(
                                             error!("Error sending pong to {}: {}", addr, e);
                                         }
                                     }
-                                    ws_protocol::MessageBody::SetBinding => {
-                                        if let Some(binding_table) = message.body_as_set_binding()
-                                            && let Some(key) = binding_table.binding()
-                                        {
-                                            let modifiers = key.modifiers().map(|m| m.iter().map(Modifier::from).collect()).unwrap_or_default();
-                                            let binding = KeyBinding {
-                                                code: key.code(),
-                                                modifiers,
-                                            };
-                                            let incoming = IncomingMessage::SetBinding { binding };
-                                            if is_current_server(server_id) {
-                                                let payload = incoming.to_ipc_flatbuffer();
-                                                send_to_frontend(&app_handle, &payload);
-                                            }
-                                        }
-                                    }
-                                    ws_protocol::MessageBody::GetBinding => {
-                                         let incoming = IncomingMessage::GetBinding;
-                                         if is_current_server(server_id) {
-                                         let payload = incoming.to_ipc_flatbuffer();
-                                         send_to_frontend(&app_handle, &payload);
-                                         }
-                                    }
                                     ws_protocol::MessageBody::Shutdown => {
-                                         let incoming = IncomingMessage::Shutdown;
-                                         if is_current_server(server_id) {
-                                         let payload = incoming.to_ipc_flatbuffer();
-                                         send_to_frontend(&app_handle, &payload);
-                                         }
+                                        if is_current_server(server_id) {
+                                            let payload = encode_ws_shutdown_event();
+                                            send_to_frontend(&app_handle, &payload);
+                                        }
                                     }
                                     ws_protocol::MessageBody::CallState => {
                                         if let Some(call_state) = message.body_as_call_state() {

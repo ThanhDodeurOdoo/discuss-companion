@@ -158,39 +158,6 @@ impl<'de> Deserialize<'de> for Modifier {
     }
 }
 
-impl From<Modifier> for ws_protocol::Modifier {
-    fn from(m: Modifier) -> Self {
-        match m {
-            Modifier::Shift => Self::Shift,
-            Modifier::Control => Self::Control,
-            Modifier::Alt => Self::Alt,
-            Modifier::Meta => Self::Meta,
-        }
-    }
-}
-
-impl From<ws_protocol::Modifier> for Modifier {
-    #[allow(
-        clippy::match_same_arms,
-        reason = "shift is a valid default for unknown variants"
-    )]
-    fn from(m: ws_protocol::Modifier) -> Self {
-        match m {
-            ws_protocol::Modifier::Shift => Self::Shift,
-            ws_protocol::Modifier::Control => Self::Control,
-            ws_protocol::Modifier::Alt => Self::Alt,
-            ws_protocol::Modifier::Meta => Self::Meta,
-            other => {
-                warn!(
-                    "Unknown ws_protocol::Modifier variant {:?}, defaulting to Shift",
-                    other
-                );
-                Self::Shift
-            }
-        }
-    }
-}
-
 impl From<ipc_protocol::Modifier> for Modifier {
     #[allow(
         clippy::match_same_arms,

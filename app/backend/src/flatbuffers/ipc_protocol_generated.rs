@@ -189,13 +189,11 @@ impl ::flatbuffers::SimpleToVerifyInSlice for ConnectionStatus {}
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 pub const ENUM_MIN_INCOMING_MESSAGE_UNION: u8 = 0;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MAX_INCOMING_MESSAGE_UNION: u8 = 3;
+pub const ENUM_MAX_INCOMING_MESSAGE_UNION: u8 = 1;
 #[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
 #[allow(non_camel_case_types)]
-pub const ENUM_VALUES_INCOMING_MESSAGE_UNION: [IncomingMessageUnion; 4] = [
+pub const ENUM_VALUES_INCOMING_MESSAGE_UNION: [IncomingMessageUnion; 2] = [
   IncomingMessageUnion::NONE,
-  IncomingMessageUnion::IncomingSetBinding,
-  IncomingMessageUnion::IncomingGetBinding,
   IncomingMessageUnion::IncomingShutdown,
 ];
 
@@ -205,24 +203,18 @@ pub struct IncomingMessageUnion(pub u8);
 #[allow(non_upper_case_globals)]
 impl IncomingMessageUnion {
   pub const NONE: Self = Self(0);
-  pub const IncomingSetBinding: Self = Self(1);
-  pub const IncomingGetBinding: Self = Self(2);
-  pub const IncomingShutdown: Self = Self(3);
+  pub const IncomingShutdown: Self = Self(1);
 
   pub const ENUM_MIN: u8 = 0;
-  pub const ENUM_MAX: u8 = 3;
+  pub const ENUM_MAX: u8 = 1;
   pub const ENUM_VALUES: &'static [Self] = &[
     Self::NONE,
-    Self::IncomingSetBinding,
-    Self::IncomingGetBinding,
     Self::IncomingShutdown,
   ];
   /// Returns the variant's name or "" if unknown.
   pub fn variant_name(self) -> Option<&'static str> {
     match self {
       Self::NONE => Some("NONE"),
-      Self::IncomingSetBinding => Some("IncomingSetBinding"),
-      Self::IncomingGetBinding => Some("IncomingGetBinding"),
       Self::IncomingShutdown => Some("IncomingShutdown"),
       _ => None,
     }
@@ -975,180 +967,6 @@ impl ::core::fmt::Debug for WsMessage<'_> {
       ds.finish()
   }
 }
-pub enum IncomingSetBindingOffset {}
-#[derive(Copy, Clone, PartialEq)]
-
-pub struct IncomingSetBinding<'a> {
-  pub _tab: ::flatbuffers::Table<'a>,
-}
-
-impl<'a> ::flatbuffers::Follow<'a> for IncomingSetBinding<'a> {
-  type Inner = IncomingSetBinding<'a>;
-  #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
-  }
-}
-
-impl<'a> IncomingSetBinding<'a> {
-  pub const VT_BINDING: ::flatbuffers::VOffsetT = 4;
-
-  #[inline]
-  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
-    IncomingSetBinding { _tab: table }
-  }
-  #[allow(unused_mut)]
-  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
-    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
-    args: &'args IncomingSetBindingArgs<'args>
-  ) -> ::flatbuffers::WIPOffset<IncomingSetBinding<'bldr>> {
-    let mut builder = IncomingSetBindingBuilder::new(_fbb);
-    if let Some(x) = args.binding { builder.add_binding(x); }
-    builder.finish()
-  }
-
-
-  #[inline]
-  pub fn binding(&self) -> Option<PttBinding<'a>> {
-    // Safety:
-    // Created from valid Table for this object
-    // which contains a valid value in this slot
-    unsafe { self._tab.get::<::flatbuffers::ForwardsUOffset<PttBinding>>(IncomingSetBinding::VT_BINDING, None)}
-  }
-}
-
-impl ::flatbuffers::Verifiable for IncomingSetBinding<'_> {
-  #[inline]
-  fn run_verifier(
-    v: &mut ::flatbuffers::Verifier, pos: usize
-  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
-    v.visit_table(pos)?
-     .visit_field::<::flatbuffers::ForwardsUOffset<PttBinding>>("binding", Self::VT_BINDING, false)?
-     .finish();
-    Ok(())
-  }
-}
-pub struct IncomingSetBindingArgs<'a> {
-    pub binding: Option<::flatbuffers::WIPOffset<PttBinding<'a>>>,
-}
-impl<'a> Default for IncomingSetBindingArgs<'a> {
-  #[inline]
-  fn default() -> Self {
-    IncomingSetBindingArgs {
-      binding: None,
-    }
-  }
-}
-
-pub struct IncomingSetBindingBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
-  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
-  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
-}
-impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> IncomingSetBindingBuilder<'a, 'b, A> {
-  #[inline]
-  pub fn add_binding(&mut self, binding: ::flatbuffers::WIPOffset<PttBinding<'b >>) {
-    self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<PttBinding>>(IncomingSetBinding::VT_BINDING, binding);
-  }
-  #[inline]
-  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> IncomingSetBindingBuilder<'a, 'b, A> {
-    let start = _fbb.start_table();
-    IncomingSetBindingBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
-  }
-  #[inline]
-  pub fn finish(self) -> ::flatbuffers::WIPOffset<IncomingSetBinding<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    ::flatbuffers::WIPOffset::new(o.value())
-  }
-}
-
-impl ::core::fmt::Debug for IncomingSetBinding<'_> {
-  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-    let mut ds = f.debug_struct("IncomingSetBinding");
-      ds.field("binding", &self.binding());
-      ds.finish()
-  }
-}
-pub enum IncomingGetBindingOffset {}
-#[derive(Copy, Clone, PartialEq)]
-
-pub struct IncomingGetBinding<'a> {
-  pub _tab: ::flatbuffers::Table<'a>,
-}
-
-impl<'a> ::flatbuffers::Follow<'a> for IncomingGetBinding<'a> {
-  type Inner = IncomingGetBinding<'a>;
-  #[inline]
-  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: unsafe { ::flatbuffers::Table::new(buf, loc) } }
-  }
-}
-
-impl<'a> IncomingGetBinding<'a> {
-
-  #[inline]
-  pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
-    IncomingGetBinding { _tab: table }
-  }
-  #[allow(unused_mut)]
-  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: ::flatbuffers::Allocator + 'bldr>(
-    _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
-    _args: &'args IncomingGetBindingArgs
-  ) -> ::flatbuffers::WIPOffset<IncomingGetBinding<'bldr>> {
-    let mut builder = IncomingGetBindingBuilder::new(_fbb);
-    builder.finish()
-  }
-
-}
-
-impl ::flatbuffers::Verifiable for IncomingGetBinding<'_> {
-  #[inline]
-  fn run_verifier(
-    v: &mut ::flatbuffers::Verifier, pos: usize
-  ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
-    v.visit_table(pos)?
-     .finish();
-    Ok(())
-  }
-}
-pub struct IncomingGetBindingArgs {
-}
-impl<'a> Default for IncomingGetBindingArgs {
-  #[inline]
-  fn default() -> Self {
-    IncomingGetBindingArgs {
-    }
-  }
-}
-
-pub struct IncomingGetBindingBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
-  fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
-  start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
-}
-impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> IncomingGetBindingBuilder<'a, 'b, A> {
-  #[inline]
-  pub fn new(_fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>) -> IncomingGetBindingBuilder<'a, 'b, A> {
-    let start = _fbb.start_table();
-    IncomingGetBindingBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
-  }
-  #[inline]
-  pub fn finish(self) -> ::flatbuffers::WIPOffset<IncomingGetBinding<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    ::flatbuffers::WIPOffset::new(o.value())
-  }
-}
-
-impl ::core::fmt::Debug for IncomingGetBinding<'_> {
-  fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-    let mut ds = f.debug_struct("IncomingGetBinding");
-      ds.finish()
-  }
-}
 pub enum IncomingShutdownOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -1278,36 +1096,6 @@ impl<'a> WsMessageEvent<'a> {
   }
   #[inline]
   #[allow(non_snake_case)]
-  pub fn message_as_incoming_set_binding(&self) -> Option<IncomingSetBinding<'a>> {
-    if self.message_type() == IncomingMessageUnion::IncomingSetBinding {
-      self.message().map(|t| {
-       // Safety:
-       // Created from a valid Table for this object
-       // Which contains a valid union in this slot
-       unsafe { IncomingSetBinding::init_from_table(t) }
-     })
-    } else {
-      None
-    }
-  }
-
-  #[inline]
-  #[allow(non_snake_case)]
-  pub fn message_as_incoming_get_binding(&self) -> Option<IncomingGetBinding<'a>> {
-    if self.message_type() == IncomingMessageUnion::IncomingGetBinding {
-      self.message().map(|t| {
-       // Safety:
-       // Created from a valid Table for this object
-       // Which contains a valid union in this slot
-       unsafe { IncomingGetBinding::init_from_table(t) }
-     })
-    } else {
-      None
-    }
-  }
-
-  #[inline]
-  #[allow(non_snake_case)]
   pub fn message_as_incoming_shutdown(&self) -> Option<IncomingShutdown<'a>> {
     if self.message_type() == IncomingMessageUnion::IncomingShutdown {
       self.message().map(|t| {
@@ -1331,8 +1119,6 @@ impl ::flatbuffers::Verifiable for WsMessageEvent<'_> {
     v.visit_table(pos)?
      .visit_union::<IncomingMessageUnion, _>("message_type", Self::VT_MESSAGE_TYPE, "message", Self::VT_MESSAGE, false, |key, v, pos| {
         match key {
-          IncomingMessageUnion::IncomingSetBinding => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<IncomingSetBinding>>("IncomingMessageUnion::IncomingSetBinding", pos),
-          IncomingMessageUnion::IncomingGetBinding => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<IncomingGetBinding>>("IncomingMessageUnion::IncomingGetBinding", pos),
           IncomingMessageUnion::IncomingShutdown => v.verify_union_variant::<::flatbuffers::ForwardsUOffset<IncomingShutdown>>("IncomingMessageUnion::IncomingShutdown", pos),
           _ => Ok(()),
         }
@@ -1388,20 +1174,6 @@ impl ::core::fmt::Debug for WsMessageEvent<'_> {
     let mut ds = f.debug_struct("WsMessageEvent");
       ds.field("message_type", &self.message_type());
       match self.message_type() {
-        IncomingMessageUnion::IncomingSetBinding => {
-          if let Some(x) = self.message_as_incoming_set_binding() {
-            ds.field("message", &x)
-          } else {
-            ds.field("message", &"InvalidFlatbuffer: Union discriminant does not match value.")
-          }
-        },
-        IncomingMessageUnion::IncomingGetBinding => {
-          if let Some(x) = self.message_as_incoming_get_binding() {
-            ds.field("message", &x)
-          } else {
-            ds.field("message", &"InvalidFlatbuffer: Union discriminant does not match value.")
-          }
-        },
         IncomingMessageUnion::IncomingShutdown => {
           if let Some(x) = self.message_as_incoming_shutdown() {
             ds.field("message", &x)

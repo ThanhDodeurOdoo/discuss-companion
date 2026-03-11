@@ -1,21 +1,12 @@
 namespace Discuss.WsProtocol;
 
-enum Modifier : ubyte { Shift, Control, Alt, Meta }
-
-table KeyBinding {
-  code: ushort;
-  modifiers: [Modifier];
-}
-
 table PttDown {
   ts: ulong;
-  key: KeyBinding;
   is_repeat: bool;
 }
 
 table PttUp {
   ts: ulong;
-  key: KeyBinding;
 }
 
 table Ping {}
@@ -44,17 +35,6 @@ table Error {
   message: string;
 }
 
-table BindingInfo {
-  ts: ulong;
-  binding: KeyBinding;
-}
-
-table SetBinding {
-  binding: KeyBinding;
-}
-
-table GetBinding {}
-
 table Shutdown {}
 
 union MessageBody {
@@ -65,9 +45,6 @@ union MessageBody {
   Status,
   CallState,
   Error,
-  BindingInfo,
-  SetBinding,
-  GetBinding,
   Shutdown
 }
 
