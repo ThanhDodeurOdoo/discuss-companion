@@ -16,14 +16,9 @@ use tracing::{error, info};
 use crate::interface::dock_menu;
 use crate::{
     WsState,
-    flatbuffers::{
-        ipc_protocol_generated::discuss::ipc_protocol, ws_protocol_generated::discuss::ws_protocol,
-    },
+    flatbuffers::ws_protocol_generated::discuss::ws_protocol,
     interface::tray,
-    protocol::{
-        CallState, OutgoingMessage, current_timestamp, encode_call_state, encode_ws_connection,
-        encode_ws_shutdown_event,
-    },
+    protocol::{self, CallState, current_timestamp},
 };
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -135,7 +130,8 @@ async fn handle_connection<R: tauri::Runtime>(
     };
 
     if is_current_server(server_id) {
-        let payload = encode_ws_connection(ipc_protocol::ConnectionStatus::Connected);
+        let payload =
+            protocol::ipc::encode_ws_connection(protocol::ipc::ConnectionStatus::Connected);
         send_to_frontend(&app_handle, &payload);
     }
 
@@ -163,7 +159,8 @@ async fn handle_connection<R: tauri::Runtime>(
                             Ok(message) => {
                                 match message.body_type() {
                                     ws_protocol::MessageBody::Ping => {
-                                        let pong = OutgoingMessage::Pong { ts: current_timestamp() };
+                                        let pong =
+                                            protocol::ws::OutgoingMessage::Pong { ts: current_timestamp() };
                                         let bin = pong.to_flatbuffer();
                                         if let Err(e) = ws_sender.send(Message::Binary(bin.into())).await {
                                             error!("Error sending pong to {}: {}", addr, e);
@@ -171,7 +168,7 @@ async fn handle_connection<R: tauri::Runtime>(
                                     }
                                     ws_protocol::MessageBody::Shutdown => {
                                         if is_current_server(server_id) {
-                                            let payload = encode_ws_shutdown_event();
+                                            let payload = protocol::ipc::encode_ws_shutdown_event();
                                             send_to_frontend(&app_handle, &payload);
                                         }
                                     }
@@ -184,7 +181,7 @@ async fn handle_connection<R: tauri::Runtime>(
                                                 {
                                                     ws_state.set_call_state(Some(state));
                                                 }
-                                                let payload = encode_call_state(&state);
+                                                let payload = protocol::ipc::encode_call_state(&state);
                                                 send_to_frontend(&app_handle, &payload);
                                                 let _ =
                                                     tray::update_tray_menu(&app_handle, Some(state));
@@ -221,7 +218,8 @@ async fn handle_connection<R: tauri::Runtime>(
         && CONNECTION_COUNT.fetch_sub(1, Ordering::AcqRel) == 1
     {
         let _ = conn_tx.send(false);
-        let payload = encode_ws_connection(ipc_protocol::ConnectionStatus::Disconnected);
+        let payload =
+            protocol::ipc::encode_ws_connection(protocol::ipc::ConnectionStatus::Disconnected);
         send_to_frontend(&app_handle, &payload);
     }
 }

@@ -26,18 +26,15 @@ use windows_sys::Win32::{
 };
 
 use crate::{
-    protocol::{
-        KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
-        universal::keyboard as kb,
-    },
-    ptt_engine::PttEngine,
+    protocol::{KeyBinding, Modifiers, PttState, current_timestamp, universal::keyboard as kb},
+    ptt_engine::{PttEngine, PttEvent},
 };
 
 static HELD: AtomicBool = AtomicBool::new(false);
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
 static HOOK_THREAD_ID: AtomicU32 = AtomicU32::new(0);
 static BINDING_PACKED: AtomicU32 = AtomicU32::new(DEFAULT_BINDING_PACKED);
-static EVENT_SENDER: OnceLock<Sender<OutgoingMessage>> = OnceLock::new();
+static EVENT_SENDER: OnceLock<Sender<PttEvent>> = OnceLock::new();
 static PRIMARY_KEY_HELD: AtomicBool = AtomicBool::new(false);
 
 #[allow(
@@ -74,18 +71,14 @@ impl PttEngine for WindowsEngine {
         PRIMARY_KEY_HELD.store(false, Ordering::Release);
         let binding = self.get_binding();
         let ts = current_timestamp();
-        send_event(OutgoingMessage::PttUp { ts, key: binding });
+        send_event(PttEvent::PttUp { ts, key: binding });
     }
 
     fn check_accessibility_permission(&self) -> bool {
         true
     }
 
-    fn start_engine(
-        &self,
-        sender: Sender<OutgoingMessage>,
-        shutdown: &Arc<AtomicBool>,
-    ) -> Result<()> {
+    fn start_engine(&self, sender: Sender<PttEvent>, shutdown: &Arc<AtomicBool>) -> Result<()> {
         EVENT_SENDER
             .set(sender)
             .map_err(|_sender| anyhow!("Event sender already initialized"))?;
@@ -110,7 +103,7 @@ fn get_ptt_state() -> PttState {
     }
 }
 
-fn send_event(msg: OutgoingMessage) {
+fn send_event(msg: PttEvent) {
     if let Some(sender) = EVENT_SENDER.get()
         && let Err(e) = sender.send(msg)
     {
@@ -349,7 +342,7 @@ fn handle_key_event(message: u32, vk: u16) {
             let modifiers_mask = map_windows_modifiers();
             let modifiers = modifiers_from_mask(modifiers_mask);
             let ts = current_timestamp();
-            send_event(OutgoingMessage::PttDown {
+            send_event(PttEvent::PttDown {
                 ts,
                 key: KeyBinding {
                     code: keycode,
@@ -414,7 +407,7 @@ fn handle_key_event(message: u32, vk: u16) {
                 set_ptt_held(true);
             }
             let binding = binding_from_packed(packed_binding);
-            send_event(OutgoingMessage::PttDown {
+            send_event(PttEvent::PttDown {
                 ts,
                 key: binding,
                 is_repeat,
@@ -423,7 +416,7 @@ fn handle_key_event(message: u32, vk: u16) {
         Some(PttTransition::Up) => {
             set_ptt_held(false);
             let binding = binding_from_packed(packed_binding);
-            send_event(OutgoingMessage::PttUp { ts, key: binding });
+            send_event(PttEvent::PttUp { ts, key: binding });
         }
         None => {}
     }

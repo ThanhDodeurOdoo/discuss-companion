@@ -2,8 +2,22 @@ use std::sync::{Arc, atomic::AtomicBool};
 
 use anyhow::Result;
 use crossbeam_channel::Sender;
+use serde::Serialize;
 
-use crate::protocol::{KeyBinding, OutgoingMessage};
+use crate::protocol::KeyBinding;
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum PttEvent {
+    #[serde(rename_all = "snake_case")]
+    PttDown {
+        ts: u64,
+        key: KeyBinding,
+        is_repeat: bool,
+    },
+    #[serde(rename_all = "snake_case")]
+    PttUp { ts: u64, key: KeyBinding },
+}
 
 #[cfg(all(target_os = "linux", feature = "x11"))]
 mod linux_x11;
@@ -42,11 +56,7 @@ pub trait PttEngine: Send + Sync {
     ///
     /// # Errors
     /// Returns an error if the engine fails to initialize (e.g., missing permissions).
-    fn start_engine(
-        &self,
-        sender: Sender<OutgoingMessage>,
-        shutdown: &Arc<AtomicBool>,
-    ) -> Result<()>;
+    fn start_engine(&self, sender: Sender<PttEvent>, shutdown: &Arc<AtomicBool>) -> Result<()>;
 }
 
 #[cfg(target_os = "macos")]
@@ -103,6 +113,6 @@ pub fn check_accessibility_permission() -> bool {
 
 /// # Errors
 /// Returns an error if the engine fails to initialize.
-pub fn start_engine(sender: Sender<OutgoingMessage>, shutdown: &Arc<AtomicBool>) -> Result<()> {
+pub fn start_engine(sender: Sender<PttEvent>, shutdown: &Arc<AtomicBool>) -> Result<()> {
     get_engine().start_engine(sender, shutdown)
 }

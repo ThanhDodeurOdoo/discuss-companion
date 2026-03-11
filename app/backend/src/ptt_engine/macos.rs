@@ -25,11 +25,8 @@ use crossbeam_channel::Sender;
 use tracing::{debug, error, info};
 
 use crate::{
-    protocol::{
-        KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
-        universal::keyboard as kb,
-    },
-    ptt_engine::PttEngine,
+    protocol::{KeyBinding, Modifiers, PttState, current_timestamp, universal::keyboard as kb},
+    ptt_engine::{PttEngine, PttEvent},
 };
 
 type CGEventRef = *mut c_void;
@@ -106,7 +103,7 @@ static IS_RECORDING: AtomicBool = AtomicBool::new(false);
 static GLOBAL_TAP: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 static BINDING_PACKED: AtomicU32 = AtomicU32::new(DEFAULT_BINDING_PACKED);
 
-static EVENT_SENDER: OnceLock<Sender<OutgoingMessage>> = OnceLock::new();
+static EVENT_SENDER: OnceLock<Sender<PttEvent>> = OnceLock::new();
 
 pub struct MacosEngine;
 
@@ -130,7 +127,7 @@ impl PttEngine for MacosEngine {
 
         let binding = self.get_binding();
         let ts = current_timestamp();
-        send_event(OutgoingMessage::PttUp { ts, key: binding });
+        send_event(PttEvent::PttUp { ts, key: binding });
     }
 
     fn check_accessibility_permission(&self) -> bool {
@@ -156,11 +153,7 @@ impl PttEngine for MacosEngine {
         }
     }
 
-    fn start_engine(
-        &self,
-        sender: Sender<OutgoingMessage>,
-        shutdown: &Arc<AtomicBool>,
-    ) -> Result<()> {
+    fn start_engine(&self, sender: Sender<PttEvent>, shutdown: &Arc<AtomicBool>) -> Result<()> {
         EVENT_SENDER
             .set(sender)
             .map_err(|_sender| anyhow!("Event sender already initialized"))?;
@@ -274,7 +267,7 @@ fn set_ptt_held(held: bool) {
     HELD.store(held, Ordering::Release);
 }
 
-fn send_event(msg: OutgoingMessage) {
+fn send_event(msg: PttEvent) {
     if let Some(sender) = EVENT_SENDER.get()
         && let Err(e) = sender.send(msg)
     {
@@ -401,7 +394,7 @@ extern "C" fn event_callback(
                 "PTT down matched (recording): keycode={} modifiers={:?}",
                 keycode, modifiers
             );
-            send_event(OutgoingMessage::PttDown {
+            send_event(PttEvent::PttDown {
                 ts,
                 key: KeyBinding {
                     code: keycode,
@@ -431,7 +424,7 @@ extern "C" fn event_callback(
                 );
                 set_ptt_held(true);
                 let binding = binding_from_packed(packed_binding);
-                send_event(OutgoingMessage::PttDown {
+                send_event(PttEvent::PttDown {
                     ts,
                     key: binding,
                     is_repeat: false,
@@ -447,11 +440,11 @@ extern "C" fn event_callback(
                 );
                 set_ptt_held(false);
                 let binding = binding_from_packed(packed_binding);
-                send_event(OutgoingMessage::PttUp { ts, key: binding });
+                send_event(PttEvent::PttUp { ts, key: binding });
             } else if is_repeat && event_type == K_CG_EVENT_KEY_DOWN {
                 // Keepalive for Odoo (it un-mutes on every PTT event)
                 let binding = binding_from_packed(packed_binding);
-                send_event(OutgoingMessage::PttDown {
+                send_event(PttEvent::PttDown {
                     ts,
                     key: binding,
                     is_repeat: true,

@@ -625,7 +625,7 @@ mod tests {
     async fn test_ptt_down_event_reaches_extension() {
         use discuss_companion_lib::{
             flatbuffers::ws_protocol_generated::discuss::ws_protocol::root_as_message,
-            protocol::{KeyBinding, OutgoingMessage},
+            protocol::{KeyBinding, ws::OutgoingMessage},
         };
 
         ws_server::reset_connection_count();
@@ -686,7 +686,7 @@ mod tests {
     async fn test_ptt_up_event_reaches_extension() {
         use discuss_companion_lib::{
             flatbuffers::ws_protocol_generated::discuss::ws_protocol::root_as_message,
-            protocol::{KeyBinding, Modifiers, OutgoingMessage},
+            protocol::{KeyBinding, Modifiers, ws::OutgoingMessage},
         };
 
         ws_server::reset_connection_count();
@@ -747,7 +747,7 @@ mod tests {
     async fn test_call_command_reaches_extension() {
         use discuss_companion_lib::{
             flatbuffers::ws_protocol_generated::discuss::ws_protocol::root_as_message,
-            protocol::{OutgoingMessage, VERSION, current_timestamp},
+            protocol::{VERSION, current_timestamp, ws::OutgoingMessage},
         };
 
         ws_server::reset_connection_count();
