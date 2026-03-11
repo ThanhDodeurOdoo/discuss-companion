@@ -12,8 +12,8 @@ use crossbeam_channel::Sender;
 use tracing::warn;
 
 use crate::{
-    protocol::{KeyBinding, OutgoingMessage},
-    ptt_engine::PttEngine,
+    protocol::KeyBinding,
+    ptt_engine::{PttEngine, PttEvent},
 };
 
 pub struct LinuxXdgEngine;
@@ -39,11 +39,7 @@ impl PttEngine for LinuxXdgEngine {
         true // Not applicable/always granted for now
     }
 
-    fn start_engine(
-        &self,
-        _sender: Sender<OutgoingMessage>,
-        shutdown: &Arc<AtomicBool>,
-    ) -> Result<()> {
+    fn start_engine(&self, _sender: Sender<PttEvent>, shutdown: &Arc<AtomicBool>) -> Result<()> {
         warn!("start_engine not implemented for Linux. Waiting for shutdown.");
         while !shutdown.load(Ordering::Relaxed) {
             thread::sleep(Duration::from_millis(100));

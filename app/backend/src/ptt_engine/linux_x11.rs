@@ -22,17 +22,14 @@ use x11::{
 };
 
 use crate::{
-    protocol::{
-        KeyBinding, Modifiers, OutgoingMessage, PttState, current_timestamp,
-        universal::keyboard as kb,
-    },
-    ptt_engine::PttEngine,
+    protocol::{KeyBinding, Modifiers, PttState, current_timestamp, universal::keyboard as kb},
+    ptt_engine::{PttEngine, PttEvent},
 };
 
 static HELD: AtomicBool = AtomicBool::new(false);
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
 static BINDING_PACKED: AtomicU32 = AtomicU32::new(DEFAULT_BINDING_PACKED);
-static EVENT_SENDER: OnceLock<Sender<OutgoingMessage>> = OnceLock::new();
+static EVENT_SENDER: OnceLock<Sender<PttEvent>> = OnceLock::new();
 
 #[derive(Clone, Copy)]
 pub struct LinuxX11Engine;
@@ -73,7 +70,7 @@ impl PttEngine for LinuxX11Engine {
         set_ptt_held(false);
         let binding = self.get_binding();
         let ts = current_timestamp();
-        send_event(OutgoingMessage::PttUp { ts, key: binding });
+        send_event(PttEvent::PttUp { ts, key: binding });
     }
 
     fn check_accessibility_permission(&self) -> bool {
@@ -99,11 +96,7 @@ impl PttEngine for LinuxX11Engine {
         true
     }
 
-    fn start_engine(
-        &self,
-        sender: Sender<OutgoingMessage>,
-        shutdown: &Arc<AtomicBool>,
-    ) -> Result<()> {
+    fn start_engine(&self, sender: Sender<PttEvent>, shutdown: &Arc<AtomicBool>) -> Result<()> {
         EVENT_SENDER
             .set(sender)
             .map_err(|_sender| anyhow!("Event sender already initialized"))?;
@@ -137,7 +130,7 @@ fn get_ptt_state() -> PttState {
     }
 }
 
-fn send_event(msg: OutgoingMessage) {
+fn send_event(msg: PttEvent) {
     if let Some(sender) = EVENT_SENDER.get()
         && let Err(e) = sender.send(msg)
     {
@@ -284,7 +277,7 @@ fn handle_key_event(type_code: i32, keycode: u8, state: u32) {
                 "PTT down matched (recording): keycode={} modifiers={:?}",
                 keycode, modifiers
             );
-            send_event(OutgoingMessage::PttDown {
+            send_event(PttEvent::PttDown {
                 ts,
                 key: KeyBinding {
                     code: keycode,
@@ -314,14 +307,14 @@ fn handle_key_event(type_code: i32, keycode: u8, state: u32) {
             );
             set_ptt_held(true);
             let binding = binding_from_packed(packed_binding);
-            send_event(OutgoingMessage::PttDown {
+            send_event(PttEvent::PttDown {
                 ts,
                 key: binding,
                 is_repeat: false,
             });
         } else if should_be_active && matches!(current_ptt_state, PttState::Held) {
             let binding = binding_from_packed(packed_binding);
-            send_event(OutgoingMessage::PttDown {
+            send_event(PttEvent::PttDown {
                 ts,
                 key: binding,
                 is_repeat: true,
@@ -337,7 +330,7 @@ fn handle_key_event(type_code: i32, keycode: u8, state: u32) {
         );
         set_ptt_held(false);
         let binding = binding_from_packed(packed_binding);
-        send_event(OutgoingMessage::PttUp { ts, key: binding });
+        send_event(PttEvent::PttUp { ts, key: binding });
     }
 }
 

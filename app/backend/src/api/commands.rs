@@ -15,10 +15,7 @@ use crate::{
     },
     interface::call_controls_window::CALL_CONTROLS_WINDOW_LABEL,
     protocol,
-    protocol::{
-        FEATURES, Features, KeyBinding, OutgoingMessage, VERSION, current_timestamp,
-        encode_call_state,
-    },
+    protocol::{FEATURES, Features, KeyBinding, VERSION, current_timestamp},
     ptt_engine,
     ptt_engine::{check_accessibility_permission, get_binding, set_binding, set_recording},
     runtime, store_keys,
@@ -223,7 +220,7 @@ pub fn update_ws_port(
 pub fn establish_channel(state: State<'_, WsState>, channel: Channel) {
     let call_state = state.call_state();
     if let Some(call_state) = call_state {
-        let _ = channel.send(InvokeBody::Raw(encode_call_state(&call_state)).into());
+        let _ = channel.send(InvokeBody::Raw(protocol::ipc::encode_call_state(&call_state)).into());
     }
     state.push_event_channel(channel);
 }
@@ -237,7 +234,7 @@ fn build_call_command_payload(command: &str, value: Option<bool>) -> String {
 
 pub(crate) fn dispatch_call_command(state: &WsState, command: &str, value: Option<bool>) -> bool {
     let payload = build_call_command_payload(command, value);
-    let message = OutgoingMessage::Status {
+    let message = protocol::ws::OutgoingMessage::Status {
         ts: current_timestamp(),
         state: payload,
         version: VERSION.to_string(),

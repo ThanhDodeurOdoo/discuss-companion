@@ -88,7 +88,7 @@ pub fn build_app(
                 if let Err(e) = ptt_engine::start_engine(event_tx, &shutdown_clone) {
                     error!("Platform engine error: {}", e);
                     if let Some(state) = handle_tap.try_state::<WsState>() {
-                        let payload = protocol::encode_backend_error(&format!(
+                        let payload = protocol::ipc::encode_backend_error(&format!(
                             "Global shortcut error: {e:?}"
                         ));
                         state.broadcast(&payload);
@@ -227,42 +227,49 @@ impl PttHandler {
         }
     }
 
-    fn handle_ptt_ipc(&self, event: &protocol::OutgoingMessage) {
+    fn handle_ptt_ipc(&self, event: &ptt_engine::PttEvent) {
         let (is_active, key, is_repeat) = match event {
-            protocol::OutgoingMessage::PttDown { key, is_repeat, .. } => (true, key, *is_repeat),
-            protocol::OutgoingMessage::PttUp { key, .. } => (false, key, false),
-            _ => return, // Only PttDown/PttUp are relevant for active state
+            ptt_engine::PttEvent::PttDown { key, is_repeat, .. } => (true, key, *is_repeat),
+            ptt_engine::PttEvent::PttUp { key, .. } => (false, key, false),
         };
         if let Some(state) = self.app_handle.try_state::<WsState>() {
-            let payload = protocol::encode_ptt_state(is_active, key.code, key.modifiers, is_repeat);
+            let payload =
+                protocol::ipc::encode_ptt_state(is_active, key.code, key.modifiers, is_repeat);
             state.broadcast(&payload);
         }
     }
-    fn handle_ptt_ws(&mut self, msg: &protocol::OutgoingMessage) {
-        debug!("PttHandler handling event: {:?}", msg);
-        let _ = self.app_handle.emit("ptt-event", msg);
+    fn handle_ptt_ws(&mut self, event: &ptt_engine::PttEvent) {
+        debug!("PttHandler handling event: {:?}", event);
+        let _ = self.app_handle.emit("ptt-event", event);
 
         let mut should_update_tray = false;
-        match msg {
-            protocol::OutgoingMessage::PttDown { is_repeat, .. } => {
+        match event {
+            ptt_engine::PttEvent::PttDown { is_repeat, .. } => {
                 if !is_repeat && !self.is_active {
                     self.is_active = true;
                     should_update_tray = true;
                 }
             }
-            protocol::OutgoingMessage::PttUp { .. } => {
+            ptt_engine::PttEvent::PttUp { .. } => {
                 if self.is_active {
                     self.is_active = false;
                     should_update_tray = true;
                 }
             }
-            _ => {}
         }
 
         if should_update_tray {
             self.update_tray();
         }
-        let bin = msg.to_flatbuffer();
+        let ws_message = match *event {
+            ptt_engine::PttEvent::PttDown { ts, key, is_repeat } => {
+                protocol::ws::OutgoingMessage::PttDown { ts, key, is_repeat }
+            }
+            ptt_engine::PttEvent::PttUp { ts, key } => {
+                protocol::ws::OutgoingMessage::PttUp { ts, key }
+            }
+        };
+        let bin = ws_message.to_flatbuffer();
         let _ = self.ws_tx.send(bin);
     }
 
@@ -282,7 +289,7 @@ impl PttHandler {
 
 fn handle_ptt_events(
     app_handle: tauri::AppHandle,
-    event_rx: crossbeam_channel::Receiver<protocol::OutgoingMessage>,
+    event_rx: crossbeam_channel::Receiver<ptt_engine::PttEvent>,
     ws_tx: broadcast::Sender<Vec<u8>>,
     conn_rx: crossbeam_channel::Receiver<bool>,
 ) {
