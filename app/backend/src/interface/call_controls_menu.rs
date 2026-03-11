@@ -125,7 +125,7 @@ fn toggle_with_state(
     set_command: CallCommand,
     toggle_command: CallCommand,
 ) {
-    let call_state = state.call_state.read().ok().and_then(|guard| *guard);
+    let call_state = state.call_state();
     if let Some(call_state) = call_state {
         let new_value = !flag(call_state);
         let _ = commands::dispatch_call_command(state, set_command.as_str(), Some(new_value));

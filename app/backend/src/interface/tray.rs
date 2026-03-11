@@ -614,7 +614,7 @@ pub fn update_tray_menu<R: Runtime>(
 pub fn setup_tray<R: Runtime>(app: &tauri::App<R>) -> tauri::Result<()> {
     let call_state = app
         .try_state::<WsState>()
-        .and_then(|state| state.call_state.read().ok().and_then(|guard| *guard));
+        .and_then(|state| state.call_state());
     let menu = build_tray_menu(app, call_state)?;
     let mut tray_icon_controller = TrayIconController::new()?;
     tray_icon_controller.set_call_state(call_state);
