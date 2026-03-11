@@ -203,10 +203,10 @@ async fn handle_connection<R: tauri::Runtime>(
                                         if let Some(call_state) = message.body_as_call_state() {
                                             let state = CallState::from(call_state);
                                             if is_current_server(server_id) {
-                                                if let Some(ws_state) = app_handle.try_state::<WsState>()
-                                                    && let Ok(mut guard) = ws_state.call_state.write()
+                                                if let Some(ws_state) =
+                                                    app_handle.try_state::<WsState>()
                                                 {
-                                                    *guard = Some(state);
+                                                    ws_state.set_call_state(Some(state));
                                                 }
                                                 let payload = encode_call_state(&state);
                                                 send_to_frontend(&app_handle, &payload);

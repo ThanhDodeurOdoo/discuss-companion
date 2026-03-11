@@ -141,9 +141,7 @@ pub fn build_app(
                     let mode = window
                         .app_handle()
                         .try_state::<AppSettings>()
-                        .and_then(|settings| {
-                            settings.app_visibility_mode.read().ok().map(|guard| *guard)
-                        })
+                        .map(|settings| settings.app_visibility_mode())
                         .unwrap_or_default();
                     if mode == protocol::AppVisibilityMode::TrayAndDockWhenWindowOpen {
                         let _ = window

@@ -5,7 +5,6 @@ use tauri::{
     ipc::{Channel, InvokeBody, Request},
 };
 use tauri_plugin_store::StoreExt;
-use tokio::sync::broadcast;
 use tracing::info;
 
 use crate::{
@@ -46,12 +45,7 @@ pub fn get_features() -> Features {
 #[must_use]
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 pub fn get_app_visibility_mode(state: State<'_, AppSettings>) -> protocol::AppVisibilityMode {
-    state
-        .app_visibility_mode
-        .read()
-        .ok()
-        .map(|guard| *guard)
-        .unwrap_or_default()
+    state.app_visibility_mode()
 }
 
 #[tauri::command]
@@ -61,9 +55,7 @@ pub fn set_app_visibility_mode(
     state: State<'_, AppSettings>,
     mode: protocol::AppVisibilityMode,
 ) {
-    if let Ok(mut guard) = state.app_visibility_mode.write() {
-        *guard = mode;
-    }
+    state.set_app_visibility_mode(mode);
 
     if let Ok(store) = app_handle.store(store_keys::STORE_FILENAME) {
         store.set(
@@ -200,16 +192,8 @@ pub fn update_ws_port(
         state.port.store(port, Ordering::Relaxed);
 
         // Shutdown previous server
-        // SAFETY: Mutex poisoning is fatal/unrecoverable in this context
-        #[allow(clippy::unwrap_used, reason = "tauri API")]
-        let mut shutdown_guard = state.server_shutdown_tx.lock().unwrap();
         info!("Shutting down previous WS server...");
-        let _ = shutdown_guard.send(());
-
-        // Create new shutdown channel
-        let (tx, rx) = broadcast::channel(1);
-        *shutdown_guard = tx;
-        drop(shutdown_guard);
+        let rx = state.rotate_server_shutdown_channel();
 
         // Start new server
         info!("Starting new WS server on port {}...", port);
@@ -237,13 +221,11 @@ pub fn update_ws_port(
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 #[allow(clippy::missing_panics_doc, reason = "tauri API")]
 pub fn establish_channel(state: State<'_, WsState>, channel: Channel) {
-    let call_state = state.call_state.read().ok().and_then(|guard| *guard);
+    let call_state = state.call_state();
     if let Some(call_state) = call_state {
         let _ = channel.send(InvokeBody::Raw(encode_call_state(&call_state)).into());
     }
-    if let Ok(mut guard) = state.event_channels.write() {
-        guard.push(channel);
-    }
+    state.push_event_channel(channel);
 }
 
 fn build_call_command_payload(command: &str, value: Option<bool>) -> String {

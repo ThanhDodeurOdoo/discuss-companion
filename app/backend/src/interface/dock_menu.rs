@@ -33,7 +33,7 @@ static DOCK_MENU_INIT: Once = Once::new();
 pub fn setup_dock_menu<R: Runtime>(app_handle: &AppHandle<R>) -> tauri::Result<()> {
     let call_state = app_handle
         .try_state::<WsState>()
-        .and_then(|state| state.call_state.read().ok().and_then(|guard| *guard));
+        .and_then(|state| state.call_state());
     let app_handle = app_handle.clone();
     let mut init_result = Ok(());
     DOCK_MENU_INIT.call_once(|| {
