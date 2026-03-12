@@ -8,7 +8,7 @@ updates:
       interval: "weekly"
     labels:
       - "dependencies"
-      - "javascript"
+      - "npm"
       - "AI"
 
   - package-ecosystem: "cargo"
@@ -17,5 +17,5 @@ updates:
       interval: "weekly"
     labels:
       - "dependencies"
-      - "rust"
+      - "cargo"
       - "AI"
