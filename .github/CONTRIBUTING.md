@@ -3,11 +3,12 @@
 ## Learning resources
 
 ### Rust
-- [The Rust Programming Language](https://doc.rust-lang.org/book/)
+- [The Rust Book](https://doc.rust-lang.org/book/)
 - [The Rustonomicon (unsafe/advanced)](https://doc.rust-lang.org/nomicon/)
 - [Rust by Example](https://doc.rust-lang.org/rust-by-example/)
 - [Rust Cookbook](https://github.com/rust-lang-nursery/rust-cookbook/)
 - [Idiomatic Rust snippets](https://idiomatic-rust-snippets.org/)
+- [The Rust Programming Language by Aaron Turon (video)](https://youtu.be/O5vzLKg7y-k)
 - [Living with Rust Long-Term by Jon Gjengset (video)](https://youtu.be/r35cBkPRNMI)
 
 ### OWL (v3)
