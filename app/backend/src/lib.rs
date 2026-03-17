@@ -138,9 +138,8 @@ fn setup_logging() {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[allow(
-    clippy::too_many_lines,
     clippy::exit,
-    reason = "Main run loop, hard to split; clippy::exit is triggered by tauri::generate_context!"
+    reason = "clippy::exit is triggered by tauri::generate_context!"
 )]
 pub fn run() {
     setup_logging();
