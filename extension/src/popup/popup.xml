@@ -84,13 +84,11 @@
                 <t t-out="this.popup.statusText()"/>
             </div>
             <div class="info">
-                <div class="info__title">Extension</div>
-                <div>Version: <t t-out="this.popup.extensionVersion()"/></div>
-            </div>
-            <div class="info" t-if="this.popup.isOdoo()">
-                 <div class="info__title">Odoo detected</div>
-                 <div>Server Version: <t t-out="this.popup.serverVersion()"/></div>
-                 <div>Owl Version: <t t-out="this.popup.owlVersion()"/></div>
+                <div>Extension Version: <a href="https://github.com/ThanhDodeurOdoo/discuss-companion" target="_blank" class="info__version" t-out="this.popup.extensionVersion()"/></div>
+                <t t-if="this.popup.isOdoo()">
+                    <div>Server Version: <a href="https://github.com/odoo/odoo" target="_blank" class="info__version" t-out="this.popup.serverVersion()"/></div>
+                    <div>Owl Version: <a href="https://github.com/odoo/owl" target="_blank" class="info__version" t-out="this.popup.owlVersion()"/></div>
+                </t>
             </div>
         </t>
     </div>
