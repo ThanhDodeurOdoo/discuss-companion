@@ -9,8 +9,7 @@ use std::{
 
 use muda::{ContextMenu, IconMenuItem, MenuItem, Submenu};
 use objc2::{
-    MainThreadMarker,
-    ffi::class_addMethod,
+    MainThreadMarker, ffi,
     runtime::{AnyClass, AnyObject, Imp, ProtocolObject, Sel},
     sel,
 };
@@ -115,7 +114,7 @@ fn install_dock_menu(call_state: Option<CallState>) {
             unsafe extern "C-unwind" fn(&AnyObject, Sel, *mut AnyObject) -> *mut AnyObject,
             Imp,
         >(application_dock_menu);
-        let added = class_addMethod(class_ptr, selector, imp, types.as_ptr().cast());
+        let added = ffi::class_addMethod(class_ptr, selector, imp, types.as_ptr().cast());
         if !added.as_bool() {
             warn!("Failed to add applicationDockMenu: to NSApplication delegate.");
         }
