@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
         build: {
             outDir,
             emptyOutDir: true,
-            rollupOptions: {
+            rolldownOptions: {
                 input: {
                     service_worker: resolve(__dirname, "src/service_worker.ts"),
                     main: resolve(__dirname, "src/popup/main.ts"),
