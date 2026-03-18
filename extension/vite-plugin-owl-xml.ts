@@ -1,23 +1,31 @@
-import { Plugin } from "vite";
+import type { Plugin } from "vite";
 import { compileTemplates } from "@odoo/owl/dist/compile_templates.mjs";
+
+const XML_FILE_REGEX = /\.xml$/;
 
 export default function owlXmlPlugin(): Plugin {
     return {
         name: "owl-xml-transform",
-        async transform(code, id) {
-            if (!id.endsWith(".xml")) {
-                return;
-            }
+        transform: {
+            filter: {
+                id: XML_FILE_REGEX
+            },
+            async handler(code, id) {
+                if (!XML_FILE_REGEX.test(id)) {
+                    return;
+                }
 
-            try {
-                const compiled = await compileTemplates([id]);
-                return {
-                    code: compiled,
-                    map: null
-                };
-            } catch (e) {
-                console.error("Failed to compile template:", e);
-                throw e;
+                try {
+                    const compiled = await compileTemplates([id]);
+                    return {
+                        code: compiled,
+                        map: null,
+                        moduleType: "js"
+                    };
+                } catch (e) {
+                    console.error("Failed to compile template:", e);
+                    throw e;
+                }
             }
         }
     };
