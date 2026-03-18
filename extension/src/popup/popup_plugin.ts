@@ -7,7 +7,13 @@ import {
     requestFocusCallTab,
     requestPttCommand
 } from "@extension/src/command_api";
-import { CallState, getCallTabId, getStoredCallState } from "@extension/src/call_state";
+import {
+    CallState,
+    getCallTabId,
+    setCallTabId,
+    getStoredCallState,
+    setStoredCallState
+} from "@extension/src/call_state";
 import { IS_FIREFOX_BUILD } from "@extension/src/env";
 import { PttCommand } from "@extension/src/page_bridge/runtime_types";
 import { SESSION_STATE_STORAGE_AREA } from "@extension/src/storage/session_state";
@@ -124,12 +130,17 @@ export class PopupPlugin extends Plugin {
 
     async collectCallTabData() {
         const callTabId = await getCallTabId();
-        this.hasCallTab.set(Boolean(callTabId));
         if (callTabId !== null) {
             const state = await requestCallState();
-            this.applyCallState(state);
-            return;
+            if (state) {
+                this.hasCallTab.set(true);
+                this.applyCallState(state);
+                return;
+            }
+            await setCallTabId(null);
+            await setStoredCallState(null);
         }
+        this.hasCallTab.set(false);
         const storedState = await getStoredCallState();
         this.applyCallState(storedState);
     }

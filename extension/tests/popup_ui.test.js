@@ -37,9 +37,14 @@ jest.unstable_mockModule("../src/command_api.ts", () => ({
     requestPttCommand: requestPttCommandMock
 }));
 
+const setCallTabIdMock = jest.fn();
+const setStoredCallStateMock = jest.fn();
+
 jest.unstable_mockModule("../src/call_state.ts", () => ({
     getCallTabId: getCallTabIdMock,
-    getStoredCallState: getStoredCallStateMock
+    setCallTabId: setCallTabIdMock,
+    getStoredCallState: getStoredCallStateMock,
+    setStoredCallState: setStoredCallStateMock
 }));
 
 jest.unstable_mockModule("../src/utils.ts", () => ({
@@ -224,6 +229,18 @@ describe("Popup UI", () => {
         const savedWsPort = chrome.storage.local.set.mock.calls.at(-1)?.[0]?.wsPort;
         expect(Number(savedWsPort)).toBe(55555);
         expect(successStatus?.textContent).toContain("Options saved.");
+    });
+
+    test("clears stale call tab when call tab reports no active session", async () => {
+        getCallTabIdMock.mockResolvedValue(101);
+        requestCallStateMock.mockResolvedValue(undefined);
+        getStoredCallStateMock.mockResolvedValue(undefined);
+
+        const target = await mountPopup();
+
+        expect(target.querySelector(".call")).toBeNull();
+        expect(setCallTabIdMock).toHaveBeenCalledWith(null);
+        expect(setStoredCallStateMock).toHaveBeenCalledWith(null);
     });
 
     test("reacts to session storage updates for call state and tab ownership", async () => {
