@@ -37,7 +37,7 @@
 The backend is located in `app/backend`. We follow standard Rust idioms and enforce strict safety.
 
 - **Formatting**: Always run `cargo fmt` before committing.
-- **Linting**: We use Clippy with warnings denied (`cargo clippy -- -D warnings`), the enfourced rules can be found in the [cargo.toml](../app/backend/cargo.toml), see the [Clippy documentation](https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html) for explanations.
+- **Linting**: We use Clippy with warnings denied (`cargo clippy -- -D warnings`), the enfourced rules can be found in the [cargo.toml](../app/backend/Cargo.toml), see the [Clippy documentation](https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html) for explanations.
 - **Unsafe Code**: Use of `unsafe` is discouraged. If absolutely necessary, it must be locally scoped and justified.
   ```rs
   #[allow(
