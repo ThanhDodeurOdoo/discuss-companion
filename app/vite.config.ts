@@ -1,15 +1,18 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { defineConfig } from "vite";
-import { readFileSync } from "fs";
-import { resolve } from "path";
 
+const appRoot = __dirname;
+const repositoryRoot = resolve(appRoot, "..");
 const host = process.env.TAURI_DEV_HOST;
-const packageJson = JSON.parse(readFileSync(resolve(__dirname, "package.json"), "utf-8"));
+const packageJson = JSON.parse(readFileSync(resolve(repositoryRoot, "package.json"), "utf-8"));
 
 export default defineConfig(async () => ({
+    root: appRoot,
     clearScreen: false,
     resolve: {
         alias: {
-            "@root": resolve(__dirname)
+            "@root": repositoryRoot
         }
     },
     define: {
@@ -30,7 +33,7 @@ export default defineConfig(async () => ({
               }
             : undefined,
         watch: {
-            ignored: ["**/app/backend/**"]
+            ignored: ["**/backend/**"]
         }
     }
 }));

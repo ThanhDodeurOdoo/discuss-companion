@@ -43,10 +43,10 @@
     "test:api:ws": "cd app/backend && cargo test --test ws_api_tests",
     "format:rust": "cd app/backend && cargo +nightly fmt",
     "format:backend": "npm run format:rust",
-    "format:ts": "prettier --write \"app/frontend/**/*.ts\" \"extension/**/*.ts\" \"vite.config.ts\"",
+    "format:ts": "prettier --write \"app/**/*.ts\" \"extension/**/*.ts\"",
     "format": "npm run format:rust && npm run format:ts",
-    "pre:dev": "vite",
-    "pre:build": "tsc && vite build",
+    "pre:dev": "vite --config app/vite.config.ts",
+    "pre:build": "tsc && vite build --config app/vite.config.ts",
     "tauri": "tauri"
   },
   "dependencies": {
