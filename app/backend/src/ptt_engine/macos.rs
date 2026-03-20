@@ -387,20 +387,18 @@ extern "C" fn event_callback(
     let ts = current_timestamp();
 
     if recording {
-        // Simple recording logic: just capture whatever keydown happens
         if event_type == K_CG_EVENT_KEY_DOWN {
             let modifiers = modifiers_from_mask(modifiers_mask);
             info!(
-                "PTT down matched (recording): keycode={} modifiers={:?}",
+                "PTT binding captured: keycode={} modifiers={:?}",
                 keycode, modifiers
             );
-            send_event(PttEvent::PttDown {
+            send_event(PttEvent::CapturedBinding {
                 ts,
                 key: KeyBinding {
                     code: keycode,
                     modifiers,
                 },
-                is_repeat,
             });
         }
         return event;

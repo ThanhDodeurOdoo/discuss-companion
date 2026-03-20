@@ -17,6 +17,8 @@ pub enum PttEvent {
     },
     #[serde(rename_all = "snake_case")]
     PttUp { ts: u64, key: KeyBinding },
+    #[serde(rename_all = "snake_case")]
+    CapturedBinding { ts: u64, key: KeyBinding },
 }
 
 #[cfg(all(target_os = "linux", feature = "x11"))]

@@ -45,6 +45,11 @@ type PttBinding = {
     modifiers: number[];
 };
 
+type BindingCapturedPayload = {
+    ts: number;
+    key: PttBinding;
+};
+
 type CompanionFeatures = {
     ptt: boolean;
     callControlsTray: boolean;
@@ -158,6 +163,16 @@ export class AppPlugin extends Plugin {
         const isConnected = await invoke<boolean>("is_extension_connected");
         this.extensionConnected.set(isConnected);
 
+        const bindingCapturedUnlisten = await listen<BindingCapturedPayload>(
+            "binding-captured",
+            async (event) => {
+                if (!this.isRecording()) {
+                    return;
+                }
+                await this.applyRecordedBinding(event.payload.key);
+            }
+        );
+
         await setupChannel(async (event: ChannelEvent) => {
             switch (event.type) {
                 case ChannelEventType.PttEvent: {
@@ -168,20 +183,7 @@ export class AppPlugin extends Plugin {
                         is_repeat: boolean;
                     };
                     if (this.isRecording()) {
-                        this.isRecording.set(false);
-                        await setRecordingMode(false);
-                        await updateBinding(payload.key.code, payload.key.modifiers);
-                        this.currentBinding.set({
-                            code: payload.key.code,
-                            modifiers: payload.key.modifiers
-                        });
-                        this.addLog(
-                            "SYSTEM",
-                            `Key binding updated to: ${this.formatKeyBinding(
-                                payload.key.code,
-                                payload.key.modifiers
-                            )}`
-                        );
+                        await this.applyRecordedBinding(payload.key);
                         return;
                     }
 
@@ -249,7 +251,20 @@ export class AppPlugin extends Plugin {
             }
         });
 
+        this.unlistenFns.push(bindingCapturedUnlisten);
         this.unlistenFns.push(wsStatusUnlisten);
+    }
+
+    async applyRecordedBinding(binding: PttBinding) {
+        this.isRecording.set(false);
+        this.isPressed.set(false);
+        await setRecordingMode(false);
+        await updateBinding(binding.code, binding.modifiers);
+        this.currentBinding.set(binding);
+        this.addLog(
+            "SYSTEM",
+            `Key binding updated to: ${this.formatKeyBinding(binding.code, binding.modifiers)}`
+        );
     }
 
     async fetchFeatures() {
