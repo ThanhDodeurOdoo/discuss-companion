@@ -2,10 +2,10 @@
     <h2 class="settings-title">Settings</h2>
     
     <div class="setting-item">
-        <div class="setting-label">
-            <label for="show-symbols" class="prevent-select">Show icons in PTT button</label>
+        <label for="show-symbols" class="setting-label cursor-pointer">
+            <span class="prevent-select">Show icons in PTT button</span>
             <span class="setting-desc">Toggle between key names and icons</span>
-        </div>
+        </label>
         <input type="checkbox" id="show-symbols" t-model="this.app.showSymbols"/>
     </div>
 
