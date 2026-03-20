@@ -27,13 +27,15 @@ const { invoke } = await import("@tauri-apps/api/core");
 const { listen } = await import("@tauri-apps/api/event");
 const { AppPlugin } = await import("../app_plugin.ts");
 const { CallCommand } = await import("../call_commands.ts");
-const { setRecordingMode, setupChannel, sendCallCommand } = await import("../ipc.ts");
+const { setRecordingMode, setupChannel, sendCallCommand, updateBinding } =
+    await import("../ipc.ts");
 
 const mockedInvoke = invoke as jest.MockedFunction<typeof invoke>;
 const mockedListen = listen as jest.MockedFunction<typeof listen>;
 const mockedSetRecordingMode = setRecordingMode as jest.MockedFunction<typeof setRecordingMode>;
 const mockedSetupChannel = setupChannel as jest.MockedFunction<typeof setupChannel>;
 const mockedSendCallCommand = sendCallCommand as jest.MockedFunction<typeof sendCallCommand>;
+const mockedUpdateBinding = updateBinding as jest.MockedFunction<typeof updateBinding>;
 
 describe("AppPlugin", () => {
     let plugin: AppPluginType;
@@ -103,6 +105,41 @@ describe("AppPlugin", () => {
 
         expect(mockedInvoke).toHaveBeenCalledWith("is_extension_connected");
         expect(mockedSetupChannel).toHaveBeenCalled();
+    });
+
+    test("binding capture updates the key without leaving PTT pressed", async () => {
+        const listeners = new Map<string, (event: { payload: unknown }) => Promise<void> | void>();
+        mockedInvoke.mockResolvedValue(true as never);
+        mockedListen.mockImplementation(async (eventName, callback) => {
+            listeners.set(
+                eventName,
+                callback as (event: { payload: unknown }) => Promise<void> | void
+            );
+            return (() => {}) as never;
+        });
+        mockedSetupChannel.mockResolvedValue(undefined as never);
+        mockedSetRecordingMode.mockResolvedValue(undefined as never);
+        mockedUpdateBinding.mockResolvedValue(undefined as never);
+
+        await plugin.setupListeners();
+        plugin.isRecording.set(true);
+        plugin.isPressed.set(true);
+
+        const bindingCaptureListener = listeners.get("binding-captured");
+        expect(bindingCaptureListener).toBeDefined();
+
+        await bindingCaptureListener?.({
+            payload: {
+                ts: Date.now(),
+                key: { code: 49, modifiers: [1] }
+            }
+        });
+
+        expect(plugin.isRecording()).toBe(false);
+        expect(plugin.isPressed()).toBe(false);
+        expect(mockedSetRecordingMode).toHaveBeenCalledWith(false);
+        expect(mockedUpdateBinding).toHaveBeenCalledWith(49, [1]);
+        expect(plugin.currentBinding()).toEqual({ code: 49, modifiers: [1] });
     });
 
     test("showMainWindow invokes show_main_window command", async () => {

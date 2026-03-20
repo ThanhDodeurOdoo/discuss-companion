@@ -274,16 +274,15 @@ fn handle_key_event(type_code: i32, keycode: u8, state: u32) {
     if recording {
         if type_code == KeyPress {
             debug!(
-                "PTT down matched (recording): keycode={} modifiers={:?}",
+                "PTT binding captured: keycode={} modifiers={:?}",
                 keycode, modifiers
             );
-            send_event(PttEvent::PttDown {
+            send_event(PttEvent::CapturedBinding {
                 ts,
                 key: KeyBinding {
                     code: keycode,
                     modifiers,
                 },
-                is_repeat: false,
             });
         }
         return;

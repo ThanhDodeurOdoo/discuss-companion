@@ -342,13 +342,12 @@ fn handle_key_event(message: u32, vk: u16) {
             let modifiers_mask = map_windows_modifiers();
             let modifiers = modifiers_from_mask(modifiers_mask);
             let ts = current_timestamp();
-            send_event(PttEvent::PttDown {
+            send_event(PttEvent::CapturedBinding {
                 ts,
                 key: KeyBinding {
                     code: keycode,
                     modifiers,
                 },
-                is_repeat: false,
             });
         }
         return;

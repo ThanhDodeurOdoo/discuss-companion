@@ -6,6 +6,7 @@ use std::{
     thread,
 };
 
+use serde::Serialize;
 use tauri::{Emitter, Manager, async_runtime};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
@@ -217,6 +218,12 @@ struct PttHandler {
     is_connected: bool,
 }
 
+#[derive(Clone, Copy, Serialize)]
+struct BindingCapturedPayload {
+    ts: u64,
+    key: protocol::KeyBinding,
+}
+
 impl PttHandler {
     fn new(app_handle: tauri::AppHandle, ws_tx: broadcast::Sender<Vec<u8>>) -> Self {
         Self {
@@ -231,6 +238,7 @@ impl PttHandler {
         let (is_active, key, is_repeat) = match event {
             ptt_engine::PttEvent::PttDown { key, is_repeat, .. } => (true, key, *is_repeat),
             ptt_engine::PttEvent::PttUp { key, .. } => (false, key, false),
+            ptt_engine::PttEvent::CapturedBinding { .. } => return,
         };
         if let Some(state) = self.app_handle.try_state::<WsState>() {
             let payload =
@@ -240,6 +248,13 @@ impl PttHandler {
     }
     fn handle_ptt_ws(&mut self, event: &ptt_engine::PttEvent) {
         debug!("PttHandler handling event: {:?}", event);
+        if let ptt_engine::PttEvent::CapturedBinding { ts, key } = *event {
+            let _ = self
+                .app_handle
+                .emit("binding-captured", BindingCapturedPayload { ts, key });
+            return;
+        }
+
         let _ = self.app_handle.emit("ptt-event", event);
 
         let mut should_update_tray = false;
@@ -256,6 +271,7 @@ impl PttHandler {
                     should_update_tray = true;
                 }
             }
+            ptt_engine::PttEvent::CapturedBinding { .. } => {}
         }
 
         if should_update_tray {
@@ -268,6 +284,7 @@ impl PttHandler {
             ptt_engine::PttEvent::PttUp { ts, key } => {
                 protocol::ws::OutgoingMessage::PttUp { ts, key }
             }
+            ptt_engine::PttEvent::CapturedBinding { .. } => return,
         };
         let bin = ws_message.to_flatbuffer();
         let _ = self.ws_tx.send(bin);
