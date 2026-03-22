@@ -14,10 +14,15 @@ import {
     IncomingMessageUnion,
     ConnectionStatus
 } from "./flatbuffers/discuss/ipc-protocol";
-import type { CallCommand } from "./call_commands";
-import { ChannelEventType, type ChannelEvent, type CallStatePayload } from "./ipc_types";
+import { CallCommand } from "./call_commands";
+import {
+    ChannelEventType,
+    type ChannelEvent,
+    IPC_COMMAND,
+    type AppVisibilityMode
+} from "./ipc_types";
 
-export { ChannelEventType, type ChannelEvent, type CallStatePayload };
+// PTT
 
 export async function updateBinding(code: number, modifiers: number[]) {
     const builder = new Builder(1024);
@@ -39,7 +44,7 @@ export async function updateBinding(code: number, modifiers: number[]) {
     builder.finish(offset);
     const bytes = builder.asUint8Array();
 
-    await invoke("update_binding", bytes);
+    await invoke(IPC_COMMAND.UpdateBinding, bytes);
 }
 
 export async function setRecordingMode(recording: boolean) {
@@ -52,8 +57,18 @@ export async function setRecordingMode(recording: boolean) {
     builder.finish(offset);
     const bytes = builder.asUint8Array();
 
-    await invoke("set_recording_mode", bytes);
+    await invoke(IPC_COMMAND.SetRecordingMode, bytes);
 }
+
+export async function getCurrentBinding(): Promise<{ code: number; modifiers: number[] }> {
+    return invoke(IPC_COMMAND.GetCurrentBinding);
+}
+
+export async function forcePttUp(): Promise<void> {
+    await invoke(IPC_COMMAND.ForcePttUp);
+}
+
+// WS
 
 export async function updateWsPort(port: number) {
     const builder = new Builder(1024);
@@ -62,12 +77,80 @@ export async function updateWsPort(port: number) {
     const offset = SetWsPort.endSetWsPort(builder);
     builder.finish(offset);
     const bytes = builder.asUint8Array();
-    await invoke("update_ws_port", bytes);
+    await invoke(IPC_COMMAND.UpdateWsPort, bytes);
 }
 
-export async function sendCallCommand(command: CallCommand, value?: boolean): Promise<boolean> {
-    return invoke<boolean>("send_call_command", { command, value });
+export async function getWsPort(): Promise<number> {
+    return invoke(IPC_COMMAND.GetWsPort);
 }
+
+// Features / App Settings
+
+export async function getFeatures(): Promise<{ ptt: boolean; callControlsTray: boolean }> {
+    return invoke(IPC_COMMAND.GetFeatures);
+}
+
+export async function getAppVisibilityMode(): Promise<AppVisibilityMode> {
+    return invoke(IPC_COMMAND.GetAppVisibilityMode);
+}
+
+export async function setAppVisibilityMode(mode: AppVisibilityMode): Promise<void> {
+    await invoke(IPC_COMMAND.SetAppVisibilityMode, { mode });
+}
+
+export async function isAccessibilityGranted(): Promise<boolean> {
+    return invoke(IPC_COMMAND.IsAccessibilityGranted);
+}
+
+export async function isExtensionConnected(): Promise<boolean> {
+    return invoke(IPC_COMMAND.IsExtensionConnected);
+}
+
+// Window
+
+export async function showMainWindow(): Promise<void> {
+    await invoke(IPC_COMMAND.ShowMainWindow);
+}
+
+export async function quitApp(): Promise<void> {
+    await invoke(IPC_COMMAND.QuitApp);
+}
+
+// Call Commands
+
+async function sendCallCommand(command: CallCommand, value?: boolean): Promise<boolean> {
+    return invoke<boolean>(IPC_COMMAND.SendCallCommand, { command, value });
+}
+
+export async function setMute(value: boolean): Promise<boolean> {
+    return sendCallCommand(CallCommand.SetMute, value);
+}
+
+export async function setDeaf(value: boolean): Promise<boolean> {
+    return sendCallCommand(CallCommand.SetDeaf, value);
+}
+
+export async function setCamera(value: boolean): Promise<boolean> {
+    return sendCallCommand(CallCommand.SetCamera, value);
+}
+
+export async function setScreen(value: boolean): Promise<boolean> {
+    return sendCallCommand(CallCommand.SetScreen, value);
+}
+
+export async function openPip(): Promise<boolean> {
+    return sendCallCommand(CallCommand.OpenPip);
+}
+
+export async function leaveCall(): Promise<boolean> {
+    return sendCallCommand(CallCommand.LeaveCall);
+}
+
+export async function focusCallTab(): Promise<boolean> {
+    return sendCallCommand(CallCommand.FocusCallTab);
+}
+
+// Channel
 
 export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
     const channel = new Channel<ArrayBuffer | number[]>();
@@ -151,5 +234,5 @@ export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
         }
     };
 
-    await invoke("establish_channel", { channel });
+    await invoke(IPC_COMMAND.EstablishChannel, { channel });
 }

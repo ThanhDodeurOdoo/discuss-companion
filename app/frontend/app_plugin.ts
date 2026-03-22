@@ -1,33 +1,22 @@
 import { Plugin, signal, onWillDestroy } from "@odoo/owl";
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { KEY_MAP, KEY_SYMBOL_MAP, MODIFIER_SYMBOLS, MODIFIER_NAMES } from "./utils";
+import * as ipc from "./ipc";
 import {
-    setRecordingMode,
-    updateBinding,
-    updateWsPort,
-    setupChannel,
-    sendCallCommand
-} from "./ipc";
-import { ChannelEventType, type ChannelEvent, type CallStatePayload } from "./ipc_types";
-import { CallCommand } from "./call_commands";
+    ChannelEventType,
+    type ChannelEvent,
+    type CallStatePayload,
+    APP_VISIBILITY_MODE,
+    type AppVisibilityMode
+} from "./ipc_types";
 
-const FEATURES_COMMAND = "get_features";
-const APP_VISIBILITY_COMMAND_GET = "get_app_visibility_mode";
-const APP_VISIBILITY_COMMAND_SET = "set_app_visibility_mode";
 const THEME_STORAGE_KEY = "discuss-companion.theme";
 
-const APP_VISIBILITY_MODE = {
-    TrayAndDockWhenWindowOpen: "trayAndDockWhenWindowOpen",
-    TrayAndDockAlways: "trayAndDockAlways",
-    DockOnly: "dockOnly"
-} as const;
 const THEME_MODE = {
     Dark: "dark",
     Light: "light"
 } as const;
 
-type AppVisibilityMode = (typeof APP_VISIBILITY_MODE)[keyof typeof APP_VISIBILITY_MODE];
 type ThemeMode = (typeof THEME_MODE)[keyof typeof THEME_MODE];
 
 /**
@@ -159,8 +148,8 @@ export class AppPlugin extends Plugin {
     }
 
     async setupListeners() {
-        const isConnected = await invoke<boolean>("is_extension_connected");
-        this.extensionConnected.set(isConnected);
+        const connected = await ipc.isExtensionConnected();
+        this.extensionConnected.set(connected);
 
         const bindingCapturedUnlisten = await listen<BindingCapturedPayload>(
             "binding-captured",
@@ -172,15 +161,10 @@ export class AppPlugin extends Plugin {
             }
         );
 
-        await setupChannel(async (event: ChannelEvent) => {
+        await ipc.setupChannel(async (event: ChannelEvent) => {
             switch (event.type) {
                 case ChannelEventType.PttEvent: {
-                    const payload = event.payload as {
-                        type: string;
-                        ts: number;
-                        key: { code: number; modifiers: number[] };
-                        is_repeat: boolean;
-                    };
+                    const payload = event.payload;
                     if (this.isRecording()) {
                         await this.applyRecordedBinding(payload.key);
                         return;
@@ -209,7 +193,7 @@ export class AppPlugin extends Plugin {
                     break;
                 }
                 case ChannelEventType.Error: {
-                    this.addLog("ERROR", event.payload as string);
+                    this.addLog("ERROR", event.payload);
                     break;
                 }
                 case ChannelEventType.WsConnection: {
@@ -224,7 +208,7 @@ export class AppPlugin extends Plugin {
                     break;
                 }
                 case ChannelEventType.CallState: {
-                    const payload = event.payload as CallStatePayload;
+                    const payload = event.payload;
                     this.addLog("CALL-STATE", this.formatCallStateLog(payload));
                     this.applyCallState(payload);
                     break;
@@ -257,8 +241,8 @@ export class AppPlugin extends Plugin {
     async applyRecordedBinding(binding: PttBinding) {
         this.isRecording.set(false);
         this.isPressed.set(false);
-        await setRecordingMode(false);
-        await updateBinding(binding.code, binding.modifiers);
+        await ipc.setRecordingMode(false);
+        await ipc.updateBinding(binding.code, binding.modifiers);
         this.currentBinding.set(binding);
         this.addLog(
             "SYSTEM",
@@ -268,7 +252,7 @@ export class AppPlugin extends Plugin {
 
     async fetchFeatures() {
         try {
-            const features = await invoke<CompanionFeatures>(FEATURES_COMMAND);
+            const features = await ipc.getFeatures();
             if (features) {
                 this.features.set(features);
             }
@@ -279,7 +263,7 @@ export class AppPlugin extends Plugin {
 
     async fetchAppVisibilityMode() {
         try {
-            const mode = await invoke<AppVisibilityMode>(APP_VISIBILITY_COMMAND_GET);
+            const mode = await ipc.getAppVisibilityMode();
             if (mode) {
                 this.appVisibilityMode.set(mode);
             }
@@ -295,7 +279,7 @@ export class AppPlugin extends Plugin {
         const previous = this.appVisibilityMode();
         this.appVisibilityMode.set(mode);
         try {
-            await invoke(APP_VISIBILITY_COMMAND_SET, { mode });
+            await ipc.setAppVisibilityMode(mode);
             this.addLog("SYSTEM", `App visibility set to ${mode}`);
         } catch (error) {
             this.appVisibilityMode.set(previous);
@@ -304,19 +288,19 @@ export class AppPlugin extends Plugin {
     }
 
     async checkPermission() {
-        const isGranted = await invoke<boolean>("is_accessibility_granted");
+        const isGranted = await ipc.isAccessibilityGranted();
         this.permissionGranted.set(isGranted);
     }
 
     async fetchCurrentBinding() {
-        const binding = await invoke<PttBinding>("get_current_binding");
+        const binding = await ipc.getCurrentBinding();
         if (binding) {
             this.currentBinding.set(binding);
         }
     }
 
     async fetchWsPort() {
-        const port = await invoke<number>("get_ws_port");
+        const port = await ipc.getWsPort();
         this.wsPort.set(port);
         this.addLog("SYSTEM", `Current WS Port: ${port}`);
     }
@@ -331,7 +315,7 @@ export class AppPlugin extends Plugin {
         }
 
         try {
-            const currentPort = await invoke<number>("get_ws_port");
+            const currentPort = await ipc.getWsPort();
             if (port === currentPort) {
                 this.addLog("SYSTEM", "Port unchanged, skipping reload");
                 return;
@@ -339,7 +323,7 @@ export class AppPlugin extends Plugin {
 
             this.addLog("SYSTEM", `Initiating WS server reload to port: ${port}`);
             this.isWsReloading.set(true);
-            await updateWsPort(port);
+            await ipc.updateWsPort(port);
             this.addLog("SYSTEM", "Reload command sent to backend");
         } catch (e) {
             this.addLog("ERROR", `Failed to reload WS server: ${e}`);
@@ -350,11 +334,11 @@ export class AppPlugin extends Plugin {
     async toggleRecording() {
         if (this.isRecording()) {
             this.isRecording.set(false);
-            await setRecordingMode(false);
+            await ipc.setRecordingMode(false);
             await this.fetchCurrentBinding();
         } else {
             this.isRecording.set(true);
-            await setRecordingMode(true);
+            await ipc.setRecordingMode(true);
         }
     }
 
@@ -362,7 +346,7 @@ export class AppPlugin extends Plugin {
         this.addLog("SYSTEM", "Safety release triggered");
         this.isForcingRelease = true;
         this.isPressed.set(false);
-        await invoke("force_ptt_up");
+        await ipc.forcePttUp();
     }
 
     hasActiveCall(): boolean {
@@ -442,69 +426,71 @@ export class AppPlugin extends Plugin {
         });
     }
 
-    async runCallCommand(command: CallCommand, value?: boolean, label?: string) {
-        const didSend = await sendCallCommand(command, value);
-        if (!didSend) {
-            this.addLog("CALL", "Failed to reach extension");
-            return false;
-        }
-        if (value === undefined) {
-            this.addLog("CALL", label ? `Sent ${label}` : `Sent ${command}`);
-        } else {
-            this.addLog("CALL", label ? `Sent ${label}: ${value}` : `Sent ${command}: ${value}`);
-        }
-        return true;
-    }
-
     async toggleMute() {
         if (!this.canUseCallToggles()) {
             return;
         }
-        await this.runCallCommand(CallCommand.SetMute, !this.isMute(), "Mute");
+        const didSend = await ipc.setMute(!this.isMute());
+        this.logCallResult(didSend, `Mute: ${!this.isMute()}`);
     }
 
     async toggleDeafen() {
         if (!this.canUseCallToggles()) {
             return;
         }
-        await this.runCallCommand(CallCommand.SetDeaf, !this.isDeaf(), "Deafen");
+        const didSend = await ipc.setDeaf(!this.isDeaf());
+        this.logCallResult(didSend, `Deafen: ${!this.isDeaf()}`);
     }
 
     async toggleCamera() {
         if (!this.canUseCallToggles()) {
             return;
         }
-        await this.runCallCommand(CallCommand.SetCamera, !this.isCameraOn(), "Camera");
+        const didSend = await ipc.setCamera(!this.isCameraOn());
+        this.logCallResult(didSend, `Camera: ${!this.isCameraOn()}`);
     }
 
     async toggleScreen() {
         if (!this.canUseCallToggles()) {
             return;
         }
-        await this.runCallCommand(CallCommand.SetScreen, !this.isScreenOn(), "Screen");
+        const didSend = await ipc.setScreen(!this.isScreenOn());
+        this.logCallResult(didSend, `Screen: ${!this.isScreenOn()}`);
     }
 
     async openPip() {
         if (!this.hasActiveCall()) {
             return;
         }
-        await this.runCallCommand(CallCommand.OpenPip, undefined, "Open PiP");
+        const didSend = await ipc.openPip();
+        this.logCallResult(didSend, "Open PiP");
     }
 
     async leaveCall() {
         if (!this.hasActiveCall()) {
             return;
         }
-        await this.runCallCommand(CallCommand.LeaveCall, undefined, "Leave call");
+        const didSend = await ipc.leaveCall();
+        this.logCallResult(didSend, "Leave call");
     }
 
     async goToCall() {
         if (!this.hasActiveCall()) {
             return;
         }
-        await this.runCallCommand(CallCommand.FocusCallTab, undefined, "Go to call");
+        const didSend = await ipc.focusCallTab();
+        this.logCallResult(didSend, "Go to call");
     }
 
+    private logCallResult(didSend: boolean, description: string) {
+        if (!didSend) {
+            this.addLog("CALL", "Failed to reach extension");
+            return;
+        }
+        this.addLog("CALL", `Sent ${description}`);
+    }
+
+    // TODO isolate in its own logger util, shouldn't take string literal but rather an enum, or expose individually named functions
     addLog(type: string, message: string) {
         const time = new Date().toLocaleTimeString("en-US", {
             hour12: false
@@ -573,10 +559,10 @@ export class AppPlugin extends Plugin {
     }
 
     async showMainWindow() {
-        await invoke("show_main_window");
+        await ipc.showMainWindow();
     }
 
     async quitApp() {
-        await invoke("quit_app");
+        await ipc.quitApp();
     }
 }
