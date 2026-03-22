@@ -12,7 +12,6 @@ import {
 import { ChannelEventType, type ChannelEvent, type CallStatePayload } from "./ipc_types";
 import { CallCommand } from "./call_commands";
 
-const DEFAULT_PORT = 49152;
 const FEATURES_COMMAND = "get_features";
 const APP_VISIBILITY_COMMAND_GET = "get_app_visibility_mode";
 const APP_VISIBILITY_COMMAND_SET = "set_app_visibility_mode";
@@ -29,9 +28,13 @@ const THEME_MODE = {
 } as const;
 
 type AppVisibilityMode = (typeof APP_VISIBILITY_MODE)[keyof typeof APP_VISIBILITY_MODE];
-const DEFAULT_APP_VISIBILITY_MODE = APP_VISIBILITY_MODE.TrayAndDockWhenWindowOpen;
 type ThemeMode = (typeof THEME_MODE)[keyof typeof THEME_MODE];
-const DEFAULT_THEME_MODE = THEME_MODE.Dark;
+
+/**
+ * The default port should be the same as the backend default port,
+ * TODO: maybe some kind of project-wide default port const
+ */
+const DEFAULT_PORT = 49152;
 
 type LogEntry = {
     id: number;
@@ -55,11 +58,6 @@ type CompanionFeatures = {
     callControlsTray: boolean;
 };
 
-const DEFAULT_FEATURES: CompanionFeatures = {
-    ptt: false,
-    callControlsTray: false
-};
-
 const MAX_LOGS = 20;
 const MODIFIER_ORDER: Record<string, number> = { Cmd: 0, Ctrl: 1, Option: 2, Shift: 3 };
 
@@ -68,28 +66,38 @@ export class AppPlugin extends Plugin {
 
     appVisibilityModes = APP_VISIBILITY_MODE;
     themeModes = THEME_MODE;
-    isRecording = signal(false);
-    isPressed = signal(false);
+
+    features = signal<CompanionFeatures>({
+        ptt: false,
+        callControlsTray: false
+    });
+
+    // App settings
+    appVisibilityMode = signal<AppVisibilityMode>(APP_VISIBILITY_MODE.TrayAndDockWhenWindowOpen);
     showSymbols = signal(true);
-    themeMode = signal<ThemeMode>(DEFAULT_THEME_MODE);
-    permissionGranted = signal(false);
-    extensionConnected = signal(false);
-    features = signal<CompanionFeatures>(DEFAULT_FEATURES);
-    appVisibilityMode = signal<AppVisibilityMode>(DEFAULT_APP_VISIBILITY_MODE);
-    currentBinding = signal<PttBinding>({ code: 0, modifiers: [] });
-    isForcingRelease = false;
+    themeMode = signal<ThemeMode>(THEME_MODE.Dark);
+    wsPort = signal(DEFAULT_PORT);
+    isWsReloading = signal(false);
+
+    // App
     logs = signal.Array<LogEntry>([]);
     showSettings = signal(false);
+
+    // PTT
+    isRecording = signal(false);
+    isPressed = signal(false);
+    permissionGranted = signal(false);
+    extensionConnected = signal(false);
+    currentBinding = signal<PttBinding>({ code: 0, modifiers: [] });
+    isForcingRelease = false;
+
+    // Call
     hasCallTab = signal(false);
     callStateKnown = signal(false);
     isMute = signal(false);
     isDeaf = signal(false);
     isCameraOn = signal(false);
     isScreenOn = signal(false);
-
-    // WS Port Management
-    wsPort = signal(DEFAULT_PORT);
-    isWsReloading = signal(false);
 
     logIdCounter = 0;
     unlistenFns: (() => void)[] = [];
@@ -104,24 +112,15 @@ export class AppPlugin extends Plugin {
     }
 
     initThemeMode() {
-        const storedMode = this.getStoredThemeMode();
-        this.themeMode.set(storedMode);
-        this.applyThemeMode(storedMode);
-    }
-
-    getStoredThemeMode(): ThemeMode {
-        if (typeof window === "undefined") {
-            return DEFAULT_THEME_MODE;
-        }
         try {
-            const mode = window.localStorage.getItem(THEME_STORAGE_KEY);
+            const mode = window?.localStorage?.getItem(THEME_STORAGE_KEY);
             if (mode === THEME_MODE.Dark || mode === THEME_MODE.Light) {
-                return mode;
+                this.themeMode.set(mode);
+                this.applyThemeMode(mode);
             }
         } catch {
-            // Keep default theme when storage is unavailable.
+            // Keep default
         }
-        return DEFAULT_THEME_MODE;
     }
 
     applyThemeMode(mode: ThemeMode) {
@@ -274,7 +273,6 @@ export class AppPlugin extends Plugin {
                 this.features.set(features);
             }
         } catch (error) {
-            this.features.set(DEFAULT_FEATURES);
             this.addLog("ERROR", `Failed to load features: ${String(error)}`);
         }
     }
@@ -286,7 +284,6 @@ export class AppPlugin extends Plugin {
                 this.appVisibilityMode.set(mode);
             }
         } catch (error) {
-            this.appVisibilityMode.set(DEFAULT_APP_VISIBILITY_MODE);
             this.addLog("ERROR", `Failed to load app visibility: ${String(error)}`);
         }
     }
