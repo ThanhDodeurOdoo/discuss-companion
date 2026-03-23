@@ -14,9 +14,10 @@ import {
     IncomingMessageUnion,
     ConnectionStatus
 } from "./flatbuffers/discuss/ipc-protocol";
-import { CallCommand } from "./call_commands";
 import {
+    CALL_COMMAND,
     ChannelEventType,
+    type CallCommand,
     type ChannelEvent,
     IPC_COMMAND,
     type AppVisibilityMode
@@ -123,31 +124,31 @@ async function sendCallCommand(command: CallCommand, value?: boolean): Promise<b
 }
 
 export async function setMute(value: boolean): Promise<boolean> {
-    return sendCallCommand(CallCommand.SetMute, value);
+    return sendCallCommand(CALL_COMMAND.SetMute, value);
 }
 
 export async function setDeaf(value: boolean): Promise<boolean> {
-    return sendCallCommand(CallCommand.SetDeaf, value);
+    return sendCallCommand(CALL_COMMAND.SetDeaf, value);
 }
 
 export async function setCamera(value: boolean): Promise<boolean> {
-    return sendCallCommand(CallCommand.SetCamera, value);
+    return sendCallCommand(CALL_COMMAND.SetCamera, value);
 }
 
 export async function setScreen(value: boolean): Promise<boolean> {
-    return sendCallCommand(CallCommand.SetScreen, value);
+    return sendCallCommand(CALL_COMMAND.SetScreen, value);
 }
 
 export async function openPip(): Promise<boolean> {
-    return sendCallCommand(CallCommand.OpenPip);
+    return sendCallCommand(CALL_COMMAND.OpenPip);
 }
 
 export async function leaveCall(): Promise<boolean> {
-    return sendCallCommand(CallCommand.LeaveCall);
+    return sendCallCommand(CALL_COMMAND.LeaveCall);
 }
 
 export async function focusCallTab(): Promise<boolean> {
-    return sendCallCommand(CallCommand.FocusCallTab);
+    return sendCallCommand(CALL_COMMAND.FocusCallTab);
 }
 
 // Channel

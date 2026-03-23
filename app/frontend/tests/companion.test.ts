@@ -6,7 +6,7 @@ import {
     userEvent,
     updateInput
 } from "@root/tests/utils/owl_test_utils";
-import { IPC_COMMAND, type ChannelEvent, type CallStatePayload } from "../ipc_types";
+import { CALL_COMMAND, IPC_COMMAND, type ChannelEvent, type CallStatePayload } from "../ipc_types";
 
 const invokeMock = jest.fn();
 const listenMock = jest.fn(() => Promise.resolve(() => {}));
@@ -38,20 +38,26 @@ jest.unstable_mockModule("../ipc", () => {
         showMainWindow: () => invokeMock(IPC_COMMAND.ShowMainWindow),
         quitApp: () => invokeMock(IPC_COMMAND.QuitApp),
         setMute: (v: boolean) =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "set-mute", value: v }),
+            invokeMock(IPC_COMMAND.SendCallCommand, { command: CALL_COMMAND.SetMute, value: v }),
         setDeaf: (v: boolean) =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "set-deaf", value: v }),
+            invokeMock(IPC_COMMAND.SendCallCommand, { command: CALL_COMMAND.SetDeaf, value: v }),
         setCamera: (v: boolean) =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "set-camera", value: v }),
+            invokeMock(IPC_COMMAND.SendCallCommand, { command: CALL_COMMAND.SetCamera, value: v }),
         setScreen: (v: boolean) =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "set-screen", value: v }),
+            invokeMock(IPC_COMMAND.SendCallCommand, { command: CALL_COMMAND.SetScreen, value: v }),
         openPip: () =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "open-pip", value: undefined }),
+            invokeMock(IPC_COMMAND.SendCallCommand, {
+                command: CALL_COMMAND.OpenPip,
+                value: undefined
+            }),
         leaveCall: () =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "leave-call", value: undefined }),
+            invokeMock(IPC_COMMAND.SendCallCommand, {
+                command: CALL_COMMAND.LeaveCall,
+                value: undefined
+            }),
         focusCallTab: () =>
             invokeMock(IPC_COMMAND.SendCallCommand, {
-                command: "focus-call-tab",
+                command: CALL_COMMAND.FocusCallTab,
                 value: undefined
             }),
         setupChannel: setupChannelMock
@@ -216,27 +222,27 @@ describe("Companion Component Interactions", () => {
         await userEvent.click(leaveBtn);
 
         expect(invokeMock).toHaveBeenCalledWith(IPC_COMMAND.SendCallCommand, {
-            command: "set-mute",
+            command: CALL_COMMAND.SetMute,
             value: true
         });
         expect(invokeMock).toHaveBeenCalledWith(IPC_COMMAND.SendCallCommand, {
-            command: "set-deaf",
+            command: CALL_COMMAND.SetDeaf,
             value: true
         });
         expect(invokeMock).toHaveBeenCalledWith(IPC_COMMAND.SendCallCommand, {
-            command: "set-camera",
+            command: CALL_COMMAND.SetCamera,
             value: true
         });
         expect(invokeMock).toHaveBeenCalledWith(IPC_COMMAND.SendCallCommand, {
-            command: "set-screen",
+            command: CALL_COMMAND.SetScreen,
             value: true
         });
         expect(invokeMock).toHaveBeenCalledWith(IPC_COMMAND.SendCallCommand, {
-            command: "focus-call-tab",
+            command: CALL_COMMAND.FocusCallTab,
             value: undefined
         });
         expect(invokeMock).toHaveBeenCalledWith(IPC_COMMAND.SendCallCommand, {
-            command: "leave-call",
+            command: CALL_COMMAND.LeaveCall,
             value: undefined
         });
     });

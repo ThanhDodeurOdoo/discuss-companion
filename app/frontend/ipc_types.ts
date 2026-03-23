@@ -50,6 +50,23 @@ export const IPC_COMMAND = {
     EstablishChannel: "establish_channel"
 } as const;
 
+export const CALL_COMMAND = {
+    ToggleMicrophone: "toggle-microphone",
+    ToggleDeafen: "toggle-deafen",
+    ToggleCamera: "toggle-camera",
+    ToggleScreen: "toggle-screen",
+    OpenPip: "open-pip",
+    LeaveCall: "leave-call",
+    OpenChannel: "open-channel",
+    SetMute: "set-mute",
+    SetDeaf: "set-deaf",
+    SetCamera: "set-camera",
+    SetScreen: "set-screen",
+    FocusCallTab: "focus-call-tab",
+    RefreshCallState: "refresh-call-state"
+} as const;
+export type CallCommand = (typeof CALL_COMMAND)[keyof typeof CALL_COMMAND];
+
 export const APP_VISIBILITY_MODE = {
     TrayAndDockWhenWindowOpen: "trayAndDockWhenWindowOpen",
     TrayAndDockAlways: "trayAndDockAlways",
