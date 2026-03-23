@@ -1,5 +1,6 @@
 use std::sync::atomic::Ordering;
 
+use serde::{Deserialize, Serialize};
 use tauri::{
     Emitter, Manager, Runtime, State,
     ipc::{Channel, InvokeBody, Request},
@@ -25,6 +26,45 @@ use crate::{
 /// Tauri commands require owned values for dependency injection of the app handle
 /// and for deserialization of arguments. This does not matter from the rust side since
 /// these handlers are called from the front-end where ownership is not a relevant concept
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CallCommand {
+    ToggleMicrophone,
+    ToggleDeafen,
+    ToggleCamera,
+    ToggleScreen,
+    OpenPip,
+    LeaveCall,
+    OpenChannel,
+    SetMute,
+    SetDeaf,
+    SetCamera,
+    SetScreen,
+    FocusCallTab,
+    RefreshCallState,
+}
+
+impl CallCommand {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::ToggleMicrophone => "toggle-microphone",
+            Self::ToggleDeafen => "toggle-deafen",
+            Self::ToggleCamera => "toggle-camera",
+            Self::ToggleScreen => "toggle-screen",
+            Self::OpenPip => "open-pip",
+            Self::LeaveCall => "leave-call",
+            Self::OpenChannel => "open-channel",
+            Self::SetMute => "set-mute",
+            Self::SetDeaf => "set-deaf",
+            Self::SetCamera => "set-camera",
+            Self::SetScreen => "set-screen",
+            Self::FocusCallTab => "focus-call-tab",
+            Self::RefreshCallState => "refresh-call-state",
+        }
+    }
+}
 
 #[tauri::command]
 #[must_use]
@@ -225,14 +265,18 @@ pub fn establish_channel(state: State<'_, WsState>, channel: Channel) {
     state.push_event_channel(channel);
 }
 
-fn build_call_command_payload(command: &str, value: Option<bool>) -> String {
+fn build_call_command_payload(command: CallCommand, value: Option<bool>) -> String {
     value.map_or_else(
-        || command.to_string(),
+        || command.as_str().to_string(),
         |value| serde_json::json!({ "command": command, "value": value }).to_string(),
     )
 }
 
-pub(crate) fn dispatch_call_command(state: &WsState, command: &str, value: Option<bool>) -> bool {
+pub(crate) fn dispatch_call_command(
+    state: &WsState,
+    command: CallCommand,
+    value: Option<bool>,
+) -> bool {
     let payload = build_call_command_payload(command, value);
     let message = protocol::ws::OutgoingMessage::Status {
         ts: current_timestamp(),
@@ -245,8 +289,12 @@ pub(crate) fn dispatch_call_command(state: &WsState, command: &str, value: Optio
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
 #[must_use]
-pub fn send_call_command(state: State<'_, WsState>, command: String, value: Option<bool>) -> bool {
-    dispatch_call_command(&state, &command, value)
+pub fn send_call_command(
+    state: State<'_, WsState>,
+    command: CallCommand,
+    value: Option<bool>,
+) -> bool {
+    dispatch_call_command(&state, command, value)
 }
 
 #[cfg(test)]
@@ -260,13 +308,13 @@ mod tests {
 
     #[test]
     fn test_build_call_command_payload_plain() {
-        let payload = build_call_command_payload("toggle-microphone", None);
+        let payload = build_call_command_payload(CallCommand::ToggleMicrophone, None);
         assert_eq!(payload, "toggle-microphone");
     }
 
     #[test]
     fn test_build_call_command_payload_with_value() {
-        let payload = build_call_command_payload("set-mute", Some(true));
+        let payload = build_call_command_payload(CallCommand::SetMute, Some(true));
         let parsed: serde_json::Value = serde_json::from_str(&payload).expect("valid json payload");
         assert_eq!(
             parsed.get("command").and_then(|value| value.as_str()),
@@ -292,7 +340,7 @@ mod tests {
             call_state: RwLock::new(None),
         };
 
-        let did_send = dispatch_call_command(&state, "set-mute", Some(true));
+        let did_send = dispatch_call_command(&state, CallCommand::SetMute, Some(true));
         assert!(did_send, "expected ws send to succeed");
 
         let bin = ws_rx.try_recv().expect("expected ws payload");

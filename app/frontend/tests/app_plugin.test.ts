@@ -2,7 +2,7 @@ import { jest, describe, test, expect, beforeEach, afterEach } from "@jest/globa
 import type { App as OwlApp } from "@odoo/owl";
 import type { AppPlugin as AppPluginType } from "../app_plugin.ts";
 import { cleanupOwl, createOwlTestApp } from "@root/tests/utils/owl_test_utils";
-import { IPC_COMMAND } from "../ipc_types";
+import { CALL_COMMAND, IPC_COMMAND } from "../ipc_types";
 
 const invokeMock = jest.fn();
 const setupChannelMock = jest.fn();
@@ -35,20 +35,26 @@ jest.unstable_mockModule("../ipc.ts", () => {
         showMainWindow: () => invokeMock(IPC_COMMAND.ShowMainWindow),
         quitApp: () => invokeMock(IPC_COMMAND.QuitApp),
         setMute: (v: boolean) =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "set-mute", value: v }),
+            invokeMock(IPC_COMMAND.SendCallCommand, { command: CALL_COMMAND.SetMute, value: v }),
         setDeaf: (v: boolean) =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "set-deaf", value: v }),
+            invokeMock(IPC_COMMAND.SendCallCommand, { command: CALL_COMMAND.SetDeaf, value: v }),
         setCamera: (v: boolean) =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "set-camera", value: v }),
+            invokeMock(IPC_COMMAND.SendCallCommand, { command: CALL_COMMAND.SetCamera, value: v }),
         setScreen: (v: boolean) =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "set-screen", value: v }),
+            invokeMock(IPC_COMMAND.SendCallCommand, { command: CALL_COMMAND.SetScreen, value: v }),
         openPip: () =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "open-pip", value: undefined }),
+            invokeMock(IPC_COMMAND.SendCallCommand, {
+                command: CALL_COMMAND.OpenPip,
+                value: undefined
+            }),
         leaveCall: () =>
-            invokeMock(IPC_COMMAND.SendCallCommand, { command: "leave-call", value: undefined }),
+            invokeMock(IPC_COMMAND.SendCallCommand, {
+                command: CALL_COMMAND.LeaveCall,
+                value: undefined
+            }),
         focusCallTab: () =>
             invokeMock(IPC_COMMAND.SendCallCommand, {
-                command: "focus-call-tab",
+                command: CALL_COMMAND.FocusCallTab,
                 value: undefined
             }),
         setupChannel: setupChannelMock
@@ -125,7 +131,7 @@ describe("AppPlugin", () => {
         await plugin.toggleMute();
 
         expect(invokeMock).toHaveBeenCalledWith(IPC_COMMAND.SendCallCommand, {
-            command: "set-mute",
+            command: CALL_COMMAND.SetMute,
             value: true
         });
     });

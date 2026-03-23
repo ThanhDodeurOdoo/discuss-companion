@@ -24,7 +24,6 @@ use crate::{
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 static CURRENT_SERVER_ID: AtomicU64 = AtomicU64::new(0);
-const REFRESH_CALL_STATE_COMMAND: &str = "refresh-call-state";
 
 pub fn is_connected() -> bool {
     CONNECTION_COUNT.load(Ordering::Acquire) > 0
@@ -139,7 +138,11 @@ async fn handle_connection<R: tauri::Runtime>(
             protocol::ipc::encode_ws_connection(protocol::ipc::ConnectionStatus::Connected);
         send_to_frontend(&app_handle, &payload);
         if let Some(state) = app_handle.try_state::<WsState>() {
-            let _ = commands::dispatch_call_command(&state, REFRESH_CALL_STATE_COMMAND, None);
+            let _ = commands::dispatch_call_command(
+                &state,
+                commands::CallCommand::RefreshCallState,
+                None,
+            );
         }
     }
 
