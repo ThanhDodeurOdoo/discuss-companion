@@ -12,6 +12,7 @@ use tokio::{
 use tokio_tungstenite::tungstenite::{Message, handshake};
 use tracing::{error, info};
 
+use super::commands;
 #[cfg(target_os = "macos")]
 use crate::interface::dock_menu;
 use crate::{
@@ -23,6 +24,7 @@ use crate::{
 
 static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 static CURRENT_SERVER_ID: AtomicU64 = AtomicU64::new(0);
+const REFRESH_CALL_STATE_COMMAND: &str = "refresh-call-state";
 
 pub fn is_connected() -> bool {
     CONNECTION_COUNT.load(Ordering::Acquire) > 0
@@ -129,14 +131,17 @@ async fn handle_connection<R: tauri::Runtime>(
         false
     };
 
+    let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+    let mut rx = tx.subscribe();
+
     if is_current_server(server_id) {
         let payload =
             protocol::ipc::encode_ws_connection(protocol::ipc::ConnectionStatus::Connected);
         send_to_frontend(&app_handle, &payload);
+        if let Some(state) = app_handle.try_state::<WsState>() {
+            let _ = commands::dispatch_call_command(&state, REFRESH_CALL_STATE_COMMAND, None);
+        }
     }
-
-    let (mut ws_sender, mut ws_receiver) = ws_stream.split();
-    let mut rx = tx.subscribe();
 
     loop {
         tokio::select! {

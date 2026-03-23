@@ -140,6 +140,17 @@ describe("AppPlugin", () => {
         expect(setupChannelMock).toHaveBeenCalled();
     });
 
+    test("setupListeners registers the channel before Tauri event listeners", async () => {
+        invokeMock.mockResolvedValue(true as never);
+        mockedListen.mockResolvedValue((() => {}) as never);
+
+        await plugin.setupListeners();
+
+        expect(setupChannelMock.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedListen.mock.invocationCallOrder[0]
+        );
+    });
+
     test("binding capture updates the key without leaving PTT pressed", async () => {
         invokeMock.mockResolvedValue(undefined as never);
         const listeners = new Map<string, (event: { payload: unknown }) => Promise<void> | void>();

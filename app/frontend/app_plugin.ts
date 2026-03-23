@@ -151,16 +151,6 @@ export class AppPlugin extends Plugin {
         const connected = await ipc.isExtensionConnected();
         this.extensionConnected.set(connected);
 
-        const bindingCapturedUnlisten = await listen<BindingCapturedPayload>(
-            "binding-captured",
-            async (event) => {
-                if (!this.isRecording()) {
-                    return;
-                }
-                await this.applyRecordedBinding(event.payload.key);
-            }
-        );
-
         await ipc.setupChannel(async (event: ChannelEvent) => {
             switch (event.type) {
                 case ChannelEventType.PttEvent: {
@@ -219,6 +209,16 @@ export class AppPlugin extends Plugin {
                 }
             }
         });
+
+        const bindingCapturedUnlisten = await listen<BindingCapturedPayload>(
+            "binding-captured",
+            async (event) => {
+                if (!this.isRecording()) {
+                    return;
+                }
+                await this.applyRecordedBinding(event.payload.key);
+            }
+        );
 
         type WsStatusPayload = {
             status: string;
