@@ -213,6 +213,10 @@ async fn handle_connection<R: tauri::Runtime>(
                         info!("WebSocket connection closed: {}", addr);
                         break;
                     }
+                    Some(Err(e)) => {
+                        error!("WebSocket connection error from {}: {}", addr, e);
+                        break;
+                    }
                     _ => {}
                 }
             }

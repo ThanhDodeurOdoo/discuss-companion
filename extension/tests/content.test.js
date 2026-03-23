@@ -208,14 +208,24 @@ describe("Extension Content Script", () => {
         });
     });
 
-    test("connects WebSocket when owner and companion enabled", async () => {
+    test("connects WebSocket only after an active call is hosted by the owner", async () => {
         setupBridgeAutoResponses({ hasOdoo: true, hasRtcService: true });
+        onMessageCallback({ type: "content-unsubscribe" }, { id: "test-extension-id" });
+        await flushPromises();
+        loadBridgeScript();
+        await flushPromises();
+
+        emitBridgeEvent("call-lifecycle-update", {
+            hasRtcService: true,
+            hasHostedCall: true,
+            isTalking: true
+        });
+        await flushPromises();
+
         onMessageCallback(
             { type: "content-subscribe", value: { isOwner: true } },
             { id: "test-extension-id" }
         );
-
-        loadBridgeScript();
         await flushPromises();
         await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -224,29 +234,10 @@ describe("Extension Content Script", () => {
 
     test("does not connect WebSocket when not owner", async () => {
         setupBridgeAutoResponses({ hasOdoo: true, hasRtcService: true });
-        onMessageCallback(
-            { type: "content-subscribe", value: { isOwner: false } },
-            { id: "test-extension-id" }
-        );
+        onMessageCallback({ type: "content-unsubscribe" }, { id: "test-extension-id" });
+        await flushPromises();
         loadBridgeScript();
         await flushPromises();
-
-        expect(global.mockSockets.length).toBe(0);
-    });
-
-    test("disconnects WebSocket when call ends and service worker unsubscribes", async () => {
-        setupBridgeAutoResponses({ hasOdoo: true, hasRtcService: true });
-        onMessageCallback(
-            { type: "content-subscribe", value: { isOwner: true } },
-            { id: "test-extension-id" }
-        );
-
-        loadBridgeScript();
-        await flushPromises();
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(global.mockSockets.length).toBeGreaterThan(0);
-        const socket = global.mockSockets[0];
 
         emitBridgeEvent("call-lifecycle-update", {
             hasRtcService: true,
@@ -254,6 +245,73 @@ describe("Extension Content Script", () => {
             isTalking: true
         });
         await flushPromises();
+
+        onMessageCallback(
+            { type: "content-subscribe", value: { isOwner: false } },
+            { id: "test-extension-id" }
+        );
+        await flushPromises();
+
+        expect(global.mockSockets.length).toBe(0);
+    });
+
+    test("disconnects WebSocket as soon as the hosted call disappears", async () => {
+        setupBridgeAutoResponses({ hasOdoo: true, hasRtcService: true });
+        onMessageCallback({ type: "content-unsubscribe" }, { id: "test-extension-id" });
+        await flushPromises();
+        loadBridgeScript();
+        await flushPromises();
+
+        emitBridgeEvent("call-lifecycle-update", {
+            hasRtcService: true,
+            hasHostedCall: true,
+            isTalking: true
+        });
+        await flushPromises();
+
+        onMessageCallback(
+            { type: "content-subscribe", value: { isOwner: true } },
+            { id: "test-extension-id" }
+        );
+        await flushPromises();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        const socket = global.mockSockets[0];
+        jest.clearAllMocks();
+
+        emitBridgeEvent("call-lifecycle-update", {
+            hasRtcService: true,
+            hasHostedCall: false,
+            isTalking: false
+        });
+        await flushPromises();
+
+        expect(socket.close).toHaveBeenCalledTimes(1);
+    });
+
+    test("disconnects WebSocket when call ends and service worker unsubscribes", async () => {
+        setupBridgeAutoResponses({ hasOdoo: true, hasRtcService: true });
+        onMessageCallback({ type: "content-unsubscribe" }, { id: "test-extension-id" });
+        await flushPromises();
+        loadBridgeScript();
+        await flushPromises();
+
+        emitBridgeEvent("call-lifecycle-update", {
+            hasRtcService: true,
+            hasHostedCall: true,
+            isTalking: true
+        });
+        await flushPromises();
+
+        onMessageCallback(
+            { type: "content-subscribe", value: { isOwner: true } },
+            { id: "test-extension-id" }
+        );
+        await flushPromises();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(global.mockSockets.length).toBeGreaterThan(0);
+        const socket = global.mockSockets[0];
         jest.clearAllMocks();
         chrome.runtime.sendMessage.mockImplementation((_message, callback) => {
             callback?.({ status: "ok" });

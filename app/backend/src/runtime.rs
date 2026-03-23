@@ -294,6 +294,16 @@ impl PttHandler {
         debug!("Connection state changed: connected={}", is_connected);
         if self.is_connected != is_connected {
             self.is_connected = is_connected;
+            if !is_connected {
+                self.is_active = false;
+                if let Some(state) = self.app_handle.try_state::<WsState>() {
+                    state.set_call_state(None);
+                }
+                let _ = tray::update_tray_menu(&self.app_handle, None);
+                tray::set_call_state(&self.app_handle, None);
+                #[cfg(target_os = "macos")]
+                let _ = dock_menu::update_dock_menu(&self.app_handle, None);
+            }
             self.update_tray();
         }
     }
