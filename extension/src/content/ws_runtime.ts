@@ -35,7 +35,9 @@ export function createContentWsRuntime(deps: {
     }
 
     function canConnect(): boolean {
-        return state.isOwner && state.isSubscribed && state.isCompanionEnabled;
+        return (
+            state.isOwner && state.isSubscribed && state.hasHostedCall && state.isCompanionEnabled
+        );
     }
 
     function refreshWsConnection(): void {

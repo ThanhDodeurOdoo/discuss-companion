@@ -113,7 +113,7 @@ export function createLifecycleSyncRuntime(deps: {
             clearLifecycleResync();
         }
 
-        if (!payload.hasRtcService && !payload.hasHostedCall) {
+        if (!payload.hasHostedCall) {
             disconnectWs();
         }
     }

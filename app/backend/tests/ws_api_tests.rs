@@ -29,6 +29,7 @@ mod tests {
         test::{mock_builder, mock_context, noop_assets},
     };
     use tokio::{
+        io::AsyncWriteExt,
         net::{TcpListener, TcpStream},
         sync::broadcast,
         time::{sleep, timeout},
@@ -883,6 +884,71 @@ mod tests {
         );
 
         // Last event should be Disconnected
+        let last_msg = ipc_protocol::root_as_to_frontend_message(events.last().unwrap()).unwrap();
+        assert_eq!(
+            last_msg.event_type(),
+            ipc_protocol::ToFrontend::WsConnection
+        );
+        let disconn_event = last_msg.event_as_ws_connection().expect("WsConnection");
+        assert_eq!(
+            disconn_event.status(),
+            ipc_protocol::ConnectionStatus::Disconnected
+        );
+        drop(events);
+
+        let _ = shutdown_tx.send(());
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_connection_error_notifies_frontend_disconnect() {
+        ws_server::reset_connection_count();
+        let (tx, _) = broadcast::channel(10);
+        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let app_handle = app.handle().clone();
+
+        let received_events: Arc<Mutex<Vec<Vec<u8>>>> = Arc::new(Mutex::new(Vec::new()));
+        let handler_received = Arc::clone(&received_events);
+        let (server_shutdown_tx, _) = broadcast::channel(1);
+        let (conn_tx_state, _) = crossbeam_channel::unbounded();
+
+        let channel = Channel::new(move |msg| {
+            if let InvokeResponseBody::Raw(data) = msg {
+                handler_received.lock().unwrap().push(data);
+            }
+            Ok(())
+        });
+
+        app.manage(WsState {
+            port: AtomicU16::new(0),
+            ws_tx: tx.clone(),
+            server_shutdown_tx: Mutex::new(server_shutdown_tx),
+            conn_tx: conn_tx_state,
+            event_channels: RwLock::new(vec![channel]),
+            call_state: RwLock::new(None),
+        });
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let port = addr.port();
+        drop(listener);
+
+        let (conn_tx, _) = crossbeam_channel::unbounded();
+        tokio::spawn(async move {
+            start_ws_server(port, tx, shutdown_rx, app_handle, conn_tx).await;
+        });
+
+        let mut ws = connect_ws(addr).await;
+        wait_for_events(&received_events, 1).await;
+
+        ws.get_mut().shutdown().await.unwrap();
+        drop(ws);
+
+        wait_for_events(&received_events, 2).await;
+        wait_until(|| !is_connected()).await;
+
+        let events = received_events.lock().unwrap();
         let last_msg = ipc_protocol::root_as_to_frontend_message(events.last().unwrap()).unwrap();
         assert_eq!(
             last_msg.event_type(),
