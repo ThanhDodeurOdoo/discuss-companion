@@ -19,6 +19,7 @@ use crate::{
     config::{DEFAULT_PORT, store_keys},
     interface::{call_controls_menu, call_controls_window, tray},
     protocol, ptt_engine,
+    settings::AppVisibilityMode,
     state::{AppSettings, WsState},
 };
 
@@ -41,7 +42,7 @@ pub fn build_app(
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(move |app| {
             let mut port = DEFAULT_PORT;
-            let mut app_visibility_mode = protocol::AppVisibilityMode::default();
+            let mut app_visibility_mode = AppVisibilityMode::default();
             if let Ok(store) = app.app_handle().store(store_keys::STORE_FILENAME) {
                 if let Some(value) = store.get(store_keys::PTT_BINDING)
                     && let Ok(binding) = serde_json::from_value(value)
@@ -146,7 +147,7 @@ pub fn build_app(
                         .try_state::<AppSettings>()
                         .map(|settings| settings.app_visibility_mode())
                         .unwrap_or_default();
-                    if mode == protocol::AppVisibilityMode::TrayAndDockWhenWindowOpen {
+                    if mode == AppVisibilityMode::TrayAndDockWhenWindowOpen {
                         let _ = window
                             .app_handle()
                             .set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -189,25 +190,26 @@ fn is_main_window_visible<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>) -
 
 pub(crate) fn apply_app_visibility_mode<R: tauri::Runtime>(
     app_handle: &tauri::AppHandle<R>,
-    mode: protocol::AppVisibilityMode,
+    mode: AppVisibilityMode,
 ) {
     if let Some(tray_icon) = app_handle.tray_by_id(tray::TRAY_ID) {
-        let show_tray = mode != protocol::AppVisibilityMode::DockOnly;
+        let show_tray = mode != AppVisibilityMode::DockOnly;
         let _ = tray_icon.set_visible(show_tray);
     }
 
     #[cfg(target_os = "macos")]
     {
         let policy = match mode {
-            protocol::AppVisibilityMode::TrayAndDockWhenWindowOpen => {
+            AppVisibilityMode::TrayAndDockWhenWindowOpen => {
                 if is_main_window_visible(app_handle) {
                     tauri::ActivationPolicy::Regular
                 } else {
                     tauri::ActivationPolicy::Accessory
                 }
             }
-            protocol::AppVisibilityMode::TrayAndDockAlways
-            | protocol::AppVisibilityMode::DockOnly => tauri::ActivationPolicy::Regular,
+            AppVisibilityMode::TrayAndDockAlways | AppVisibilityMode::DockOnly => {
+                tauri::ActivationPolicy::Regular
+            }
         };
         let _ = app_handle.set_activation_policy(policy);
     }

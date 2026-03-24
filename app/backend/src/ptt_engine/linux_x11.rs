@@ -22,7 +22,7 @@ use x11::{
 };
 
 use crate::{
-    protocol::{KeyBinding, Modifiers, PttState, current_timestamp, universal::keyboard as kb},
+    protocol::{KeyBinding, Modifiers, PttState, current_timestamp, keyboard as kb},
     ptt_engine::{PttEngine, PttEvent},
 };
 

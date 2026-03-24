@@ -29,6 +29,7 @@ mod profiling;
 pub mod protocol;
 pub mod ptt_engine;
 pub mod runtime;
+pub mod settings;
 pub mod state;
 pub mod utils;
 

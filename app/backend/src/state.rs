@@ -6,23 +6,23 @@ use std::sync::{
 use tauri::ipc::{Channel, InvokeBody};
 use tokio::sync::broadcast;
 
-use crate::protocol;
+use crate::{protocol, settings::AppVisibilityMode};
 
 pub struct AppSettings {
-    pub app_visibility_mode: RwLock<protocol::AppVisibilityMode>,
+    pub app_visibility_mode: RwLock<AppVisibilityMode>,
 }
 
 impl AppSettings {
     /// Recovers poisoned locks to keep settings access available after panics in worker threads.
     #[must_use]
-    pub(crate) fn app_visibility_mode(&self) -> protocol::AppVisibilityMode {
+    pub(crate) fn app_visibility_mode(&self) -> AppVisibilityMode {
         *self
             .app_visibility_mode
             .read()
             .unwrap_or_else(PoisonError::into_inner)
     }
 
-    pub(crate) fn set_app_visibility_mode(&self, mode: protocol::AppVisibilityMode) {
+    pub(crate) fn set_app_visibility_mode(&self, mode: AppVisibilityMode) {
         *self
             .app_visibility_mode
             .write()
@@ -151,7 +151,7 @@ mod tests {
     use tokio::sync::broadcast;
 
     use super::{AppSettings, WsState};
-    use crate::protocol;
+    use crate::{protocol, settings::AppVisibilityMode};
 
     fn make_ws_state(shutdown_tx: broadcast::Sender<()>) -> WsState {
         let (ws_tx, _) = broadcast::channel(1);
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn app_settings_recovers_from_poisoned_lock() {
         let settings = Arc::new(AppSettings {
-            app_visibility_mode: RwLock::new(protocol::AppVisibilityMode::default()),
+            app_visibility_mode: RwLock::new(AppVisibilityMode::default()),
         });
 
         let poisoned_settings = Arc::clone(&settings);
@@ -193,21 +193,18 @@ mod tests {
                 .app_visibility_mode
                 .write()
                 .expect("lock app visibility mode");
-            *guard = protocol::AppVisibilityMode::DockOnly;
+            *guard = AppVisibilityMode::DockOnly;
             panic_with_guard(guard);
         })
         .join();
         assert!(join_result.is_err(), "expected thread panic to poison lock");
 
-        assert_eq!(
-            settings.app_visibility_mode(),
-            protocol::AppVisibilityMode::DockOnly
-        );
+        assert_eq!(settings.app_visibility_mode(), AppVisibilityMode::DockOnly);
 
-        settings.set_app_visibility_mode(protocol::AppVisibilityMode::TrayAndDockAlways);
+        settings.set_app_visibility_mode(AppVisibilityMode::TrayAndDockAlways);
         assert_eq!(
             settings.app_visibility_mode(),
-            protocol::AppVisibilityMode::TrayAndDockAlways
+            AppVisibilityMode::TrayAndDockAlways
         );
     }
 
