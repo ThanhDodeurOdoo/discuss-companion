@@ -9,8 +9,8 @@ use tauri_plugin_store::StoreExt;
 use tracing::info;
 
 use crate::{
-    AppSettings, WsState,
     api::ws_server,
+    config::store_keys,
     flatbuffers::ipc_protocol_generated::discuss::ipc_protocol::{
         PttBinding, SetRecordingMode, SetWsPort,
     },
@@ -19,7 +19,8 @@ use crate::{
     protocol::{FEATURES, Features, KeyBinding, VERSION, current_timestamp},
     ptt_engine,
     ptt_engine::{check_accessibility_permission, get_binding, set_binding, set_recording},
-    runtime, store_keys,
+    runtime,
+    state::{AppSettings, WsState},
 };
 
 /// JUSTIFICATION: for all `clippy::needless_pass_by_value` below

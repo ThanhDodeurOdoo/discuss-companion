@@ -3,9 +3,9 @@ use tauri::menu::NativeIcon;
 use tauri::{AppHandle, Manager, Runtime};
 
 use crate::{
-    WsState,
     api::commands::{self, CallCommand},
     protocol::CallState,
+    state::WsState,
 };
 
 pub const CALL_MENU_TOGGLE_MUTE_ID: &str = "call-controls-toggle-mute";

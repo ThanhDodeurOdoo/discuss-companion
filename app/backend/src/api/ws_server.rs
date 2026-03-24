@@ -1,7 +1,4 @@
-use std::{
-    net::SocketAddr,
-    sync::atomic::{AtomicU64, AtomicUsize, Ordering},
-};
+use std::net::SocketAddr;
 
 use futures_util::{SinkExt, StreamExt};
 use tauri::Manager;
@@ -16,23 +13,19 @@ use super::commands;
 #[cfg(target_os = "macos")]
 use crate::interface::dock_menu;
 use crate::{
-    WsState,
     flatbuffers::ws_protocol_generated::discuss::ws_protocol,
     interface::tray,
     protocol::{self, CallState, current_timestamp},
+    state::{WS_SERVER_RUNTIME_STATE, WsState},
 };
 
-static CONNECTION_COUNT: AtomicUsize = AtomicUsize::new(0);
-static CURRENT_SERVER_ID: AtomicU64 = AtomicU64::new(0);
-
 pub fn is_connected() -> bool {
-    CONNECTION_COUNT.load(Ordering::Acquire) > 0
+    WS_SERVER_RUNTIME_STATE.is_connected()
 }
 
 // Helper for testing
 pub fn reset_connection_count() {
-    CONNECTION_COUNT.store(0, Ordering::Release);
-    CURRENT_SERVER_ID.store(0, Ordering::Release);
+    WS_SERVER_RUNTIME_STATE.reset();
 }
 
 pub async fn start_ws_server<R: tauri::Runtime>(
@@ -42,8 +35,7 @@ pub async fn start_ws_server<R: tauri::Runtime>(
     app_handle: tauri::AppHandle<R>,
     conn_tx: crossbeam_channel::Sender<bool>,
 ) {
-    let server_id = CURRENT_SERVER_ID.fetch_add(1, Ordering::AcqRel) + 1;
-    CONNECTION_COUNT.store(0, Ordering::Release);
+    let server_id = WS_SERVER_RUNTIME_STATE.start_server();
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = match TcpListener::bind(&addr).await {
         Ok(l) => l,
@@ -104,7 +96,7 @@ async fn handle_connection<R: tauri::Runtime>(
     mut shutdown_rx: broadcast::Receiver<()>,
     server_id: u64,
 ) {
-    let is_current_server = |id| CURRENT_SERVER_ID.load(Ordering::Acquire) == id;
+    let is_current_server = |id| WS_SERVER_RUNTIME_STATE.is_current_server(id);
     let callback = |request: &handshake::server::Request, response: handshake::server::Response| {
         info!("Received handshake request from: {:?}", addr);
         for (name, value) in request.headers() {
@@ -122,7 +114,7 @@ async fn handle_connection<R: tauri::Runtime>(
     };
     info!("New WebSocket connection from: {}", addr);
     let counted = if is_current_server(server_id) {
-        if CONNECTION_COUNT.fetch_add(1, Ordering::AcqRel) == 0 {
+        if WS_SERVER_RUNTIME_STATE.register_connection() {
             let _ = conn_tx.send(true);
         }
         true
@@ -225,10 +217,7 @@ async fn handle_connection<R: tauri::Runtime>(
             break;
         }
     }
-    if counted
-        && is_current_server(server_id)
-        && CONNECTION_COUNT.fetch_sub(1, Ordering::AcqRel) == 1
-    {
+    if counted && is_current_server(server_id) && WS_SERVER_RUNTIME_STATE.unregister_connection() {
         let _ = conn_tx.send(false);
         let payload =
             protocol::ipc::encode_ws_connection(protocol::ipc::ConnectionStatus::Disconnected);
