@@ -1,6 +1,0 @@
-version: 2
-triggerPaths:
-  - "package.json"
-  - "package-lock.json"
-  - "app/backend/Cargo.toml"
-  - "app/backend/Cargo.lock"
