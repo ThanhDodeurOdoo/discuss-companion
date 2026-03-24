@@ -1,12 +1,10 @@
 use std::time::SystemTime;
 
-use super::types::{CallState, KeyBinding, Modifiers};
-
 pub mod ws {
     use flatbuffers::FlatBufferBuilder;
     use serde::{Deserialize, Serialize};
 
-    use super::KeyBinding;
+    use super::super::input::KeyBinding;
     use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -144,7 +142,7 @@ pub mod ws {
 pub mod ipc {
     use flatbuffers::FlatBufferBuilder;
 
-    use super::{CallState, Modifiers};
+    use super::super::{call::CallState, input::Modifiers};
     use crate::flatbuffers::ipc_protocol_generated::discuss::ipc_protocol;
     pub use crate::flatbuffers::ipc_protocol_generated::discuss::ipc_protocol::ConnectionStatus;
 
@@ -293,7 +291,7 @@ pub fn current_timestamp() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::flatbuffers::ws_protocol_generated::discuss::ws_protocol;
+    use crate::{flatbuffers::ws_protocol_generated::discuss::ws_protocol, protocol::KeyBinding};
 
     #[test]
     fn test_current_timestamp() {

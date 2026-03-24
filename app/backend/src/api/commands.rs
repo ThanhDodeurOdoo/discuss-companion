@@ -20,6 +20,7 @@ use crate::{
     ptt_engine,
     ptt_engine::{check_accessibility_permission, get_binding, set_binding, set_recording},
     runtime,
+    settings::AppVisibilityMode,
     state::{AppSettings, WsState},
 };
 
@@ -82,7 +83,7 @@ pub fn get_features() -> Features {
 #[tauri::command]
 #[must_use]
 #[allow(clippy::needless_pass_by_value, reason = "tauri API")]
-pub fn get_app_visibility_mode(state: State<'_, AppSettings>) -> protocol::AppVisibilityMode {
+pub fn get_app_visibility_mode(state: State<'_, AppSettings>) -> AppVisibilityMode {
     state.app_visibility_mode()
 }
 
@@ -91,7 +92,7 @@ pub fn get_app_visibility_mode(state: State<'_, AppSettings>) -> protocol::AppVi
 pub fn set_app_visibility_mode(
     app_handle: tauri::AppHandle,
     state: State<'_, AppSettings>,
-    mode: protocol::AppVisibilityMode,
+    mode: AppVisibilityMode,
 ) {
     state.set_app_visibility_mode(mode);
 
