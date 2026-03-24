@@ -74,14 +74,12 @@ The frontend uses Owl v3 and is in `app/frontend`. The extension is in the `exte
 
 ### Dependencies
 
-#### Dev:
 - General:
     -  **Node.js (v24.13.0+)** ([link](https://nodejs.org/en/download))
 - For building the app:
     -  **Rust (v1.92+)** ([link](https://rustup.rs/))
 - For changing the protocol schema:
     -  **flatc (v25.12.19+)** ([link](https://github.com/google/flatbuffers/releases/tag/v25.12.19))
-
 
 You may run `npm install` and `cargo install` if you add new dependencies, which may update their respective package-lock and cargo-lock, but the commands must be done at the specified node/rust
 version.
@@ -143,23 +141,14 @@ npm run dev:app # app only, no extension build
 npm run build:app # app bundle only
 npm run build # packed extensions + app bundle
 ```
-
-## Running in dev mode
+or in dev mode:
 
 ```bash
 npm run dev        # Builds extension + runs the app for your current OS
 npm run dev:x11    # Linux (X11) feature flag
 ```
 
-## Extension
-
-see [Extension's Readme](./doc/extension.md)
-
-> [!WARNING]  
-> The extension is not compatible with the Odoo Discuss extension
->
-
-To link the app with Odoo:
+### Extension
 
 1.  **Build the unpacked Extensions**:
     ```bash
@@ -167,7 +156,7 @@ To link the app with Odoo:
     npm run dev:extension
     ```
     This will generate `extension/dist/chrome` and `extension/dist/firefox`.
-    Running `npm run dev` also builds these directories.
+    Running the more general `npm run dev` also builds these assets (along with running the app in dev mode).
 
 2.  **Load in Browser**:
     -   **Chrome**:
@@ -179,37 +168,13 @@ To link the app with Odoo:
         2.  Click **This Firefox**.
         3.  Click **Load Temporary Add-on...** and select `extension/dist/firefox/manifest.json`.
 
-    Refresh your Odoo tab after loading.
+    Refresh your Odoo tab after loading (this may not always be necessary if for example you're not updating code in the page script)
+    When extensions are loaded like this, re-building the extension assets will automatically be reflected without needing to unload it and re selecting the files.
 
 
-## Deployment & Distribution
+## Post-development:
 
-### Build for Production
-```bash
-npm run build         # Packed extensions + app bundle
-npm run build:app     # App bundle only
-npm run build:extension # Packed extensions only
-```
-The app output will be generated in `app/backend/target/release/bundle/`.
-The packed extensions are generated at `extension/dist/chrome.zip` and `extension/dist/firefox.zip`.
-
-### Choosing the Target OS
-The application automatically detects the target OS based on the build environment. If you want to build for a specific target manually using Cargo:
-
-- **macOS**: `npm run tauri build -- --target aarch64-apple-darwin`
-- **Windows**: `npm run tauri build -- --target x86_64-pc-windows-msvc`
-- **Linux (X11)**: `npm run tauri build -- --target x86_64-unknown-linux-gnu -- --features x11`
-
-> [!NOTE]
-> Linux support requires X11. Wayland is not yet supported.
-> see: [Issue#1](https://github.com/ThanhDodeurOdoo/discuss-companion/issues/1)
-
-When using Tauri, the target is determined by the host system:
-```bash
-npm run build:app # Builds for the current OS
-```
-
-## Profiling
+### Profiling
 
 To capture a CPU flamegraph and a DHAT heap profile:
 
@@ -232,11 +197,11 @@ Notes:
 - Quit the app via the tray "Quit" action to flush the DHAT output file.
 - The flamegraph capture stops automatically when the app exits.
 
-## Formatting
+### Formatting
 
 Run `npm run format` to format the codebase, this will apply both TS and Rust formatting.
 
-## Verification
+### Verification
 
 Before submitting a Pull Request, ensure all lints and tests pass locally:
 
@@ -265,7 +230,7 @@ or all at the same time:
 npm run verify
 ```
 
-## Versioning
+### Versioning
 
 The repo keeps app and extension versions in sync for major/minor bumps. Patch/fix bumps can diverge.
 
@@ -281,4 +246,34 @@ npm run bump patch
 # bump a single scope (patch/fix only)
 npm run bump app fix
 npm run bump extension fix
+```
+### Git commit
+
+Follow the [Odoo commit message guidelines](https://www.odoo.com/documentation/19.0/contributing/development/git_guidelines.html)
+
+## Deployment & Distribution
+
+### Build for Production
+```bash
+npm run build         # Packed extensions + app bundle
+npm run build:app     # App bundle only
+npm run build:extension # Packed extensions only
+```
+The app output will be generated in `app/backend/target/release/bundle/`.
+The packed extensions are generated at `extension/dist/chrome.zip` and `extension/dist/firefox.zip`.
+
+### Choosing the Target OS
+The application automatically detects the target OS based on the build environment. If you want to build for a specific target manually using Cargo:
+
+- **macOS**: `npm run tauri build -- --target aarch64-apple-darwin`
+- **Windows**: `npm run tauri build -- --target x86_64-pc-windows-msvc`
+- **Linux (X11)**: `npm run tauri build -- --target x86_64-unknown-linux-gnu -- --features x11`
+
+> [!NOTE]
+> Linux support requires X11. Wayland is not yet supported.
+> see: [Issue#1](https://github.com/ThanhDodeurOdoo/discuss-companion/issues/1)
+
+When using Tauri, the target is determined by the host system:
+```bash
+npm run build:app # Builds for the current OS
 ```
