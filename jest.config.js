@@ -24,7 +24,7 @@ export default {
                 useESM: true
             }
         ],
-        "^.+\\.xml$": "<rootDir>/jest.xmlTransformer.js"
+        "^.+\\.xml$": "<rootDir>/scripts/jest.xmlTransformer.js"
     },
-    setupFilesAfterEnv: ["<rootDir>/jest.setup.js"]
+    setupFilesAfterEnv: ["<rootDir>/scripts/jest.setup.js"]
 };
