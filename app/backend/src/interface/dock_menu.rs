@@ -18,7 +18,7 @@ use tauri::{AppHandle, Manager, Runtime};
 use tracing::warn;
 
 use super::call_controls_menu;
-use crate::{WsState, protocol::CallState};
+use crate::{protocol::CallState, state::WsState};
 
 pub const DOCK_MENU_SHOW_CALL_CONTROLS_ID: &str = "dock-call-controls";
 

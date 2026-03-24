@@ -14,7 +14,7 @@ mod tests {
 
     use discuss_companion_lib::{
         api::commands, flatbuffers::ipc_protocol_generated::discuss::ipc_protocol,
-        protocol::CallState,
+        protocol::CallState, state::WsState,
     };
     use tauri::{
         Manager,
@@ -92,7 +92,7 @@ mod tests {
             .build(mock_context(noop_assets()))
             .expect("failed to build app");
 
-        app.manage(discuss_companion_lib::WsState {
+        app.manage(WsState {
             port: AtomicU16::new(12345),
             ws_tx: broadcast::channel(1).0,
             server_shutdown_tx: Mutex::new(broadcast::channel(1).0),
@@ -151,7 +151,7 @@ mod tests {
             Ok(())
         });
 
-        app.manage(discuss_companion_lib::WsState {
+        app.manage(WsState {
             port: AtomicU16::new(12345),
             ws_tx: broadcast::channel(1).0,
             server_shutdown_tx: Mutex::new(server_shutdown_tx),
@@ -160,7 +160,7 @@ mod tests {
             call_state: RwLock::new(Some(call_state)),
         });
 
-        commands::establish_channel(app.state::<discuss_companion_lib::WsState>(), channel);
+        commands::establish_channel(app.state::<WsState>(), channel);
 
         let event = {
             let events = received.lock().unwrap();
@@ -201,7 +201,7 @@ mod tests {
             Ok(())
         });
 
-        app.manage(discuss_companion_lib::WsState {
+        app.manage(WsState {
             port: AtomicU16::new(12345),
             ws_tx: broadcast::channel(1).0,
             server_shutdown_tx: Mutex::new(server_shutdown_tx),
@@ -210,12 +210,12 @@ mod tests {
             call_state: RwLock::new(None),
         });
 
-        commands::establish_channel(app.state::<discuss_companion_lib::WsState>(), channel);
+        commands::establish_channel(app.state::<WsState>(), channel);
 
         let events_len = { received.lock().unwrap().len() };
         assert_eq!(events_len, 0, "no cached call state expected");
         let channels_len = {
-            let state = app.state::<discuss_companion_lib::WsState>();
+            let state = app.state::<WsState>();
             let channels = state.event_channels.read().unwrap();
             channels.len()
         };

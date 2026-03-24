@@ -10,7 +10,7 @@ use tauri::{
 };
 
 use super::{call_controls_menu, call_controls_window};
-use crate::{WsState, api, protocol::CallState, utils::path::assets};
+use crate::{api, protocol::CallState, state::WsState, utils::path::assets};
 
 pub const TRAY_ID: &str = "main-tray";
 const TRAY_OPEN_MAIN_WINDOW_ID: &str = "open-main-window";

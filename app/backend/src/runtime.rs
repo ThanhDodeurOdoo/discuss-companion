@@ -15,9 +15,11 @@ use tracing::{debug, error};
 #[cfg(target_os = "macos")]
 use crate::interface::dock_menu;
 use crate::{
-    AppSettings, DEFAULT_PORT, WsState, api,
+    api,
+    config::{DEFAULT_PORT, store_keys},
     interface::{call_controls_menu, call_controls_window, tray},
-    protocol, ptt_engine, store_keys,
+    protocol, ptt_engine,
+    state::{AppSettings, WsState},
 };
 
 #[allow(

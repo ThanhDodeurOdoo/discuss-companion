@@ -13,12 +13,12 @@ mod tests {
     };
 
     use discuss_companion_lib::{
-        WsState,
         api::ws_server::{self, is_connected, start_ws_server},
         flatbuffers::{
             ipc_protocol_generated::discuss::ipc_protocol,
             ws_protocol_generated::discuss::ws_protocol,
         },
+        state::WsState,
     };
     use flatbuffers::FlatBufferBuilder;
     use futures_util::{SinkExt, StreamExt};
