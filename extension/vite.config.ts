@@ -7,6 +7,8 @@ import owlXmlPlugin from "./vite-plugin-owl-xml";
 export default defineConfig(({ mode }) => {
     const target = mode === "firefox" ? "firefox" : "chrome";
     const outDir = `extension/dist/${target}`;
+    const extensionStaticPathDepth = 1;
+    const sharedStaticPathDepth = 2;
     const iconsSrc = normalizePath(resolve(__dirname, "../assets/icons/**/*"));
     const fontsSrc = normalizePath(resolve(__dirname, "../common/fonts/**/*"));
     const manifestSrc =
@@ -48,24 +50,28 @@ export default defineConfig(({ mode }) => {
                     {
                         src: manifestSrc,
                         dest: ".",
-                        rename: "manifest.json"
+                        rename: () => "../manifest.json"
                     },
                     {
                         src: "extension/content.js",
-                        dest: "."
+                        dest: ".",
+                        rename: { stripBase: extensionStaticPathDepth }
                     },
 
                     {
                         src: iconsSrc,
-                        dest: "assets/icons"
+                        dest: "assets/icons",
+                        rename: { stripBase: sharedStaticPathDepth }
                     },
                     {
                         src: fontsSrc,
-                        dest: "fonts"
+                        dest: "fonts",
+                        rename: { stripBase: sharedStaticPathDepth }
                     },
                     {
                         src: "extension/popup.html",
-                        dest: "."
+                        dest: ".",
+                        rename: { stripBase: extensionStaticPathDepth }
                     }
                 ]
             })
