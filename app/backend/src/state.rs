@@ -63,6 +63,12 @@ impl WsState {
             .push(channel);
     }
 
+    /// Requests shutdown of the current WebSocket server and prepares the shutdown channel for the
+    /// next server instance.
+    ///
+    /// This broadcasts a shutdown signal to the current server listener, replaces the stored sender
+    /// with a fresh channel, and returns the receiver that must be passed to the newly spawned
+    /// server.
     pub(crate) fn rotate_server_shutdown_channel(&self) -> broadcast::Receiver<()> {
         let mut shutdown_tx = self
             .server_shutdown_tx

@@ -7,7 +7,7 @@ use std::{
 };
 
 use serde::Serialize;
-use tauri::{Emitter, Manager, async_runtime};
+use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::broadcast;
 use tracing::{debug, error};
@@ -76,7 +76,7 @@ pub fn build_app(
                 app_visibility_mode: RwLock::new(app_visibility_mode),
             });
 
-            handle_ws_server(
+            api::ws_server::spawn_ws_server(
                 app.handle().clone(),
                 port,
                 ws_tx_clone,
@@ -166,18 +166,6 @@ pub fn build_app(
     let builder = builder.device_event_filter(tauri::DeviceEventFilter::Always);
 
     builder
-}
-
-pub(crate) fn handle_ws_server(
-    app_handle: tauri::AppHandle,
-    port: u16,
-    ws_tx: broadcast::Sender<Vec<u8>>,
-    ws_shutdown_rx: broadcast::Receiver<()>,
-    conn_tx: crossbeam_channel::Sender<bool>,
-) {
-    async_runtime::spawn(async move {
-        api::ws_server::start_ws_server(port, ws_tx, ws_shutdown_rx, app_handle, conn_tx).await;
-    });
 }
 
 #[cfg(target_os = "macos")]
