@@ -2,7 +2,7 @@ use std::sync::atomic::Ordering;
 
 use serde::{Deserialize, Serialize};
 use tauri::{
-    Emitter, Manager, Runtime, State,
+    Manager, Runtime, State,
     ipc::{Channel, InvokeBody, Request},
 };
 use tauri_plugin_store::StoreExt;
@@ -210,49 +210,12 @@ pub fn update_ws_port(
         let port = msg.port();
         info!("Updating WS port to: {}", port);
 
-        // Save to store
         if let Ok(store) = app_handle.store(store_keys::STORE_FILENAME) {
             store.set(store_keys::WS_PORT, serde_json::json!(port));
             let _ = store.save();
         }
 
-        let current_port = state.port.load(Ordering::Relaxed);
-        if current_port == port {
-            let _ = app_handle.emit(
-                "ws-server-status",
-                serde_json::json!({
-                    "status": "restarted",
-                    "port": port
-                }),
-            );
-            info!("WS server port unchanged, frontend notified.");
-            return;
-        }
-        state.port.store(port, Ordering::Relaxed);
-
-        // Shutdown previous server
-        info!("Shutting down previous WS server...");
-        let rx = state.rotate_server_shutdown_channel();
-
-        // Start new server
-        info!("Starting new WS server on port {}...", port);
-        runtime::handle_ws_server(
-            app_handle.clone(),
-            port,
-            state.ws_tx.clone(),
-            rx,
-            state.conn_tx.clone(),
-        );
-
-        // Notify frontend
-        let _ = app_handle.emit(
-            "ws-server-status",
-            serde_json::json!({
-                "status": "restarted",
-                "port": port
-            }),
-        );
-        info!("WS server restart initiated, frontend notified.");
+        ws_server::apply_ws_port_update(&app_handle, &state, port);
     }
 }
 
