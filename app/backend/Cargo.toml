@@ -54,7 +54,7 @@ objc2-app-kit = { version = "0.3.2", features = [
 ] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.183"
+libc = "0.2.184"
 x11 = { version = "2.21.0", features = ["xlib", "xrecord"], optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
