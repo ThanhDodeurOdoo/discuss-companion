@@ -14,7 +14,7 @@
 ### OWL (v3)
 - [odoo/owl](https://github.com/odoo/owl)
 - [Owl v3.0 technical notes](https://gist.github.com/ged-odoo/3d13eafc8ad19b79c4265adcc426ed98)
-- [Owl documentation](https://github.com/odoo/owl/blob/master/doc/readme.md) (not up to date on V3 yet)
+- [Owl documentation](https://github.com/odoo/owl/blob/master/doc/readme.md)
 
 
 ## General Rules
