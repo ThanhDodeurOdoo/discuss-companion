@@ -122,6 +122,18 @@
 
     <div class="setting-item">
         <div class="setting-label">
+            <span class="setting-title prevent-select">Bug reports</span>
+            <span class="setting-desc">Report bugs here and check if the bug is already known.</span>
+        </div>
+        <button
+            class="text-btn std-btn settings-action-btn prevent-select"
+            t-on-click="() => this.openBugReports()">
+            Report Bug
+        </button>
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
             <span class="setting-title prevent-select">Event log</span>
             <span class="setting-desc">Clear the activity log shown in the main view</span>
         </div>
