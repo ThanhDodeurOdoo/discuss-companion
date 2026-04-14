@@ -141,12 +141,6 @@ npm run dev:app # app only, no extension build
 npm run build:app # app bundle only
 npm run build # packed extensions + app bundle
 ```
-or in dev mode:
-
-```bash
-npm run dev        # Builds extension + runs the app for your current OS
-npm run dev:x11    # Linux (X11) feature flag
-```
 
 ### Extension
 
