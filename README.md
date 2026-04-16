@@ -15,6 +15,7 @@ The Discuss Companion is a companion app for Odoo Discuss, currently supporting 
 
 ![Discuss Companion Example](assets/example.gif)
 
+
 The app backend is written in Rust, the app frontend (and the extension) is written in TypeScript using [Owl v3](https://github.com/odoo/owl) as the framework.
 
 ### Prerequisites
@@ -26,6 +27,10 @@ The app backend is written in Rust, the app frontend (and the extension) is writ
     -   On the first run, macOS will prompt for **Accessibility Permissions** (it will appear as permissions to your IDE or whatever spawns the app).
     -   Grant permission in `System Settings` → `Privacy & Security` → `Accessibility`.
     -   Restart the app after granting permission.
+  
+4. **Browser-side permission**:
+    -  This permission should be granted to allow the page to communicate with the companion app:
+      <img width="200" height="300" alt="CleanShot 2026-04-16 at 09 38 36@2x" src="https://github.com/user-attachments/assets/e114604b-e765-4701-8f77-d7d0531c8282" />
 
 ## Usage
 1.  Launch the **Discuss Companion**.
