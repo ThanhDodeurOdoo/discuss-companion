@@ -35,6 +35,7 @@
         {
             "resources": [
                 "page_bridge.js",
+                "page_probe.js",
                 "content_bundle.js",
                 "assets/*.js"
             ],
