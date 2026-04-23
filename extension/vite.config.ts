@@ -34,8 +34,10 @@ export default defineConfig(({ mode }) => {
                 input: {
                     service_worker: resolve(__dirname, "src/service_worker.ts"),
                     main: resolve(__dirname, "src/popup/main.ts"),
+                    content_bootstrap: resolve(__dirname, "src/content_bootstrap.ts"),
                     content_bundle: resolve(__dirname, "src/content.ts"),
-                    page_bridge: resolve(__dirname, "src/page_bridge.ts")
+                    page_bridge: resolve(__dirname, "src/page_bridge.ts"),
+                    page_probe: resolve(__dirname, "src/page_probe.ts")
                 },
                 output: {
                     entryFileNames: "[name].js",
