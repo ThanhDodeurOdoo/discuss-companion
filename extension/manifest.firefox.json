@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Discuss Companion Bridge",
     "description": "Bridge extension to connect to the Discuss Companion app",
-    "version": "0.13.1",
+    "version": "0.13.2",
     "homepage_url": "https://github.com/ThanhDodeurOdoo/discuss-companion",
     "browser_specific_settings": {
         "gecko": {
@@ -47,7 +47,9 @@
     "web_accessible_resources": [
         {
             "resources": [
+                "content_bootstrap.js",
                 "page_bridge.js",
+                "page_probe.js",
                 "content_bundle.js",
                 "assets/*.js"
             ],
