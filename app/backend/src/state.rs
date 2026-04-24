@@ -119,6 +119,11 @@ impl WsServerRuntimeState {
         self.connection_count.load(Ordering::Acquire) > 0
     }
 
+    #[must_use]
+    pub(crate) fn connection_count(&self) -> usize {
+        self.connection_count.load(Ordering::Acquire)
+    }
+
     pub(crate) fn reset(&self) {
         self.connection_count.store(0, Ordering::Release);
         self.current_server_id.store(0, Ordering::Release);
