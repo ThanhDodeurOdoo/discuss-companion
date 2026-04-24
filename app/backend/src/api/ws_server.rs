@@ -7,7 +7,7 @@ use tokio::{
     sync::broadcast,
 };
 use tokio_tungstenite::tungstenite::{Message, handshake};
-use tracing::{error, info};
+use tracing::{debug, error, info, warn};
 
 use super::commands;
 #[cfg(target_os = "macos")]
@@ -94,6 +94,10 @@ pub async fn start_ws_server<R: tauri::Runtime>(
 ) {
     let server_id = WS_SERVER_RUNTIME_STATE.start_server();
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    debug!(
+        "Starting WebSocket server id={} on ws://{}; active connection count reset",
+        server_id, addr
+    );
     let listener = match TcpListener::bind(&addr).await {
         Ok(l) => l,
         Err(e) => {
@@ -118,6 +122,7 @@ pub async fn start_ws_server<R: tauri::Runtime>(
                         continue;
                     }
                 };
+                debug!("Accepted TCP connection for WebSocket handshake from {}", addr);
                 let tx = tx_clone.clone();
                 let app_handle = app_handle.clone();
                 let conn_tx = conn_tx_clone.clone();
@@ -125,7 +130,7 @@ pub async fn start_ws_server<R: tauri::Runtime>(
                 tokio::spawn(handle_connection(stream, addr, tx, app_handle, conn_tx, shutdown_rx, server_id));
             }
             _ = shutdown_rx.recv() => {
-                info!("WS server shutting down");
+                info!("WS server id={} shutting down", server_id);
                 break;
             }
         }
@@ -155,9 +160,12 @@ async fn handle_connection<R: tauri::Runtime>(
 ) {
     let is_current_server = |id| WS_SERVER_RUNTIME_STATE.is_current_server(id);
     let callback = |request: &handshake::server::Request, response: handshake::server::Response| {
-        info!("Received handshake request from: {:?}", addr);
+        debug!("Received WebSocket handshake request from: {:?}", addr);
         for (name, value) in request.headers() {
-            info!("Header: {:?}: {:?}", name, value);
+            debug!(
+                "WebSocket handshake header from {}: {:?}: {:?}",
+                addr, name, value
+            );
         }
         Ok(response)
     };
@@ -174,8 +182,17 @@ async fn handle_connection<R: tauri::Runtime>(
         if WS_SERVER_RUNTIME_STATE.register_connection() {
             let _ = conn_tx.send(true);
         }
+        debug!(
+            "Registered WebSocket connection from {}; active_connections={}",
+            addr,
+            WS_SERVER_RUNTIME_STATE.connection_count()
+        );
         true
     } else {
+        warn!(
+            "WebSocket connection from {} belongs to stale server id={}",
+            addr, server_id
+        );
         false
     };
 
@@ -183,10 +200,18 @@ async fn handle_connection<R: tauri::Runtime>(
     let mut rx = tx.subscribe();
 
     if is_current_server(server_id) {
+        debug!(
+            "Notifying frontend that WebSocket client {} connected",
+            addr
+        );
         let payload =
             protocol::ipc::encode_ws_connection(protocol::ipc::ConnectionStatus::Connected);
         send_to_frontend(&app_handle, &payload);
         if let Some(state) = app_handle.try_state::<WsState>() {
+            debug!(
+                "Requesting call-state refresh after WebSocket connection from {}",
+                addr
+            );
             let _ = commands::dispatch_call_command(
                 &state,
                 commands::CallCommand::RefreshCallState,
@@ -202,20 +227,33 @@ async fn handle_connection<R: tauri::Runtime>(
                 break;
             }
             msg = rx.recv() => {
-                if let Ok(msg) = msg
-                    && let Err(e) = ws_sender.send(Message::Binary(msg.into())).await
-                {
-                    error!("Error sending message to {}: {}", addr, e);
-                    break;
+                match msg {
+                    Ok(msg) => {
+                        debug!("Sending WebSocket broadcast to {} ({} bytes)", addr, msg.len());
+                        if let Err(e) = ws_sender.send(Message::Binary(msg.into())).await {
+                            error!("Error sending message to {}: {}", addr, e);
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        debug!("WebSocket broadcast receive skipped for {}: {}", addr, e);
+                    }
                 }
             }
             msg = ws_receiver.next() => {
                 match msg {
                     Some(Ok(Message::Binary(bin))) => {
+                        debug!("Received WebSocket binary message from {} ({} bytes)", addr, bin.len());
                         match ws_protocol::root_as_message(&bin) {
                             Ok(message) => {
+                                debug!(
+                                    "Decoded WebSocket message from {}: {:?}",
+                                    addr,
+                                    message.body_type()
+                                );
                                 match message.body_type() {
                                     ws_protocol::MessageBody::Ping => {
+                                        debug!("Received WebSocket ping from {}; sending pong", addr);
                                         let pong =
                                             protocol::ws::OutgoingMessage::Pong { ts: current_timestamp() };
                                         let bin = pong.to_flatbuffer();
@@ -224,6 +262,7 @@ async fn handle_connection<R: tauri::Runtime>(
                                         }
                                     }
                                     ws_protocol::MessageBody::Shutdown => {
+                                        info!("Received WebSocket shutdown message from {}", addr);
                                         if is_current_server(server_id) {
                                             let payload = protocol::ipc::encode_ws_shutdown_event();
                                             send_to_frontend(&app_handle, &payload);
@@ -232,6 +271,16 @@ async fn handle_connection<R: tauri::Runtime>(
                                     ws_protocol::MessageBody::CallState => {
                                         if let Some(call_state) = message.body_as_call_state() {
                                             let state = CallState::from(call_state);
+                                            debug!(
+                                                "Received call state from {}: has_call={} has_state={} mute={} deaf={} camera={} screen={}",
+                                                addr,
+                                                state.has_call,
+                                                state.has_state,
+                                                state.is_mute,
+                                                state.is_deaf,
+                                                state.is_camera_on,
+                                                state.is_screen_on
+                                            );
                                             if is_current_server(server_id) {
                                                 if let Some(ws_state) =
                                                     app_handle.try_state::<WsState>()
@@ -249,7 +298,11 @@ async fn handle_connection<R: tauri::Runtime>(
                                         }
                                     }
                                     _ => {
-                                        // Ignore other messages from client or unhandled types
+                                        debug!(
+                                            "Ignoring WebSocket message from {} with body type {:?}",
+                                            addr,
+                                            message.body_type()
+                                        );
                                     }
                                 }
                             }
@@ -258,8 +311,12 @@ async fn handle_connection<R: tauri::Runtime>(
                             }
                         }
                     }
-                    Some(Ok(Message::Close(_))) | None => {
-                        info!("WebSocket connection closed: {}", addr);
+                    Some(Ok(Message::Close(frame))) => {
+                        info!("WebSocket connection closed by {}: {:?}", addr, frame);
+                        break;
+                    }
+                    None => {
+                        info!("WebSocket connection ended: {}", addr);
                         break;
                     }
                     Some(Err(e)) => {
@@ -271,10 +328,19 @@ async fn handle_connection<R: tauri::Runtime>(
             }
         }
         if !is_current_server(server_id) {
+            debug!(
+                "Closing WebSocket connection from {} because server id={} is stale",
+                addr, server_id
+            );
             break;
         }
     }
     if counted && is_current_server(server_id) && WS_SERVER_RUNTIME_STATE.unregister_connection() {
+        debug!(
+            "Unregistered WebSocket connection from {}; active_connections={}",
+            addr,
+            WS_SERVER_RUNTIME_STATE.connection_count()
+        );
         let _ = conn_tx.send(false);
         let payload =
             protocol::ipc::encode_ws_connection(protocol::ipc::ConnectionStatus::Disconnected);
