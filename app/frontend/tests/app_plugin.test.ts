@@ -189,6 +189,36 @@ describe("AppPlugin", () => {
         expect(plugin.currentBinding()).toEqual({ code: 49, modifiers: [1] });
     });
 
+    test("logs websocket recovery restarts from backend status events", async () => {
+        invokeMock.mockResolvedValue(false as never);
+        const listeners = new Map<string, (event: { payload: unknown }) => Promise<void> | void>();
+        mockedListen.mockImplementation(async (eventName, callback) => {
+            listeners.set(
+                eventName,
+                callback as (event: { payload: unknown }) => Promise<void> | void
+            );
+            return (() => {}) as never;
+        });
+
+        await plugin.setupListeners();
+
+        const wsStatusListener = listeners.get("ws-server-status");
+        expect(wsStatusListener).toBeDefined();
+
+        wsStatusListener?.({
+            payload: {
+                status: "restarted",
+                port: 49152,
+                reason: "ptt-recovery"
+            }
+        });
+
+        expect(plugin.logs()[0]).toMatchObject({
+            type: "SYSTEM",
+            message: "WS recovery restarted server on port 49152"
+        });
+    });
+
     test("showMainWindow invokes show_main_window command", async () => {
         invokeMock.mockResolvedValue(undefined as never);
 

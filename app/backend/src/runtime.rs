@@ -4,6 +4,7 @@ use std::{
         atomic::{AtomicBool, AtomicU16},
     },
     thread,
+    time::{Duration, Instant},
 };
 
 use serde::Serialize;
@@ -22,6 +23,8 @@ use crate::{
     settings::AppVisibilityMode,
     state::{AppSettings, WsState},
 };
+
+const WS_RECOVERY_DEBOUNCE: Duration = Duration::from_secs(10);
 
 #[allow(
     clippy::too_many_lines,
@@ -208,6 +211,7 @@ struct PttHandler {
     ws_tx: broadcast::Sender<Vec<u8>>,
     is_active: bool,
     is_connected: bool,
+    last_ws_recovery_attempt: Option<Instant>,
 }
 
 #[derive(Clone, Copy, Serialize)]
@@ -223,6 +227,7 @@ impl PttHandler {
             ws_tx,
             is_active: false,
             is_connected: false,
+            last_ws_recovery_attempt: None,
         }
     }
 
@@ -248,6 +253,7 @@ impl PttHandler {
         }
 
         let _ = self.app_handle.emit("ptt-event", event);
+        self.maybe_recover_ws_server(event);
 
         let mut should_update_tray = false;
         match event {
@@ -280,6 +286,37 @@ impl PttHandler {
         };
         let bin = ws_message.to_flatbuffer();
         let _ = self.ws_tx.send(bin);
+    }
+
+    fn maybe_recover_ws_server(&mut self, event: &ptt_engine::PttEvent) {
+        if !matches!(
+            event,
+            ptt_engine::PttEvent::PttDown {
+                is_repeat: false,
+                ..
+            }
+        ) {
+            return;
+        }
+
+        if let Some(last_attempt) = self.last_ws_recovery_attempt
+            && last_attempt.elapsed() < WS_RECOVERY_DEBOUNCE
+        {
+            debug!(
+                "WS server recovery skipped because the debounce window is still active: {:?}",
+                WS_RECOVERY_DEBOUNCE
+            );
+            return;
+        }
+
+        let Some(state) = self.app_handle.try_state::<WsState>() else {
+            debug!("WS server recovery skipped because runtime state is unavailable.");
+            return;
+        };
+
+        if api::ws_server::restart_ws_server_if_disconnected(&self.app_handle, &state) {
+            self.last_ws_recovery_attempt = Some(Instant::now());
+        }
     }
 
     fn handle_connection_change(&mut self, is_connected: bool) {

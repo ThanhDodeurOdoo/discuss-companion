@@ -519,6 +519,47 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    async fn test_recovery_restart_starts_server_when_disconnected() {
+        ws_server::reset_connection_count();
+        let (tx, _) = broadcast::channel(10);
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let port = addr.port();
+        drop(listener);
+
+        let (server_shutdown_tx, _) = broadcast::channel(1);
+        let (conn_tx, _) = crossbeam_channel::unbounded();
+        app.manage(WsState {
+            port: AtomicU16::new(port),
+            ws_tx: tx,
+            server_shutdown_tx: Mutex::new(server_shutdown_tx),
+            conn_tx,
+            event_channels: RwLock::new(Vec::new()),
+            call_state: RwLock::new(None),
+        });
+
+        let state = app.state::<WsState>();
+        assert!(ws_server::restart_ws_server_if_disconnected(
+            app.handle(),
+            &state
+        ));
+
+        let ws = connect_ws(addr).await;
+        wait_until(is_connected).await;
+
+        assert!(!ws_server::restart_ws_server_if_disconnected(
+            app.handle(),
+            &state
+        ));
+
+        drop(ws);
+        let _ = state.server_shutdown_tx.lock().unwrap().send(());
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_generation_reset_ignores_old_connections() {
         ws_server::reset_connection_count();
         let (tx, _) = broadcast::channel(10);

@@ -24,6 +24,12 @@ type ThemeMode = (typeof THEME_MODE)[keyof typeof THEME_MODE];
  * TODO: maybe some kind of project-wide default port const
  */
 const DEFAULT_PORT = 49152;
+const WS_SERVER_STATUS = {
+    Restarted: "restarted"
+} as const;
+const WS_SERVER_RESTART_REASON = {
+    PttRecovery: "ptt-recovery"
+} as const;
 
 type LogEntry = {
     id: number;
@@ -223,13 +229,21 @@ export class AppPlugin extends Plugin {
         type WsStatusPayload = {
             status: string;
             port: number;
+            reason?: string | null;
         };
 
         const wsStatusUnlisten = await listen<WsStatusPayload>("ws-server-status", (event) => {
             this.addLog("WS-STATUS", JSON.stringify(event.payload));
-            if (event.payload.status === "restarted") {
+            if (event.payload.status === WS_SERVER_STATUS.Restarted) {
                 this.wsPort.set(event.payload.port);
                 this.isWsReloading.set(false);
+                if (event.payload.reason === WS_SERVER_RESTART_REASON.PttRecovery) {
+                    this.addLog(
+                        "SYSTEM",
+                        `WS recovery restarted server on port ${event.payload.port}`
+                    );
+                    return;
+                }
                 this.addLog("SYSTEM", `WS Server restarted on port ${event.payload.port}`);
             }
         });

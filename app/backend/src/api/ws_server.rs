@@ -1,10 +1,11 @@
-use std::{net::SocketAddr, sync::atomic::Ordering};
+use std::{net::SocketAddr, sync::atomic::Ordering, time::Duration};
 
 use futures_util::{SinkExt, StreamExt};
 use tauri::{Emitter, Manager, async_runtime};
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::broadcast,
+    time::sleep,
 };
 use tokio_tungstenite::tungstenite::{Message, handshake};
 use tracing::{debug, error, info, warn};
@@ -21,6 +22,9 @@ use crate::{
 
 const WS_SERVER_STATUS_EVENT: &str = "ws-server-status";
 const WS_SERVER_STATUS_RESTARTED: &str = "restarted";
+const WS_SERVER_RESTART_REASON_PORT_UPDATE: &str = "port-update";
+const WS_SERVER_RESTART_REASON_PTT_RECOVERY: &str = "ptt-recovery";
+const WS_SERVER_SAME_PORT_RESTART_DELAY: Duration = Duration::from_millis(250);
 
 pub fn is_connected() -> bool {
     WS_SERVER_RUNTIME_STATE.is_connected()
@@ -39,9 +43,78 @@ pub(crate) fn spawn_ws_server<R: tauri::Runtime>(
     ws_shutdown_rx: broadcast::Receiver<()>,
     conn_tx: crossbeam_channel::Sender<bool>,
 ) {
+    spawn_ws_server_after(
+        app_handle,
+        port,
+        ws_tx,
+        ws_shutdown_rx,
+        conn_tx,
+        Duration::ZERO,
+    );
+}
+
+fn spawn_ws_server_after<R: tauri::Runtime>(
+    app_handle: tauri::AppHandle<R>,
+    port: u16,
+    ws_tx: broadcast::Sender<Vec<u8>>,
+    ws_shutdown_rx: broadcast::Receiver<()>,
+    conn_tx: crossbeam_channel::Sender<bool>,
+    delay: Duration,
+) {
     async_runtime::spawn(async move {
+        if !delay.is_zero() {
+            sleep(delay).await;
+        }
         start_ws_server(port, ws_tx, ws_shutdown_rx, app_handle, conn_tx).await;
     });
+}
+
+fn restart_ws_server<R: tauri::Runtime>(
+    app_handle: &tauri::AppHandle<R>,
+    state: &WsState,
+    port: u16,
+    delay: Duration,
+    reason: &'static str,
+) {
+    info!("Shutting down previous WS server...");
+    let shutdown_rx = state.rotate_server_shutdown_channel();
+
+    info!("Starting new WS server on port {}...", port);
+    spawn_ws_server_after(
+        app_handle.clone(),
+        port,
+        state.ws_tx.clone(),
+        shutdown_rx,
+        state.conn_tx.clone(),
+        delay,
+    );
+
+    notify_ws_server_restarted(app_handle, port, Some(reason));
+    info!("WS server restart initiated, frontend notified.");
+}
+
+pub fn restart_ws_server_if_disconnected<R: tauri::Runtime>(
+    app_handle: &tauri::AppHandle<R>,
+    state: &WsState,
+) -> bool {
+    if is_connected() {
+        debug!("WS server recovery skipped because an extension connection is still registered.");
+        return false;
+    }
+
+    let port = state.port.load(Ordering::Relaxed);
+    info!(
+        "Restarting WS server on port {} because PTT was pressed without an extension connection.",
+        port
+    );
+    restart_ws_server(
+        app_handle,
+        state,
+        port,
+        WS_SERVER_SAME_PORT_RESTART_DELAY,
+        WS_SERVER_RESTART_REASON_PTT_RECOVERY,
+    );
+    true
 }
 
 /// Applies a persisted WebSocket port change and restarts the server when needed.
@@ -52,35 +125,33 @@ pub(crate) fn apply_ws_port_update<R: tauri::Runtime>(
 ) {
     let current_port = state.port.load(Ordering::Relaxed);
     if current_port == port {
-        notify_ws_server_restarted(app_handle, port);
+        notify_ws_server_restarted(app_handle, port, None);
         info!("WS server port unchanged, frontend notified.");
         return;
     }
 
     state.port.store(port, Ordering::Relaxed);
 
-    info!("Shutting down previous WS server...");
-    let shutdown_rx = state.rotate_server_shutdown_channel();
-
-    info!("Starting new WS server on port {}...", port);
-    spawn_ws_server(
-        app_handle.clone(),
+    restart_ws_server(
+        app_handle,
+        state,
         port,
-        state.ws_tx.clone(),
-        shutdown_rx,
-        state.conn_tx.clone(),
+        Duration::ZERO,
+        WS_SERVER_RESTART_REASON_PORT_UPDATE,
     );
-
-    notify_ws_server_restarted(app_handle, port);
-    info!("WS server restart initiated, frontend notified.");
 }
 
-fn notify_ws_server_restarted<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, port: u16) {
+fn notify_ws_server_restarted<R: tauri::Runtime>(
+    app_handle: &tauri::AppHandle<R>,
+    port: u16,
+    reason: Option<&'static str>,
+) {
     let _ = app_handle.emit(
         WS_SERVER_STATUS_EVENT,
         serde_json::json!({
             "status": WS_SERVER_STATUS_RESTARTED,
             "port": port,
+            "reason": reason,
         }),
     );
 }
