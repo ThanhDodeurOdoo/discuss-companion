@@ -45,7 +45,7 @@ x11 = ["dep:x11"]
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = "0.10"
 core-graphics = "0.25"
-muda = "0.17.2"
+muda = "0.18.0"
 objc2 = "0.6.4"
 objc2-app-kit = { version = "0.3.2", features = [
     "NSApplication",
