@@ -178,6 +178,7 @@ export function createStoreWatchController(deps: {
             cleanupBootstrapWatcher();
         };
 
+        const intervalId = window.setInterval(tryAttach, 1000);
         const onReadyStateChange = () => {
             tryAttach();
         };
@@ -191,6 +192,7 @@ export function createStoreWatchController(deps: {
         state.stopBootstrapWatcher = () => {
             observer.disconnect();
             document.removeEventListener("readystatechange", onReadyStateChange);
+            window.clearInterval(intervalId);
         };
 
         emitLifecycle({ hasRtcService: false, hasHostedCall: false, isTalking: false });
