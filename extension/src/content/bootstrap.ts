@@ -66,25 +66,43 @@ async function probePageForOdoo(): Promise<boolean> {
 export function startContentBootstrap(
     deps: ContentBootstrapDeps = { loadContentRuntime, probePageForOdoo }
 ): void {
+    const MAX_RETRIES = 5;
     let runtimeLoaded = false;
     let probePromise: Promise<boolean> | null = null;
+    let intervalId: number | null = null;
+    let retryCount = 0;
+
+    const cleanup = () => {
+        if (intervalId !== null) {
+            window.clearInterval(intervalId);
+            intervalId = null;
+        }
+        document.removeEventListener("DOMContentLoaded", onReady);
+        window.removeEventListener("load", onReady);
+    };
 
     const onReady = () => {
         if (runtimeLoaded) {
+            cleanup();
             return;
         }
-        if (!probePromise) {
-            probePromise = deps.probePageForOdoo().finally(() => {
-                probePromise = null;
-            });
+        if (retryCount >= MAX_RETRIES) {
+            cleanup();
+            return;
         }
+        if (probePromise) {
+            return;
+        }
+        retryCount++;
+        probePromise = deps.probePageForOdoo().finally(() => {
+            probePromise = null;
+        });
         void probePromise.then((hasOdoo) => {
             if (!hasOdoo || runtimeLoaded) {
                 return;
             }
             runtimeLoaded = true;
-            document.removeEventListener("DOMContentLoaded", onReady);
-            window.removeEventListener("load", onReady);
+            cleanup();
             void deps.loadContentRuntime().catch((error) => {
                 runtimeLoaded = false;
                 console.error("[Discuss Companion] Failed to load content runtime", error);
@@ -99,5 +117,6 @@ export function startContentBootstrap(
         window.addEventListener("load", onReady, { once: true });
     }
 
+    intervalId = window.setInterval(onReady, 2000);
     onReady();
 }
