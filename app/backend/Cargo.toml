@@ -16,7 +16,7 @@ crate-type = ["cdylib", "rlib", "staticlib"]
 name = "discuss_companion_lib"
 
 [build-dependencies]
-tauri-build = { version = "2.5", features = [] }
+tauri-build = { version = "2.6", features = [] }
 
 [dependencies]
 anyhow = "1.0"
