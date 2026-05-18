@@ -66,6 +66,19 @@
                         t-model="this.popup.port"
                         min="1" max="65535" />
                     <button class="btn btn--primary" id="save" t-on-click="() => this.popup.save()">Save</button>
+                    <button class="btn reconnect-btn"
+                        id="force-reconnect"
+                        t-att-class="{ 'reconnect-btn--trying': this.popup.isWsReconnectTrying() }"
+                        t-att-disabled="this.popup.isWsReconnectTrying()"
+                        t-att-title="this.popup.isWsReconnectTrying() ? 'Trying to connect to the companion app' : 'Retry companion app connection'"
+                        t-on-click="() => this.popup.forceReconnect()">
+                        <span class="icon" aria-hidden="true">sync</span>
+                        <span t-if="this.popup.isWsReconnectTrying()">
+                            Trying
+                            <t t-if="this.popup.wsReconnectAttemptsRemaining()" t-out="'(' + this.popup.wsReconnectAttemptsRemaining() + ')'"/>
+                        </span>
+                        <span t-else="">Retry</span>
+                    </button>
                 </div>
             </div>
             <div t-else="" class="settings__actions">

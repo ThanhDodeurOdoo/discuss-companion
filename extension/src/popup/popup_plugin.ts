@@ -16,7 +16,11 @@ import {
 } from "@extension/src/call_state";
 import { IS_FIREFOX_BUILD } from "@extension/src/env";
 import { PttCommand } from "@extension/src/page_bridge/runtime_types";
-import { SESSION_STATE_STORAGE_AREA } from "@extension/src/storage/session_state";
+import {
+    getWsReconnectState,
+    SESSION_STATE_STORAGE_AREA,
+    type WsReconnectState
+} from "@extension/src/storage/session_state";
 
 const EXTENSION_VERSION =
     typeof __EXTENSION_VERSION__ === "string" ? __EXTENSION_VERSION__ : "0.0.0";
@@ -25,7 +29,8 @@ export enum StatusCode {
     Default = 0,
     Saving = 1,
     Success = 2,
-    InvalidPort = 3
+    InvalidPort = 3,
+    ReconnectRequested = 4
 }
 
 export class PopupPlugin extends Plugin {
@@ -36,6 +41,9 @@ export class PopupPlugin extends Plugin {
     owlVersion = signal("");
     isLoggingEnabled = signal(false);
     isCompanionEnabled = signal(false);
+    isWsReconnectTrying = signal(false);
+    wsReconnectAttemptsRemaining = signal(0);
+    wsReconnectAttemptLimit = signal(0);
     hasCallTab = signal(false);
     extensionVersion = signal(EXTENSION_VERSION);
     isFirefoxBuild = IS_FIREFOX_BUILD;
@@ -59,6 +67,8 @@ export class PopupPlugin extends Plugin {
                 return "Options saved. Extension reloading connection...";
             case StatusCode.InvalidPort:
                 return "Invalid port number.";
+            case StatusCode.ReconnectRequested:
+                return "Reconnect requested.";
             case StatusCode.Default:
             default:
                 return "";
@@ -69,9 +79,15 @@ export class PopupPlugin extends Plugin {
         this.restoreOptions();
         this.collectCurrentTabData();
         this.collectCallTabData();
+        this.collectReconnectData();
         chrome.storage.onChanged.addListener((changes, area) => {
             if (area !== SESSION_STATE_STORAGE_AREA) {
                 return;
+            }
+            if (changes.wsReconnectState) {
+                this.applyWsReconnectState(
+                    changes.wsReconnectState.newValue as Partial<WsReconnectState> | null
+                );
             }
             if (changes.callState) {
                 const nextState = changes.callState.newValue as CallState | null | undefined;
@@ -145,6 +161,10 @@ export class PopupPlugin extends Plugin {
         this.applyCallState(storedState);
     }
 
+    async collectReconnectData() {
+        this.applyWsReconnectState(await getWsReconnectState());
+    }
+
     async toggleMicrophone() {
         await this.runCallAction({ type: CallActionType.ToggleMicrophone });
     }
@@ -189,6 +209,12 @@ export class PopupPlugin extends Plugin {
         this.isCameraOn.set(Boolean(state?.isCameraOn));
         this.isScreenOn.set(Boolean(state?.isScreenOn));
         this.isVoiceActivated.set(Boolean(state?.isVoiceActivated));
+    }
+
+    applyWsReconnectState(state?: Partial<WsReconnectState> | null) {
+        this.isWsReconnectTrying.set(Boolean(state?.isTrying));
+        this.wsReconnectAttemptsRemaining.set(Number(state?.attemptsRemaining ?? 0));
+        this.wsReconnectAttemptLimit.set(Number(state?.maxAttempts ?? 0));
     }
 
     async runCallAction(
@@ -254,5 +280,18 @@ export class PopupPlugin extends Plugin {
         await chrome.storage.local.set({
             isCompanionEnabled: this.isCompanionEnabled()
         });
+    }
+
+    async forceReconnect() {
+        this.statusCode.set(StatusCode.ReconnectRequested);
+        await chrome.storage.local.set({
+            wsReconnectRequestId: Date.now()
+        });
+
+        setTimeout(() => {
+            if (this.statusCode() === StatusCode.ReconnectRequested) {
+                this.statusCode.set(StatusCode.Default);
+            }
+        }, 2000);
     }
 }

@@ -1,5 +1,6 @@
 import { readLocalSettings } from "@extension/src/storage/local_settings";
 import type { ContentRuntimeState } from "@extension/src/content/runtime_state";
+import type { RefreshWsConnectionOptions } from "@extension/src/content/ws_runtime";
 
 const mutedLog = (..._args: unknown[]) => {};
 
@@ -8,7 +9,7 @@ export async function initializeContentSettingsRuntime(deps: {
     setLoggerTarget: (target: (...args: unknown[]) => void) => void;
     maybeStartStoreWatch: () => Promise<void>;
     maybeStopStoreWatch: () => Promise<void>;
-    refreshWsConnection: () => void;
+    refreshWsConnection: (options?: RefreshWsConnectionOptions) => void;
     disconnectWs: () => void;
 }) {
     const {
@@ -57,14 +58,17 @@ export async function initializeContentSettingsRuntime(deps: {
         if (changes.wsPort) {
             state.wsPort = changes.wsPort.newValue as number;
             disconnectWs();
-            refreshWsConnection();
+            refreshWsConnection({ resetAttemptLimit: true });
         }
         if (changes.isLoggingEnabled) {
             setLoggerTarget(changes.isLoggingEnabled.newValue ? console.log : mutedLog);
         }
         if (changes.isCompanionEnabled) {
             state.isCompanionEnabled = Boolean(changes.isCompanionEnabled.newValue);
-            refreshWsConnection();
+            refreshWsConnection({ resetAttemptLimit: state.isCompanionEnabled });
+        }
+        if (changes.wsReconnectRequestId) {
+            refreshWsConnection({ resetAttemptLimit: true });
         }
     });
 }

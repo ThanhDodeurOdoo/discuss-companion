@@ -6,7 +6,8 @@ import { flushPromises, mockChrome } from "./utils.js";
 
 const mockStorage = mockChrome({
     isTalkingByTabId: {},
-    appConnected: true
+    appConnected: true,
+    wsReconnectState: null
 });
 
 await import("../src/service_worker.ts");
@@ -23,6 +24,7 @@ describe("Extension Service Worker", () => {
         mockStorage.isTalkingByTabId = {};
         mockStorage.appConnected = true;
         mockStorage.callTabId = null;
+        mockStorage.wsReconnectState = null;
     });
 
     test("handles subscribe message and sends content-subscribe", async () => {
@@ -195,6 +197,27 @@ describe("Extension Service Worker", () => {
         await flushPromises();
 
         expect(mockStorage.callState).toEqual(state);
+        expect(sendResponse).toHaveBeenCalledWith({ status: "ok" });
+    });
+
+    test("stores websocket reconnect state updates from owner content", async () => {
+        const sendResponse = jest.fn();
+
+        capturedHandleMessage(
+            {
+                type: "content-reconnect-state",
+                value: { isTrying: true, attemptsRemaining: 42, maxAttempts: 60 }
+            },
+            { tab: { id: 123 } },
+            sendResponse
+        );
+        await flushPromises();
+
+        expect(mockStorage.wsReconnectState).toEqual({
+            isTrying: true,
+            attemptsRemaining: 42,
+            maxAttempts: 60
+        });
         expect(sendResponse).toHaveBeenCalledWith({ status: "ok" });
     });
 

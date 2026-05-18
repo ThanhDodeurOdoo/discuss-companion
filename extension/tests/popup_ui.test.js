@@ -19,6 +19,7 @@ const mockStorage = mockChrome({
     wsPort: 49152,
     isLoggingEnabled: false,
     isCompanionEnabled: true,
+    wsReconnectState: null,
     lastJoinedCall: null
 });
 
@@ -85,6 +86,7 @@ describe("Popup UI", () => {
         mockStorage.wsPort = 49152;
         mockStorage.isLoggingEnabled = false;
         mockStorage.isCompanionEnabled = true;
+        mockStorage.wsReconnectState = null;
         mockStorage.lastJoinedCall = null;
         getCallTabIdMock.mockResolvedValue(101);
         getStoredCallStateMock.mockResolvedValue(undefined);
@@ -229,6 +231,42 @@ describe("Popup UI", () => {
         const savedWsPort = chrome.storage.local.set.mock.calls.at(-1)?.[0]?.wsPort;
         expect(Number(savedWsPort)).toBe(55555);
         expect(successStatus?.textContent).toContain("Options saved.");
+    });
+
+    test("requests websocket reconnect from settings", async () => {
+        const target = await mountPopup();
+        const settingsButton = target.querySelector('button[title="Open settings"]');
+
+        expect(settingsButton).toBeTruthy();
+        await userEvent.click(settingsButton);
+
+        const reconnectButton = target.querySelector("#force-reconnect");
+        expect(reconnectButton).toBeTruthy();
+
+        await userEvent.click(reconnectButton);
+
+        const reconnectRequest = chrome.storage.local.set.mock.calls.at(-1)?.[0];
+        expect(typeof reconnectRequest?.wsReconnectRequestId).toBe("number");
+
+        const onStorageChanged = chrome.storage.onChanged.addListener.mock.calls[0][0];
+        onStorageChanged(
+            {
+                wsReconnectState: {
+                    newValue: {
+                        isTrying: true,
+                        attemptsRemaining: 59,
+                        maxAttempts: 60
+                    }
+                }
+            },
+            "session"
+        );
+        await nextTick();
+
+        expect(reconnectButton.disabled).toBe(true);
+        expect(reconnectButton.classList.contains("reconnect-btn--trying")).toBe(true);
+        expect(reconnectButton.textContent).toContain("Trying");
+        expect(reconnectButton.textContent).toContain("59");
     });
 
     test("clears stale call tab when call tab reports no active session", async () => {

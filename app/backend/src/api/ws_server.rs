@@ -144,6 +144,10 @@ fn send_to_frontend<R: tauri::Runtime>(app_handle: &tauri::AppHandle<R>, bin: &[
     clippy::cognitive_complexity,
     reason = "WebSocket loop handles multiple message types and connection states."
 )]
+#[allow(
+    clippy::result_large_err,
+    reason = "tungstenite handshake callbacks must return the provided response type"
+)]
 async fn handle_connection<R: tauri::Runtime>(
     stream: TcpStream,
     addr: SocketAddr,
@@ -223,11 +227,11 @@ async fn handle_connection<R: tauri::Runtime>(
                                             error!("Error sending pong to {}: {}", addr, e);
                                         }
                                     }
-                                    ws_protocol::MessageBody::Shutdown => {
-                                        if is_current_server(server_id) {
-                                            let payload = protocol::ipc::encode_ws_shutdown_event();
-                                            send_to_frontend(&app_handle, &payload);
-                                        }
+                                    ws_protocol::MessageBody::Shutdown
+                                        if is_current_server(server_id) =>
+                                    {
+                                        let payload = protocol::ipc::encode_ws_shutdown_event();
+                                        send_to_frontend(&app_handle, &payload);
                                     }
                                     ws_protocol::MessageBody::CallState => {
                                         if let Some(call_state) = message.body_as_call_state() {

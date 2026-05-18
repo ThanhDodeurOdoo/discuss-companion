@@ -2,12 +2,14 @@ export type LocalSettings = {
     wsPort: number;
     isLoggingEnabled: boolean;
     isCompanionEnabled: boolean;
+    wsReconnectRequestId: number;
 };
 
 export const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
     wsPort: 49152,
     isLoggingEnabled: false,
-    isCompanionEnabled: false
+    isCompanionEnabled: false,
+    wsReconnectRequestId: 0
 };
 
 export async function readLocalSettings(): Promise<LocalSettings> {
@@ -15,6 +17,7 @@ export async function readLocalSettings(): Promise<LocalSettings> {
     return {
         wsPort: items.wsPort,
         isLoggingEnabled: Boolean(items.isLoggingEnabled),
-        isCompanionEnabled: Boolean(items.isCompanionEnabled)
+        isCompanionEnabled: Boolean(items.isCompanionEnabled),
+        wsReconnectRequestId: Number(items.wsReconnectRequestId) || 0
     };
 }

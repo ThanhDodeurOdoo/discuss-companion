@@ -1,6 +1,6 @@
 declare module "*.xml" {
-    import { Template } from "@odoo/owl";
-    export const templates: Record<string, Template>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    export const templates: Record<string, any>;
 }
 
 declare module "*/compile_templates.mjs" {

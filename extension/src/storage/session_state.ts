@@ -5,15 +5,23 @@ const CALL_STATE_KEY = "callState";
 const CALL_TAB_ID_KEY = "callTabId";
 const IS_TALKING_KEY = "isTalkingByTabId";
 const APP_CONNECTED_KEY = "appConnected";
+const WS_RECONNECT_STATE_KEY = "wsReconnectState";
 export const SESSION_STATE_STORAGE_AREA: "local" | "session" = IS_FIREFOX_BUILD
     ? "local"
     : "session";
+
+export type WsReconnectState = {
+    isTrying: boolean;
+    attemptsRemaining: number;
+    maxAttempts: number;
+};
 
 type SessionStorageSnapshot = {
     callState?: CallState | null;
     callTabId?: number | null;
     isTalkingByTabId?: Record<string, boolean>;
     appConnected?: boolean;
+    wsReconnectState?: WsReconnectState | null;
 };
 
 function getSessionStorageArea(): chrome.storage.StorageArea {
@@ -64,7 +72,26 @@ export async function setAppConnected(connected: boolean): Promise<void> {
     await storage.set({ appConnected: connected });
 }
 
+export async function getWsReconnectState(): Promise<WsReconnectState | undefined> {
+    const storage = getSessionStorageArea();
+    const { wsReconnectState } = (await storage.get(
+        WS_RECONNECT_STATE_KEY
+    )) as SessionStorageSnapshot;
+    return wsReconnectState ?? undefined;
+}
+
+export async function setWsReconnectState(state?: WsReconnectState | null): Promise<void> {
+    const storage = getSessionStorageArea();
+    await storage.set({ wsReconnectState: state ?? null });
+}
+
 export async function clearSessionState(): Promise<void> {
     const storage = getSessionStorageArea();
-    await storage.remove([CALL_STATE_KEY, CALL_TAB_ID_KEY, IS_TALKING_KEY, APP_CONNECTED_KEY]);
+    await storage.remove([
+        CALL_STATE_KEY,
+        CALL_TAB_ID_KEY,
+        IS_TALKING_KEY,
+        APP_CONNECTED_KEY,
+        WS_RECONNECT_STATE_KEY
+    ]);
 }

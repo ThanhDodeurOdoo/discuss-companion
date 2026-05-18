@@ -154,10 +154,10 @@ pub fn build_app(
                     }
                 }
             }
-            tauri::WindowEvent::Focused(false) => {
-                if window.label() == call_controls_window::CALL_CONTROLS_WINDOW_LABEL {
-                    let _ = window.hide();
-                }
+            tauri::WindowEvent::Focused(false)
+                if window.label() == call_controls_window::CALL_CONTROLS_WINDOW_LABEL =>
+            {
+                let _ = window.hide();
             }
             _ => {}
         });

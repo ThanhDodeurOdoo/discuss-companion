@@ -3,6 +3,10 @@ import { ContentToSwMessageType } from "@extension/src/messaging/sw_channel";
 import { buildPingMessage } from "@extension/src/ws/ws_codec";
 import type { ContentRuntimeState } from "@extension/src/content/runtime_state";
 
+export type RefreshWsConnectionOptions = {
+    resetAttemptLimit?: boolean;
+};
+
 export function createContentWsRuntime(deps: {
     state: ContentRuntimeState;
     log: (...args: unknown[]) => void;
@@ -27,6 +31,12 @@ export function createContentWsRuntime(deps: {
             if (connected) {
                 void onConnected();
             }
+        },
+        onRetryStateChange: (retryState) => {
+            void sendToServiceWorker({
+                type: ContentToSwMessageType.ContentReconnectState,
+                value: retryState
+            });
         }
     });
 
@@ -40,12 +50,12 @@ export function createContentWsRuntime(deps: {
         );
     }
 
-    function refreshWsConnection(): void {
+    function refreshWsConnection(options: RefreshWsConnectionOptions = {}): void {
         if (!canConnect()) {
             wsClient.disconnect();
             return;
         }
-        wsClient.connect(buildWsUrl());
+        wsClient.connect(buildWsUrl(), options);
     }
 
     return {
