@@ -7,7 +7,8 @@ import {
     getIsTalkingByTabId,
     setAppConnected,
     setCallTabId,
-    setIsTalkingByTabId
+    setIsTalkingByTabId,
+    setWsReconnectState
 } from "@extension/src/storage/session_state";
 import { IS_FIREFOX_BUILD } from "@extension/src/env";
 import {
@@ -172,6 +173,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 const nextOwner = await ownership.syncCallTabIdFromMap(isTalkingByTabId);
                 if (previousOwner === safeTabId && nextOwner === null) {
                     await setAppConnected(false);
+                    await setWsReconnectState(null);
                 }
                 await ownership.notifyOwnerChange(previousOwner, nextOwner, isTalkingByTabId);
                 sendToContentTab(safeTabId, { type: SwToContentMessageType.ContentUnsubscribe });
@@ -243,6 +245,26 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
                 sendResponse?.({ status: "ok" });
                 break;
             }
+            case ContentToSwMessageType.ContentReconnectState: {
+                if (!tabId || !(await ownership.isOwnerTab(safeTabId))) {
+                    sendResponse?.({ status: "ok", ignored: true });
+                    break;
+                }
+                const retryState = value as
+                    | {
+                          isTrying?: boolean;
+                          attemptsRemaining?: number;
+                          maxAttempts?: number;
+                      }
+                    | undefined;
+                await setWsReconnectState({
+                    isTrying: Boolean(retryState?.isTrying),
+                    attemptsRemaining: Number(retryState?.attemptsRemaining ?? 0),
+                    maxAttempts: Number(retryState?.maxAttempts ?? 0)
+                });
+                sendResponse?.({ status: "ok" });
+                break;
+            }
             case ContentToSwMessageType.ContentCallStateUpdate: {
                 if (!tabId || !(await ownership.isOwnerTab(safeTabId))) {
                     sendResponse?.({ status: "ok", ignored: true });
@@ -287,6 +309,7 @@ export function createMessageHandlers({ log }: MessageHandlerDeps): MessageHandl
         await setIsTalkingByTabId(isTalkingByTabId);
         if (previousOwner === tabId) {
             await setAppConnected(false);
+            await setWsReconnectState(null);
         }
         const nextOwner = await ownership.syncCallTabIdFromMap(isTalkingByTabId);
         await ownership.notifyOwnerChange(previousOwner, nextOwner, isTalkingByTabId);

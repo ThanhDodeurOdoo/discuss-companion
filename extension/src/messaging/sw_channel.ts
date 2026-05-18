@@ -20,7 +20,8 @@ export enum ContentToSwMessageType {
     PttCommand = "ptt-command",
     FocusCallTab = "focus-call-tab",
     ContentConnectionState = "content-connection-state",
-    ContentCallStateUpdate = "content-call-state-update"
+    ContentCallStateUpdate = "content-call-state-update",
+    ContentReconnectState = "content-reconnect-state"
 }
 
 export type ContentSubscribeMessage = {
@@ -67,6 +68,15 @@ export type ContentConnectionStateMessage = {
 export type ContentCallStateUpdateMessage = {
     type: ContentToSwMessageType.ContentCallStateUpdate;
     value: { state: CallState | null };
+};
+
+export type ContentReconnectStateMessage = {
+    type: ContentToSwMessageType.ContentReconnectState;
+    value: {
+        isTrying: boolean;
+        attemptsRemaining: number;
+        maxAttempts: number;
+    };
 };
 
 export type SwResponse<T> = T | { error: string };

@@ -210,6 +210,46 @@ body {
     padding: var(--space-2) 14px;
 }
 
+.popup .field__row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.reconnect-btn {
+    gap: var(--space-1);
+    min-width: 82px;
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+    background: var(--color-surface-muted);
+}
+
+.reconnect-btn:hover:not(:disabled) {
+    color: var(--color-text);
+    border-color: var(--color-border-strong);
+    background: var(--color-surface-hover);
+}
+
+.reconnect-btn--trying,
+.reconnect-btn--trying:disabled {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    background: var(--color-accent-muted);
+    opacity: 1;
+}
+
+.reconnect-btn--trying .icon {
+    animation: reconnect-spin 1s linear infinite;
+}
+
+@keyframes reconnect-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* ========================================
    INFO SECTION
    ======================================== */

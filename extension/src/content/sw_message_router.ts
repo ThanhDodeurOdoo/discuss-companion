@@ -4,6 +4,7 @@ import {
     WorkerSubscriptionState,
     type ContentRuntimeState
 } from "@extension/src/content/runtime_state";
+import type { RefreshWsConnectionOptions } from "@extension/src/content/ws_runtime";
 
 /**
  * Registers service-worker -> content message routing for subscription and
@@ -22,7 +23,7 @@ import {
 export function registerSwMessageRouter(deps: {
     state: ContentRuntimeState;
     ensureBridgeReady: () => Promise<void>;
-    refreshWsConnection: () => void;
+    refreshWsConnection: (options?: RefreshWsConnectionOptions) => void;
     refreshAndSendCallState: () => Promise<CallState | null>;
     sendCallStateToApp: (state?: CallState | null) => Promise<void>;
     updateCachedCallState: (
@@ -82,7 +83,7 @@ export function registerSwMessageRouter(deps: {
 
         if (state.isOwner && state.isSubscribed) {
             await ensureBridgeReady();
-            refreshWsConnection();
+            refreshWsConnection({ resetAttemptLimit: true });
             await refreshAndSendCallState();
             return;
         }
