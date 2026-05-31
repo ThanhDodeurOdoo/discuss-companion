@@ -817,7 +817,7 @@ dependencies = [
  "flatbuffers",
  "futures-util",
  "libc",
- "muda",
+ "muda 0.19.2",
  "objc2",
  "objc2-app-kit",
  "serde",
@@ -2242,7 +2242,6 @@ dependencies = [
  "dpi",
  "gtk",
  "keyboard-types",
- "libxdo",
  "objc2",
  "objc2-app-kit",
  "objc2-core-foundation",
@@ -2252,6 +2251,27 @@ dependencies = [
  "serde",
  "thiserror 2.0.18",
  "windows-sys 0.60.2",
+]
+
+[[package]]
+name = "muda"
+version = "0.19.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47a2e3dff89cd322c66647942668faee0a2b1f88ea6cbb4d374b4a8d7e92528c"
+dependencies = [
+ "crossbeam-channel",
+ "dpi",
+ "gtk",
+ "keyboard-types",
+ "libxdo",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-core-foundation",
+ "objc2-foundation",
+ "once_cell",
+ "png 0.18.0",
+ "thiserror 2.0.18",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3952,7 +3972,7 @@ dependencies = [
  "libc",
  "log",
  "mime",
- "muda",
+ "muda 0.17.2",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
@@ -4593,7 +4613,7 @@ dependencies = [
  "crossbeam-channel",
  "dirs",
  "libappindicator",
- "muda",
+ "muda 0.17.2",
  "objc2",
  "objc2-app-kit",
  "objc2-core-foundation",
