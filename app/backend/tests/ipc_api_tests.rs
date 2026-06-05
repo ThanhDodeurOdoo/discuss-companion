@@ -25,6 +25,16 @@ mod tests {
     };
     use tokio::sync::broadcast;
 
+    fn local_ipc_url() -> tauri::Url {
+        if cfg!(any(windows, target_os = "android")) {
+            "http://tauri.localhost"
+        } else {
+            "tauri://localhost"
+        }
+        .parse()
+        .unwrap()
+    }
+
     #[tokio::test]
     async fn test_get_version() {
         let app = mock_builder()
@@ -46,7 +56,7 @@ mod tests {
                 cmd: "get_version".into(),
                 callback: CallbackFn(0),
                 error: CallbackFn(1),
-                url: "http://tauri.localhost".parse().unwrap(),
+                url: local_ipc_url(),
                 body: InvokeBody::default(),
                 headers: HeaderMap::default(),
                 invoke_key: INVOKE_KEY.to_string(),
@@ -76,7 +86,7 @@ mod tests {
                 cmd: "is_extension_connected".into(),
                 callback: CallbackFn(0),
                 error: CallbackFn(1),
-                url: "http://tauri.localhost".parse().unwrap(),
+                url: local_ipc_url(),
                 body: InvokeBody::default(),
                 headers: HeaderMap::default(),
                 invoke_key: INVOKE_KEY.to_string(),
@@ -115,7 +125,7 @@ mod tests {
                 cmd: "get_ws_port".into(),
                 callback: CallbackFn(0),
                 error: CallbackFn(1),
-                url: "http://tauri.localhost".parse().unwrap(),
+                url: local_ipc_url(),
                 body: InvokeBody::default(),
                 headers: HeaderMap::default(),
                 invoke_key: INVOKE_KEY.to_string(),
