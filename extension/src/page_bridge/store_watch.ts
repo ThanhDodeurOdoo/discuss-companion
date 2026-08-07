@@ -1,10 +1,14 @@
-import type { MailStore, RtcSession, RtcService } from "@extension/src/page_bridge/runtime_types";
+import type { RtcSession, RtcService } from "@extension/src/page_bridge/runtime_types";
 import type { PageBridgeRuntimeState } from "@extension/src/page_bridge/runtime_state";
 import type { CallState } from "@extension/src/call_state_types";
 
 type RtcAccess = {
-    getStore: () => MailStore | undefined;
     getRtc: () => RtcService | undefined;
+    observeFields: <T extends object>(
+        target: T,
+        fields: readonly Extract<keyof T, string>[],
+        callback: () => void
+    ) => (() => void) | undefined;
     setVoiceActivated: (value: boolean, rtc?: RtcService) => void;
     getSessionKey: (session?: RtcSession) => string | null;
     buildCallState: (session: RtcSession, rtc?: RtcService) => CallState;
@@ -28,7 +32,7 @@ export function createStoreWatchController(deps: {
         }
     }
 
-    function addSessionWatcherStop(stop: (() => void) | void): void {
+    function addSessionWatcherStop(stop: (() => void) | undefined): void {
         if (typeof stop !== "function") {
             return;
         }
@@ -52,9 +56,9 @@ export function createStoreWatchController(deps: {
         );
     }
 
-    function bindSessionWatchers(store: MailStore, session: RtcSession): void {
+    function bindSessionWatchers(rtc: RtcService, session: RtcSession): void {
         cleanupSessionWatchers();
-        access.setVoiceActivated(false, store.rtc);
+        access.setVoiceActivated(false, rtc);
 
         const sessionKey = access.getSessionKey(session);
         if (!sessionKey) {
@@ -87,26 +91,28 @@ export function createStoreWatchController(deps: {
             }
             const isMute = Boolean(session.isMute);
             if (isMute && !previousMute) {
-                access.setVoiceActivated(false, store.rtc);
+                access.setVoiceActivated(false, rtc);
             }
             previousMute = isMute;
-            emitCallState(access.buildCallState(session, store.rtc));
+            emitCallState(access.buildCallState(session, rtc));
         };
 
-        addSessionWatcherStop(store.onChange(session, "isTalking", emitSessionLifecycle));
-        addSessionWatcherStop(store.onChange(session, "is_muted", emitSessionState));
-        addSessionWatcherStop(store.onChange(session, "is_deaf", emitSessionState));
-        addSessionWatcherStop(store.onChange(session, "is_camera_on", emitSessionState));
-        addSessionWatcherStop(store.onChange(session, "is_screen_sharing_on", emitSessionState));
+        addSessionWatcherStop(access.observeFields(session, ["isTalking"], emitSessionLifecycle));
+        addSessionWatcherStop(
+            access.observeFields(
+                session,
+                ["is_muted", "is_deaf", "is_camera_on", "is_screen_sharing_on"],
+                emitSessionState
+            )
+        );
 
         emitSessionLifecycle();
         emitSessionState();
     }
 
     function handleLocalSessionChange(): void {
-        const store = access.getStore();
-        const rtc = store?.rtc;
-        if (!store || !rtc) {
+        const rtc = access.getRtc();
+        if (!rtc) {
             state.activeSessionToken += 1;
             state.activeSessionKey = null;
             state.voiceActivated = false;
@@ -140,7 +146,7 @@ export function createStoreWatchController(deps: {
             return;
         }
 
-        bindSessionWatchers(store, localSession);
+        bindSessionWatchers(rtc, localSession);
     }
 
     function tryAttachStoreWatcher(): boolean {
@@ -148,13 +154,13 @@ export function createStoreWatchController(deps: {
             return true;
         }
 
-        const store = access.getStore();
-        if (!store?.rtc || typeof store.onChange !== "function") {
+        const rtc = access.getRtc();
+        if (!rtc) {
             return false;
         }
 
-        const stopWatcher = store.onChange(store.rtc, "localSession", handleLocalSessionChange);
-        if (typeof stopWatcher !== "function") {
+        const stopWatcher = access.observeFields(rtc, ["localSession"], handleLocalSessionChange);
+        if (!stopWatcher) {
             return false;
         }
 

@@ -2,27 +2,55 @@ export const CONTENT_BOOTSTRAP_CHANNEL = "discuss-companion-bootstrap";
 
 type ContentBootstrapDeps = {
     loadContentRuntime: () => Promise<void>;
-    probePageForOdoo: () => Promise<boolean>;
+    probeRuntimeSupport: () => Promise<boolean>;
 };
 
-type OdooProbeMessage = {
-    channel: typeof CONTENT_BOOTSTRAP_CHANNEL;
+export type OdooRuntimeProbe = {
     hasOdoo: boolean;
+    owlVersion: string | null;
+    hasOwl3ObservationApi: boolean;
 };
+
+type OdooProbeMessage = OdooRuntimeProbe & {
+    channel: typeof CONTENT_BOOTSTRAP_CHANNEL;
+};
+
+const OWL_2_VERSION_PATTERN = /^2\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+const OWL_3_VERSION_PATTERN = /^3\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+
+export function isSupportedOdooRuntime(runtime: OdooRuntimeProbe): boolean {
+    if (!runtime.hasOdoo || !runtime.owlVersion) {
+        return false;
+    }
+    if (OWL_2_VERSION_PATTERN.test(runtime.owlVersion)) {
+        return true;
+    }
+    return OWL_3_VERSION_PATTERN.test(runtime.owlVersion) && runtime.hasOwl3ObservationApi;
+}
 
 function isOdooProbeMessage(value: unknown): value is OdooProbeMessage {
     if (!value || typeof value !== "object") {
         return false;
     }
-    const message = value as { channel?: unknown; hasOdoo?: unknown };
-    return message.channel === CONTENT_BOOTSTRAP_CHANNEL && typeof message.hasOdoo === "boolean";
+    const message = value as {
+        channel?: unknown;
+        hasOdoo?: unknown;
+        owlVersion?: unknown;
+        hasOwl3ObservationApi?: unknown;
+    };
+    return (
+        message.channel === CONTENT_BOOTSTRAP_CHANNEL &&
+        typeof message.hasOdoo === "boolean" &&
+        (typeof message.owlVersion === "string" || message.owlVersion === null) &&
+        typeof message.hasOwl3ObservationApi === "boolean"
+    );
 }
 
 async function loadContentRuntime(): Promise<void> {
     await import(chrome.runtime.getURL("content_bundle.js"));
 }
 
-async function probePageForOdoo(): Promise<boolean> {
+async function probeRuntimeSupport(): Promise<boolean> {
     const target = document.head ?? document.documentElement;
     if (!target) {
         return false;
@@ -49,7 +77,7 @@ async function probePageForOdoo(): Promise<boolean> {
                 return;
             }
             cleanup();
-            resolve(event.data.hasOdoo);
+            resolve(isSupportedOdooRuntime(event.data));
         };
 
         window.addEventListener("message", handleMessage);
@@ -64,7 +92,7 @@ async function probePageForOdoo(): Promise<boolean> {
 }
 
 export function startContentBootstrap(
-    deps: ContentBootstrapDeps = { loadContentRuntime, probePageForOdoo }
+    deps: ContentBootstrapDeps = { loadContentRuntime, probeRuntimeSupport }
 ): void {
     const MAX_RETRIES = 5;
     let runtimeLoaded = false;
@@ -94,11 +122,11 @@ export function startContentBootstrap(
             return;
         }
         retryCount++;
-        probePromise = deps.probePageForOdoo().finally(() => {
+        probePromise = deps.probeRuntimeSupport().finally(() => {
             probePromise = null;
         });
-        void probePromise.then((hasOdoo) => {
-            if (!hasOdoo || runtimeLoaded) {
+        void probePromise.then((isSupported) => {
+            if (!isSupported || runtimeLoaded) {
                 return;
             }
             runtimeLoaded = true;

@@ -2,7 +2,8 @@
  * @jest-environment jsdom
  * @jest-environment-options {"url": "https://odoo.com/"}
  */
-import { beforeAll, beforeEach, describe, expect, jest, test } from "@jest/globals";
+import { afterEach, beforeAll, beforeEach, describe, expect, jest, test } from "@jest/globals";
+import { effect, proxy, untrack } from "@odoo/owl";
 
 const BRIDGE_CHANNEL = "discuss-companion-bridge";
 
@@ -13,22 +14,35 @@ function nextRequestId() {
     return `req-${requestSequence}`;
 }
 
-function createSession(key, overrides = {}) {
-    return {
+function asHostRecord(runtime, record) {
+    if (runtime !== "owl3") {
+        return record;
+    }
+    record.onChange = function (dependencies) {
+        dependencies.bind(this);
+    };
+    return proxy(record);
+}
+
+function createSession(runtime, key, overrides = {}) {
+    return asHostRecord(runtime, {
         localId: key,
         id: Number(key.replace(/\D/g, "")) || 1,
         isTalking: false,
-        isMute: false,
+        is_muted: false,
         is_deaf: false,
+        get isMute() {
+            return this.is_muted || this.is_deaf;
+        },
         is_camera_on: false,
         is_screen_sharing_on: false,
         ...overrides
-    };
+    });
 }
 
-function createStoreMock() {
+function createStoreMock(runtime) {
     const watchers = [];
-    const rtc = {
+    const rtc = asHostRecord(runtime, {
         localSession: undefined,
         channel: { id: 1, name: "General", open: jest.fn() },
         pipService: {},
@@ -43,15 +57,9 @@ function createStoreMock() {
         toggleVideo: jest.fn(),
         openPip: jest.fn(),
         leaveCall: jest.fn()
-    };
+    });
 
     const onChange = jest.fn((target, key, cb) => {
-        if (Array.isArray(key)) {
-            for (const item of key) {
-                onChange(target, item, cb);
-            }
-            return undefined;
-        }
         const watcher = {
             target,
             key,
@@ -64,17 +72,10 @@ function createStoreMock() {
         };
     });
 
-    const store = {
+    const store = asHostRecord(runtime, {
         rtc,
         onChange
-    };
-
-    function keyMatches(registeredKey, incomingKey) {
-        if (Array.isArray(registeredKey)) {
-            return registeredKey.includes(incomingKey);
-        }
-        return registeredKey === incomingKey;
-    }
+    });
 
     function triggerChange(target, key) {
         for (const watcher of watchers) {
@@ -84,20 +85,31 @@ function createStoreMock() {
             if (watcher.target !== target) {
                 continue;
             }
-            if (!keyMatches(watcher.key, key)) {
+            if (watcher.key !== key) {
                 continue;
             }
             watcher.cb();
         }
     }
 
-    return { store, rtc, triggerChange, watchers };
+    return { store, rtc, triggerChange };
 }
 
-const flushBridgeEvents = () => new Promise((resolve) => setTimeout(resolve, 0));
+async function flushBridgeEvents() {
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+}
 
-function setOdooStore(store) {
+function setOdooStore(store, runtime) {
     window.odoo = {
+        loader: {
+            require: jest.fn((name) => {
+                if (name !== "@odoo/owl") {
+                    return undefined;
+                }
+                return runtime === "owl3" ? { effect, proxy, untrack } : {};
+            })
+        },
         __WOWL_DEBUG__: {
             root: {
                 env: {
@@ -180,7 +192,7 @@ beforeAll(async () => {
     await import("../src/page_bridge.ts");
 });
 
-describe("page_bridge store.onChange flow", () => {
+describe.each(["saas-19.2", "owl3"])("page_bridge store watch on %s", (runtime) => {
     let collector;
 
     beforeEach(async () => {
@@ -196,8 +208,8 @@ describe("page_bridge store.onChange flow", () => {
     });
 
     test("emits lifecycle and call-state updates from localSession watchers", async () => {
-        const { store, rtc, triggerChange } = createStoreMock();
-        setOdooStore(store);
+        const { store, rtc, triggerChange } = createStoreMock(runtime);
+        setOdooStore(store, runtime);
 
         await bridgeRequest("start-store-watch");
         await flushBridgeEvents();
@@ -207,7 +219,7 @@ describe("page_bridge store.onChange flow", () => {
             isTalking: false
         });
 
-        const session = createSession("A", { is_camera_on: true });
+        const session = createSession(runtime, "A", { is_camera_on: true });
         rtc.localSession = session;
         triggerChange(rtc, "localSession");
         await flushBridgeEvents();
@@ -254,13 +266,13 @@ describe("page_bridge store.onChange flow", () => {
     });
 
     test("removes session listeners when localSession becomes falsy", async () => {
-        const { store, rtc, triggerChange } = createStoreMock();
-        setOdooStore(store);
+        const { store, rtc, triggerChange } = createStoreMock(runtime);
+        setOdooStore(store, runtime);
 
         await bridgeRequest("start-store-watch");
         await flushBridgeEvents();
 
-        const session = createSession("A");
+        const session = createSession(runtime, "A");
         rtc.localSession = session;
         triggerChange(rtc, "localSession");
         await flushBridgeEvents();
@@ -288,14 +300,14 @@ describe("page_bridge store.onChange flow", () => {
     });
 
     test("session switch ignores stale callbacks from previous session", async () => {
-        const { store, rtc, triggerChange } = createStoreMock();
-        setOdooStore(store);
+        const { store, rtc, triggerChange } = createStoreMock(runtime);
+        setOdooStore(store, runtime);
 
         await bridgeRequest("start-store-watch");
         await flushBridgeEvents();
 
-        const sessionA = createSession("A", { is_camera_on: false });
-        const sessionB = createSession("B", { is_camera_on: true });
+        const sessionA = createSession(runtime, "A", { is_camera_on: false });
+        const sessionB = createSession(runtime, "B", { is_camera_on: true });
 
         rtc.localSession = sessionA;
         triggerChange(rtc, "localSession");
@@ -329,33 +341,38 @@ describe("page_bridge store.onChange flow", () => {
         });
     });
 
-    test("bootstrap watcher attaches rtc localSession watcher once after delayed store availability", async () => {
-        const { store } = createStoreMock();
+    test("bootstrap watcher attaches after delayed store availability", async () => {
+        const { store, rtc, triggerChange } = createStoreMock(runtime);
 
         await bridgeRequest("start-store-watch");
         await flushBridgeEvents();
 
-        setOdooStore(store);
+        setOdooStore(store, runtime);
         document.body.appendChild(document.createElement("div"));
         await flushBridgeEvents();
 
-        const localSessionWatcherCalls = store.onChange.mock.calls.filter(
-            ([target, key]) => target === store.rtc && key === "localSession"
-        );
-        expect(localSessionWatcherCalls).toHaveLength(1);
-
-        document.body.appendChild(document.createElement("span"));
+        const session = createSession(runtime, "A", { is_camera_on: true });
+        rtc.localSession = session;
+        triggerChange(rtc, "localSession");
         await flushBridgeEvents();
 
-        const localSessionWatcherCallsAfter = store.onChange.mock.calls.filter(
-            ([target, key]) => target === store.rtc && key === "localSession"
-        );
-        expect(localSessionWatcherCallsAfter).toHaveLength(1);
+        expect(collector.last("call-lifecycle-update").payload).toEqual({
+            hasRtcService: true,
+            hasHostedCall: true,
+            isTalking: false
+        });
+        expect(collector.last("call-state-update").payload.state.isCameraOn).toBe(true);
+
+        session.isTalking = true;
+        triggerChange(session, "isTalking");
+        await flushBridgeEvents();
+
+        expect(collector.last("call-lifecycle-update").payload.isTalking).toBe(true);
     });
 
     test("ptt-command uses rtc methods only with a localSession", async () => {
-        const { store, rtc, triggerChange } = createStoreMock();
-        setOdooStore(store);
+        const { store, rtc, triggerChange } = createStoreMock(runtime);
+        setOdooStore(store, runtime);
 
         await bridgeRequest("start-store-watch");
         await flushBridgeEvents();
@@ -364,7 +381,7 @@ describe("page_bridge store.onChange flow", () => {
         expect(response.payload).toEqual({ didRun: false, state: null });
         expect(rtc.onPushToTalk).not.toHaveBeenCalled();
 
-        rtc.localSession = createSession("A");
+        rtc.localSession = createSession(runtime, "A");
         triggerChange(rtc, "localSession");
         await flushBridgeEvents();
 
@@ -413,13 +430,13 @@ describe("page_bridge store.onChange flow", () => {
     });
 
     test("mute transition forces voice latch off until re-toggled", async () => {
-        const { store, rtc, triggerChange } = createStoreMock();
-        setOdooStore(store);
+        const { store, rtc, triggerChange } = createStoreMock(runtime);
+        setOdooStore(store, runtime);
 
         await bridgeRequest("start-store-watch");
         await flushBridgeEvents();
 
-        const session = createSession("A");
+        const session = createSession(runtime, "A");
         rtc.localSession = session;
         triggerChange(rtc, "localSession");
         await flushBridgeEvents();
@@ -428,13 +445,13 @@ describe("page_bridge store.onChange flow", () => {
         expect(response.payload.state.isVoiceActivated).toBe(true);
         expect(rtc.pttExtService.voiceActivated).toBe(true);
 
-        session.isMute = true;
+        session.is_muted = true;
         triggerChange(session, "is_muted");
         await flushBridgeEvents();
         expect(collector.last("call-state-update").payload.state.isVoiceActivated).toBe(false);
         expect(rtc.pttExtService.voiceActivated).toBe(false);
 
-        session.isMute = false;
+        session.is_muted = false;
         triggerChange(session, "is_muted");
         await flushBridgeEvents();
         expect(collector.last("call-state-update").payload.state.isVoiceActivated).toBe(false);
@@ -444,13 +461,13 @@ describe("page_bridge store.onChange flow", () => {
     });
 
     test("muting and deafening actions explicitly stop talking", async () => {
-        const { store, rtc, triggerChange } = createStoreMock();
-        setOdooStore(store);
+        const { store, rtc, triggerChange } = createStoreMock(runtime);
+        setOdooStore(store, runtime);
 
         await bridgeRequest("start-store-watch");
         await flushBridgeEvents();
 
-        rtc.localSession = createSession("A", { isTalking: true });
+        rtc.localSession = createSession(runtime, "A", { isTalking: true });
         triggerChange(rtc, "localSession");
         await flushBridgeEvents();
 
@@ -471,5 +488,41 @@ describe("page_bridge store.onChange flow", () => {
         await bridgeRequest("call-action", { action: { type: "set-deaf", value: true } });
         expect(rtc.toggleDeafen).toHaveBeenCalledTimes(2);
         expect(rtc.setTalking).toHaveBeenCalledTimes(4);
+    });
+
+    test("stops observing host records until watching restarts", async () => {
+        const { store, rtc, triggerChange } = createStoreMock(runtime);
+        setOdooStore(store, runtime);
+
+        await bridgeRequest("start-store-watch");
+        rtc.localSession = createSession(runtime, "A");
+        triggerChange(rtc, "localSession");
+        await flushBridgeEvents();
+
+        await bridgeRequest("stop-store-watch");
+        await flushBridgeEvents();
+        collector.events.length = 0;
+        window.odoo = undefined;
+
+        rtc.localSession = undefined;
+        triggerChange(rtc, "localSession");
+        await flushBridgeEvents();
+
+        expect(collector.events).toHaveLength(0);
+
+        setOdooStore(store, runtime);
+        await bridgeRequest("start-store-watch");
+        const nextSession = createSession(runtime, "B");
+        rtc.localSession = nextSession;
+        triggerChange(rtc, "localSession");
+        await flushBridgeEvents();
+        collector.events.length = 0;
+
+        nextSession.isTalking = true;
+        triggerChange(nextSession, "isTalking");
+        await flushBridgeEvents();
+
+        expect(collector.byType("call-lifecycle-update")).toHaveLength(1);
+        expect(collector.last("call-lifecycle-update").payload.isTalking).toBe(true);
     });
 });
