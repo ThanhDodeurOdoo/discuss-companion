@@ -15,6 +15,7 @@ export type RtcSession = {
     id?: number;
     isTalking: boolean;
     isMute: boolean;
+    is_muted: boolean;
     is_deaf: boolean;
     is_camera_on: boolean;
     is_screen_sharing_on: boolean;
@@ -45,11 +46,14 @@ export type RtcService = {
 
 export type MailStore = {
     rtc?: RtcService;
-    onChange: (target: object, key: string | string[], cb: () => void) => (() => void) | void;
+    onChange: (target: object, key: string, callback: () => void) => () => void;
 };
 
 export type OdooWindow = Window & {
     odoo?: {
+        loader?: {
+            require: (name: string) => unknown;
+        };
         __WOWL_DEBUG__?: {
             root: {
                 env: {
