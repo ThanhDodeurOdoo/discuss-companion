@@ -7,10 +7,13 @@ import {
     type ChannelEvent,
     type CallStatePayload,
     APP_VISIBILITY_MODE,
-    type AppVisibilityMode
+    type AppVisibilityMode,
+    type MacosPermission,
+    type MacosPermissionStatus
 } from "./ipc_types";
 
 const THEME_STORAGE_KEY = "discuss-companion.theme";
+const PERMISSION_REVIEW_STORAGE_KEY = "discuss-companion.permission-review-open";
 
 const THEME_MODE = {
     Dark: "dark",
@@ -76,6 +79,17 @@ export class AppPlugin extends Plugin {
     isRecording = signal(false);
     isPressed = signal(false);
     permissionGranted = signal(false);
+    permissionChecked = signal(false);
+    macosPermissions = signal<MacosPermissionStatus | null>(null);
+    permissionError = signal("");
+    permissionActionError = signal("");
+    permissionActionPending = signal(false);
+    permissionRequested = signal<Record<MacosPermission, boolean>>({
+        accessibility: false,
+        inputMonitoring: false
+    });
+    permissionSettingsTarget = signal<MacosPermission | null>(null);
+    permissionReviewOpen = signal(false);
     extensionConnected = signal(false);
     currentBinding = signal<PttBinding>({ code: 0, modifiers: [] });
     isForcingRelease = false;
@@ -90,12 +104,19 @@ export class AppPlugin extends Plugin {
 
     logIdCounter = 0;
     unlistenFns: (() => void)[] = [];
-    permissionInterval: number | null = null;
+    permissionTimer: number | null = null;
+    destroyed = false;
+    permissionCheck: Promise<void> | null = null;
 
     setup() {
         this.initThemeMode();
+        this.restorePermissionReview();
         this.init();
         onWillDestroy(() => {
+            this.destroyed = true;
+            if (this.permissionTimer !== null) {
+                window.clearTimeout(this.permissionTimer);
+            }
             this.unlistenFns.forEach((fn) => fn());
         });
     }
@@ -145,6 +166,7 @@ export class AppPlugin extends Plugin {
         await this.fetchWsPort();
         await this.checkPermission();
         await this.setupListeners();
+        this.schedulePermissionCheck();
     }
 
     async setupListeners() {
@@ -234,8 +256,12 @@ export class AppPlugin extends Plugin {
             }
         });
 
-        this.unlistenFns.push(bindingCapturedUnlisten);
-        this.unlistenFns.push(wsStatusUnlisten);
+        if (this.destroyed) {
+            bindingCapturedUnlisten();
+            wsStatusUnlisten();
+        } else {
+            this.unlistenFns.push(bindingCapturedUnlisten, wsStatusUnlisten);
+        }
     }
 
     async applyRecordedBinding(binding: PttBinding) {
@@ -287,9 +313,136 @@ export class AppPlugin extends Plugin {
         }
     }
 
+    needsPermissionSetup(): boolean {
+        return (
+            !this.permissionChecked() ||
+            (this.macosPermissions() !== null && !this.permissionGranted())
+        );
+    }
+
+    restorePermissionReview() {
+        try {
+            this.permissionReviewOpen.set(
+                window.localStorage.getItem(PERMISSION_REVIEW_STORAGE_KEY) === "true"
+            );
+        } catch {
+            // Storage may be unavailable; setup still works during this session.
+        }
+    }
+
+    setPermissionReviewOpen(open: boolean) {
+        this.permissionReviewOpen.set(open);
+        try {
+            // Input Monitoring can require macOS to restart the app immediately.
+            // Save before opening Settings, and retain until explicit dismissal.
+            if (open) {
+                window.localStorage.setItem(PERMISSION_REVIEW_STORAGE_KEY, "true");
+            } else {
+                window.localStorage.removeItem(PERMISSION_REVIEW_STORAGE_KEY);
+            }
+        } catch {
+            // Do not block permission recovery when persistence is unavailable.
+        }
+    }
+
     async checkPermission() {
-        const isGranted = await ipc.isAccessibilityGranted();
-        this.permissionGranted.set(isGranted);
+        // Share an in-flight query between polling and explicit actions.
+        if (this.permissionCheck) {
+            return this.permissionCheck;
+        }
+        this.permissionCheck = this.readPermissionStatus();
+        try {
+            await this.permissionCheck;
+        } finally {
+            this.permissionCheck = null;
+        }
+    }
+
+    async readPermissionStatus() {
+        try {
+            const status = await ipc.getMacosPermissionStatus();
+            const granted =
+                status !== null
+                    ? status.accessibility && status.inputMonitoring && status.listenerRunning
+                    : await ipc.isAccessibilityGranted();
+            if (this.destroyed) {
+                return;
+            }
+            this.macosPermissions.set(status);
+            this.permissionGranted.set(granted);
+            this.permissionChecked.set(true);
+            this.permissionError.set("");
+            if (status === null && this.permissionReviewOpen()) {
+                this.setPermissionReviewOpen(false);
+            }
+            const settingsTarget = this.permissionSettingsTarget();
+            if (settingsTarget && status?.[settingsTarget]) {
+                this.permissionSettingsTarget.set(null);
+            }
+            if (status && !granted) {
+                // The backend releases PTT and cancels capture when its tap is lost.
+                this.isPressed.set(false);
+                this.isRecording.set(false);
+                this.isForcingRelease = false;
+            }
+        } catch (error) {
+            if (!this.destroyed) {
+                this.permissionChecked.set(false);
+                this.permissionGranted.set(false);
+                this.permissionError.set(`Unable to check permissions: ${String(error)}`);
+            }
+        }
+    }
+
+    schedulePermissionCheck() {
+        if (this.destroyed || (this.permissionChecked() && this.macosPermissions() === null)) {
+            return;
+        }
+        this.permissionTimer = window.setTimeout(async () => {
+            this.permissionTimer = null;
+            await this.checkPermission();
+            this.schedulePermissionCheck();
+        }, 1000);
+    }
+
+    async runPermissionAction(action: () => Promise<void>) {
+        if (this.permissionActionPending()) {
+            return;
+        }
+        this.permissionActionPending.set(true);
+        this.permissionActionError.set("");
+        this.permissionSettingsTarget.set(null);
+        try {
+            await action();
+            await this.checkPermission();
+        } catch (error) {
+            this.permissionActionError.set(String(error));
+        } finally {
+            this.permissionActionPending.set(false);
+        }
+    }
+
+    async requestPermission(permission: MacosPermission) {
+        await this.runPermissionAction(async () => {
+            if (this.permissionRequested()[permission]) {
+                await ipc.openMacosPermissionSettings(permission);
+                this.permissionSettingsTarget.set(permission);
+            } else {
+                // Request once per session to register fresh installs with macOS.
+                // Native prompts can be asynchronous or absent, so later clicks
+                // open Settings without issuing another request alongside it.
+                this.permissionRequested.set({ ...this.permissionRequested(), [permission]: true });
+                await ipc.requestMacosPermission(permission);
+            }
+        });
+    }
+
+    async openPermissionSettings(permission: MacosPermission) {
+        await this.runPermissionAction(() => ipc.openMacosPermissionSettings(permission));
+    }
+
+    async retryKeyboardListener() {
+        await this.runPermissionAction(() => ipc.retryKeyboardListener());
     }
 
     async fetchCurrentBinding() {

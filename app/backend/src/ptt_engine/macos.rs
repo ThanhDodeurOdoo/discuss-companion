@@ -1,32 +1,35 @@
 use std::{
     ffi::c_void,
-    ptr,
+    process, ptr,
     sync::{
         Arc, OnceLock,
-        atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
+        atomic::{AtomicBool, AtomicU32, Ordering},
     },
-    time::Duration,
+    thread::sleep,
+    time::{Duration, Instant},
 };
 
 use anyhow::{Result, anyhow};
 // SAFETY: requires unsafe code for macOS Core Graphics FFI calls.
 // The CGEventTap API is inherently unsafe as it involves C callbacks and raw pointers.
 use core_foundation::{
-    base::TCFType,
-    dictionary,
-    mach_port::CFMachPortRef,
+    base::{CFRelease, TCFType},
+    mach_port::{CFMachPortInvalidate, CFMachPortRef},
     runloop::{
-        CFRunLoop, CFRunLoopAddSource, CFRunLoopSourceRef, kCFRunLoopCommonModes,
-        kCFRunLoopDefaultMode,
+        CFRunLoop, CFRunLoopAddSource, CFRunLoopRemoveSource, CFRunLoopSourceRef,
+        kCFRunLoopCommonModes, kCFRunLoopDefaultMode,
     },
 };
 use core_graphics::event::{CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement};
 use crossbeam_channel::Sender;
 use tracing::{debug, error, info};
 
+pub(crate) mod permissions;
+mod recovery;
+
 use crate::{
     protocol::{KeyBinding, Modifiers, PttState, current_timestamp, keyboard as kb},
-    ptt_engine::{PttEngine, PttEvent},
+    ptt_engine::{PttEngine, PttEvent, permissions::MacosPermissionStatus},
 };
 
 type CGEventRef = *mut c_void;
@@ -52,25 +55,14 @@ unsafe extern "C" {
 
     fn CGEventGetIntegerValueField(event: CGEventRef, field: u32) -> i64;
     fn CGEventGetFlags(event: CGEventRef) -> u64;
-    fn CGEventTapEnable(tap: CFMachPortRef, enable: bool);
+    fn CGEventTapIsEnabled(tap: CFMachPortRef) -> bool;
+    fn CGGetEventTapList(max_taps: u32, taps: *mut EventTapInformation, count: *mut u32) -> i32;
 
     fn CFMachPortCreateRunLoopSource(
         allocator: *const c_void,
         port: CFMachPortRef,
         order: i64,
     ) -> CFRunLoopSourceRef;
-}
-
-#[link(name = "ApplicationServices", kind = "framework")]
-#[allow(
-    unsafe_code,
-    reason = "
-    SAFETY: required for macOS ApplicationServices FFI.
-    The extern declarations match the official Application Services header definitions (AXUIElement.h),
-    ensuring correct ABI compatibility for the linked framework."
-)]
-unsafe extern "C" {
-    fn AXIsProcessTrustedWithOptions(options: dictionary::CFDictionaryRef) -> u8;
 }
 
 const K_CG_EVENT_KEY_DOWN: u32 = 10;
@@ -100,7 +92,11 @@ const DEFAULT_BINDING_PACKED: u32 = (kb::KEY_SPACE as u32) << 8;
 
 static HELD: AtomicBool = AtomicBool::new(false);
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
-static GLOBAL_TAP: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
+static LISTENER_RUNNING: AtomicBool = AtomicBool::new(false);
+static RETRY_REQUESTED: AtomicBool = AtomicBool::new(false);
+const HEALTH_CHECK_INTERVAL: Duration = Duration::from_secs(1);
+const RUN_LOOP_INTERVAL: Duration = Duration::from_millis(100);
+const KEYBOARD_EVENT_MASK: u64 = (1 << K_CG_EVENT_KEY_DOWN) | (1 << K_CG_EVENT_KEY_UP);
 static BINDING_PACKED: AtomicU32 = AtomicU32::new(DEFAULT_BINDING_PACKED);
 
 static EVENT_SENDER: OnceLock<Sender<PttEvent>> = OnceLock::new();
@@ -131,26 +127,7 @@ impl PttEngine for MacosEngine {
     }
 
     fn check_accessibility_permission(&self) -> bool {
-        use core_foundation::{boolean::CFBoolean, dictionary::CFDictionary, string::CFString};
-
-        #[allow(
-            unsafe_code,
-            reason = "
-            SAFETY: Interacting with macOS ApplicationServices to check accessibility permissions.
-            We create valid CFString and CFBoolean objects using safe wrappers (core_foundation crate).
-            The CFDictionary is constructed from these valid safe types.
-            The raw pointer passed to `AXIsProcessTrustedWithOptions` comes from `as_concrete_TypeRef()`,
-            which is guaranteed to be a valid CFDictionaryRef by the type system."
-        )]
-        unsafe {
-            // The actual key string for kAXTrustedCheckOptionPrompt
-            let key = CFString::from_static_string("AXTrustedCheckOptionPrompt");
-            let value = CFBoolean::true_value();
-            let options = CFDictionary::from_CFType_pairs(&[(key.as_CFType(), value.as_CFType())]);
-            let trusted = AXIsProcessTrustedWithOptions(options.as_concrete_TypeRef()) != 0;
-            debug!("Accessibility permission check: {}", trusted);
-            trusted
-        }
+        permissions::accessibility_granted()
     }
 
     fn start_engine(&self, sender: Sender<PttEvent>, shutdown: &Arc<AtomicBool>) -> Result<()> {
@@ -158,71 +135,154 @@ impl PttEngine for MacosEngine {
             .set(sender)
             .map_err(|_sender| anyhow!("Event sender already initialized"))?;
 
-        // We also want to listen for flags changed to update modifiers if needed,
-        let event_mask: u64 =
-            (1 << K_CG_EVENT_KEY_DOWN) | (1 << K_CG_EVENT_KEY_UP) | (1 << K_CG_EVENT_FLAGS_CHANGED);
+        let mut listener: Option<EventTap> = None;
+        let mut next_check = Instant::now();
+        while !shutdown.load(Ordering::Relaxed) {
+            let retry = RETRY_REQUESTED.swap(false, Ordering::AcqRel);
+            if retry || Instant::now() >= next_check {
+                let status = permission_status();
+                let running = recovery::reconcile(
+                    &mut listener,
+                    status.accessibility && status.input_monitoring,
+                    retry,
+                    EventTap::healthy,
+                    EventTap::new,
+                    reset_capture,
+                )
+                .unwrap_or_else(|error| {
+                    error!("Cannot start global keyboard listener: {error}");
+                    false
+                });
+                LISTENER_RUNNING.store(running, Ordering::Release);
+                next_check = Instant::now() + HEALTH_CHECK_INTERVAL;
+            }
+            if listener.is_some() {
+                #[allow(
+                    unsafe_code,
+                    reason = "SAFETY: kCFRunLoopDefaultMode is a system constant; the worker owns and services the tap's run loop"
+                )]
+                let mode = unsafe { kCFRunLoopDefaultMode };
+                CFRunLoop::run_in_mode(mode, RUN_LOOP_INTERVAL, false);
+            } else {
+                sleep(RUN_LOOP_INTERVAL);
+            }
+        }
+        LISTENER_RUNNING.store(false, Ordering::Release);
+        reset_capture();
+        drop(listener);
+        Ok(())
+    }
+}
 
+pub(crate) fn permission_status() -> MacosPermissionStatus {
+    MacosPermissionStatus {
+        accessibility: permissions::accessibility_granted(),
+        input_monitoring: permissions::input_monitoring_granted(),
+        listener_running: LISTENER_RUNNING.load(Ordering::Acquire),
+    }
+}
+
+pub(crate) fn retry_listener() {
+    LISTENER_RUNNING.store(false, Ordering::Release);
+    RETRY_REQUESTED.store(true, Ordering::Release);
+}
+
+fn reset_capture() {
+    IS_RECORDING.store(false, Ordering::Release);
+    get_engine().force_ptt_up();
+}
+
+// ABI layout from CGEventTypes.h. This contains listener metadata, not key events.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+struct EventTapInformation {
+    id: u32,
+    location: u32,
+    options: u32,
+    events: u64,
+    process: i32,
+    target_process: i32,
+    enabled: bool,
+    min_latency: f32,
+    avg_latency: f32,
+    max_latency: f32,
+}
+
+fn captures_keyboard(tap: &EventTapInformation, process: u32) -> bool {
+    u32::try_from(tap.process).ok() == Some(process)
+        && tap.target_process == 0
+        && tap.enabled
+        && tap.events & KEYBOARD_EVENT_MASK == KEYBOARD_EVENT_MASK
+}
+
+fn has_keyboard_listener() -> bool {
+    let mut count = 0;
+    #[allow(
+        unsafe_code,
+        reason = "SAFETY: null buffer requests only the event-tap count; count is writable"
+    )]
+    let result = unsafe { CGGetEventTapList(0, ptr::null_mut(), &raw mut count) };
+    if result != 0 || count == 0 {
+        return false;
+    }
+    let Ok(size) = usize::try_from(count) else {
+        return false;
+    };
+    let mut taps = vec![EventTapInformation::default(); size];
+    #[allow(
+        unsafe_code,
+        reason = "SAFETY: buffer holds count ABI-compatible structures; CoreGraphics never writes beyond the supplied capacity"
+    )]
+    let result = unsafe { CGGetEventTapList(count, taps.as_mut_ptr(), &raw mut count) };
+    result == 0 && taps.iter().any(|tap| captures_keyboard(tap, process::id()))
+}
+
+struct EventTap {
+    port: CFMachPortRef,
+    source: CFRunLoopSourceRef,
+    run_loop: CFRunLoop,
+}
+
+impl EventTap {
+    fn new() -> Result<Self> {
         #[allow(
             unsafe_code,
-            reason = "
-            SAFETY: CGEventTapCreate is called with:
-            - Valid numeric constants for location, placement, and options.
-            - A valid event mask.
-            - `event_callback`: A valid extern 'C' function pointer matching the required signature.
-            - `ptr::null_mut()`: Null user_info is explicitly allowed by the API.
-            The returned CFMachPortRef is checked for NULL immediately after this block."
+            clippy::as_conversions,
+            reason = "SAFETY: CoreGraphics enum values and callback match CGEvent.h; the returned port is checked and owned by this worker"
         )]
-        let tap: CFMachPortRef = unsafe {
-            #[allow(
-                clippy::as_conversions,
-                reason = "The Core Graphics FFI function expects raw u32 values for enum-backed parameters."
-            )]
+        let port = unsafe {
             CGEventTapCreate(
                 CGEventTapLocation::AnnotatedSession as u32,
                 CGEventTapPlacement::HeadInsertEventTap as u32,
                 CGEventTapOptions::ListenOnly as u32,
-                event_mask,
+                KEYBOARD_EVENT_MASK | (1 << K_CG_EVENT_FLAGS_CHANGED),
                 event_callback,
                 ptr::null_mut(),
             )
         };
-
-        GLOBAL_TAP.store(tap.cast::<c_void>(), Ordering::Release);
-
-        if tap.is_null() {
-            error!("Failed to create event tap - NULL return");
-            return Err(anyhow!(
-                "Failed to create event tap. Accessibility permission may be missing. \
-                 Grant permission in System Settings -> Privacy & Security -> Accessibility."
-            ));
+        if port.is_null() {
+            return Err(anyhow!("macOS refused keyboard capture"));
         }
-        debug!("CGEventTap created successfully");
-
         #[allow(
             unsafe_code,
-            reason = "
-            SAFETY: CFMachPortCreateRunLoopSource is called with:
-            - `ptr::null()`: Allowed for default allocator.
-            - `tap`: Verified to be non-null in the check above.
-            - `0`: Valid order parameter.
-            The result is checked for NULL immediately after."
+            reason = "SAFETY: port is live; null allocator selects the default allocator"
         )]
-        let source: CFRunLoopSourceRef =
-            unsafe { CFMachPortCreateRunLoopSource(ptr::null(), tap, 0) };
-
+        let source = unsafe { CFMachPortCreateRunLoopSource(ptr::null(), port, 0) };
         if source.is_null() {
-            return Err(anyhow!("Failed to create run loop source"));
+            #[allow(
+                unsafe_code,
+                reason = "SAFETY: release the create-rule port on this failure path; no source or callbacks were installed"
+            )]
+            unsafe {
+                CFMachPortInvalidate(port);
+                CFRelease(port.cast());
+            }
+            return Err(anyhow!("Cannot create keyboard capture run loop"));
         }
-
         let run_loop = CFRunLoop::get_current();
-
         #[allow(
             unsafe_code,
-            reason = "
-            SAFETY: CFRunLoopAddSource is called with:
-            - `run_loop`: Obtained securely via `CFRunLoop::get_current()`, guaranteed to be valid.
-            - `source`: Verified to be non-null in the check above.
-            - `kCFRunLoopCommonModes`: A valid constant from the `core_foundation` crate."
+            reason = "SAFETY: the worker owns the valid source and run loop for the lifetime of EventTap"
         )]
         unsafe {
             CFRunLoopAddSource(
@@ -231,22 +291,41 @@ impl PttEngine for MacosEngine {
                 kCFRunLoopCommonModes,
             );
         }
+        Ok(Self {
+            port,
+            source,
+            run_loop,
+        })
+    }
 
-        info!("Event tap started, listening for PTT key events");
+    fn healthy(&self) -> bool {
+        #[allow(
+            unsafe_code,
+            reason = "SAFETY: only the owner thread queries the live port, before Drop"
+        )]
+        let enabled = unsafe { CGEventTapIsEnabled(self.port) };
+        // macOS can return a non-null tap with keyboard bits silently removed.
+        // This app has one global keyboard worker, so verify its process's mask too.
+        enabled && has_keyboard_listener()
+    }
+}
 
-        while !shutdown.load(Ordering::Relaxed) {
-            #[allow(
-                unsafe_code,
-                reason = "
-                SAFETY: kCFRunLoopDefaultMode is a valid extern static provided by core_foundation.
-                Accessing it is safe as it is a constant global symbol."
-            )]
-            let mode = unsafe { kCFRunLoopDefaultMode };
-            CFRunLoop::run_in_mode(mode, Duration::from_millis(100), false);
+impl Drop for EventTap {
+    fn drop(&mut self) {
+        #[allow(
+            unsafe_code,
+            reason = "SAFETY: teardown runs on the owning run-loop thread; remove and invalidate before releasing each create-rule reference exactly once"
+        )]
+        unsafe {
+            CFRunLoopRemoveSource(
+                self.run_loop.as_concrete_TypeRef(),
+                self.source,
+                kCFRunLoopCommonModes,
+            );
+            CFMachPortInvalidate(self.port);
+            CFRelease(self.source.cast());
+            CFRelease(self.port.cast());
         }
-
-        info!("Event tap stopped");
-        Ok(())
     }
 }
 
@@ -290,25 +369,10 @@ extern "C" fn event_callback(
     if event_type == K_CG_EVENT_TAP_DISABLED_BY_TIMEOUT
         || event_type == K_CG_EVENT_TAP_DISABLED_BY_USER_INTEREST
     {
-        let tap = GLOBAL_TAP.load(Ordering::Acquire);
-        if !tap.is_null() {
-            info!(
-                "Event tap disabled by system (type={}), re-enabling...",
-                event_type
-            );
-            #[allow(
-                unsafe_code,
-                clippy::as_conversions,
-                reason = "
-                SAFETY: CGEventTapEnable is called with:
-                - `tap`: Loaded from the global atomic. We verified `!tap.is_null()` right above.
-                - `true`: Boolean literal.
-                The `as` conversion is required to cast the raw pointer from AtomicPtr back to CFMachPortRef."
-            )]
-            unsafe {
-                CGEventTapEnable(tap as CFMachPortRef, true);
-            }
-        }
+        // Recreate on the owner thread, rather than re-enabling a tap whose
+        // permissions or keyboard mask may no longer be valid.
+        retry_listener();
+        reset_capture();
         return event;
     }
 
@@ -500,6 +564,46 @@ fn binding_from_packed(packed: u32) -> KeyBinding {
 mod tests {
     use super::*;
     use crate::protocol::Modifier;
+
+    #[test]
+    fn keyboard_health_requires_enabled_global_capture_for_this_process() {
+        let valid = EventTapInformation {
+            process: 42,
+            enabled: true,
+            events: KEYBOARD_EVENT_MASK,
+            ..EventTapInformation::default()
+        };
+        assert!(captures_keyboard(&valid, 42));
+        assert!(!captures_keyboard(&valid, 43));
+        assert!(!captures_keyboard(
+            &EventTapInformation {
+                enabled: false,
+                ..valid
+            },
+            42
+        ));
+        assert!(!captures_keyboard(
+            &EventTapInformation {
+                target_process: 7,
+                ..valid
+            },
+            42
+        ));
+        assert!(!captures_keyboard(
+            &EventTapInformation {
+                events: 1 << K_CG_EVENT_FLAGS_CHANGED,
+                ..valid
+            },
+            42
+        ));
+        assert!(!captures_keyboard(
+            &EventTapInformation {
+                events: 1 << K_CG_EVENT_KEY_DOWN,
+                ..valid
+            },
+            42
+        ));
+    }
 
     #[test]
     fn test_binding_storage() {

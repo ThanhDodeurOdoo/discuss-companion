@@ -5,6 +5,7 @@ use tauri::{
     Manager, Runtime, State,
     ipc::{Channel, InvokeBody, Request},
 };
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_store::StoreExt;
 use tracing::info;
 
@@ -18,7 +19,11 @@ use crate::{
     protocol,
     protocol::{FEATURES, Features, KeyBinding, VERSION, current_timestamp},
     ptt_engine,
-    ptt_engine::{check_accessibility_permission, get_binding, set_binding, set_recording},
+    ptt_engine::{
+        check_accessibility_permission, get_binding,
+        permissions::{self, MacosPermission, MacosPermissionStatus},
+        set_binding, set_recording,
+    },
     runtime,
     settings::AppVisibilityMode,
     state::{AppSettings, WsState},
@@ -149,6 +154,44 @@ pub fn get_current_binding() -> KeyBinding {
 #[must_use]
 pub fn is_accessibility_granted() -> bool {
     check_accessibility_permission()
+}
+
+#[tauri::command]
+#[must_use]
+pub fn get_macos_permission_status() -> Option<MacosPermissionStatus> {
+    permissions::status()
+}
+
+/// # Errors
+/// Returns an error when the requested permission is unavailable.
+#[tauri::command]
+pub fn request_macos_permission(permission: MacosPermission) -> Result<(), String> {
+    permissions::request(permission)
+}
+
+/// # Errors
+/// Returns an error if System Settings cannot be opened.
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "tauri API")]
+pub fn open_macos_permission_settings(
+    app: tauri::AppHandle,
+    permission: MacosPermission,
+) -> Result<(), String> {
+    let pane = match permission {
+        MacosPermission::Accessibility => "Privacy_Accessibility",
+        MacosPermission::InputMonitoring => "Privacy_ListenEvent",
+    };
+    app.opener()
+        .open_url(
+            format!("x-apple.systempreferences:com.apple.preference.security?{pane}"),
+            None::<&str>,
+        )
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn retry_keyboard_listener() {
+    permissions::retry_listener();
 }
 
 #[tauri::command]

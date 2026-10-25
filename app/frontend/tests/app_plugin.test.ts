@@ -27,6 +27,12 @@ jest.unstable_mockModule("../ipc.ts", () => {
         getAppVisibilityMode: () => invokeMock(IPC_COMMAND.GetAppVisibilityMode),
         setAppVisibilityMode: (mode: string) =>
             invokeMock(IPC_COMMAND.SetAppVisibilityMode, { mode }),
+        getMacosPermissionStatus: () => invokeMock(IPC_COMMAND.GetMacosPermissionStatus),
+        requestMacosPermission: (permission: string) =>
+            invokeMock(IPC_COMMAND.RequestMacosPermission, { permission }),
+        openMacosPermissionSettings: (permission: string) =>
+            invokeMock(IPC_COMMAND.OpenMacosPermissionSettings, { permission }),
+        retryKeyboardListener: () => invokeMock(IPC_COMMAND.RetryKeyboardListener),
         isAccessibilityGranted: () => invokeMock(IPC_COMMAND.IsAccessibilityGranted),
         isExtensionConnected: () => invokeMock(IPC_COMMAND.IsExtensionConnected),
         getCurrentBinding: () => invokeMock(IPC_COMMAND.GetCurrentBinding),
@@ -72,13 +78,146 @@ describe("AppPlugin", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        window.localStorage.clear();
         setupChannelMock.mockImplementation(async () => {});
         owlApp = createOwlTestApp();
         plugin = new AppPlugin(owlApp.pluginManager);
     });
 
     afterEach(() => {
+        plugin.destroyed = true;
+        if (plugin.permissionTimer !== null) {
+            window.clearTimeout(plugin.permissionTimer);
+        }
         cleanupOwl();
+        jest.useRealTimers();
+    });
+
+    test("permission loss clears capture and pressed state, then regrant recovers", async () => {
+        plugin.isRecording.set(true);
+        plugin.isPressed.set(true);
+        invokeMock.mockResolvedValue({
+            accessibility: true,
+            inputMonitoring: false,
+            listenerRunning: false
+        } as never);
+        await plugin.checkPermission();
+        expect(plugin.needsPermissionSetup()).toBe(true);
+        expect(plugin.isRecording()).toBe(false);
+        expect(plugin.isPressed()).toBe(false);
+        expect(invokeMock.mock.calls.map(([cmd]) => cmd)).toEqual([
+            IPC_COMMAND.GetMacosPermissionStatus
+        ]);
+        invokeMock.mockResolvedValue({
+            accessibility: true,
+            inputMonitoring: true,
+            listenerRunning: true
+        } as never);
+        await plugin.checkPermission();
+        expect(plugin.needsPermissionSetup()).toBe(false);
+        expect(plugin.permissionGranted()).toBe(true);
+    });
+
+    test("polling recovers without prompts and stops after destruction", async () => {
+        jest.useFakeTimers();
+        invokeMock.mockResolvedValue({
+            accessibility: false,
+            inputMonitoring: false,
+            listenerRunning: false
+        } as never);
+        await plugin.checkPermission();
+        plugin.schedulePermissionCheck();
+        invokeMock.mockResolvedValue({
+            accessibility: true,
+            inputMonitoring: true,
+            listenerRunning: true
+        } as never);
+        await jest.advanceTimersByTimeAsync(1000);
+        expect(plugin.needsPermissionSetup()).toBe(false);
+        expect(invokeMock.mock.calls.map(([cmd]) => cmd)).toEqual([
+            IPC_COMMAND.GetMacosPermissionStatus,
+            IPC_COMMAND.GetMacosPermissionStatus
+        ]);
+        plugin.destroyed = true;
+        await jest.advanceTimersByTimeAsync(1000);
+        expect(plugin.permissionTimer).toBeNull();
+    });
+
+    test("status errors gate controls and a subsequent check recovers", async () => {
+        invokeMock.mockRejectedValueOnce(new Error("IPC unavailable") as never);
+        await plugin.checkPermission();
+        expect(plugin.needsPermissionSetup()).toBe(true);
+        expect(plugin.permissionError()).toContain("IPC unavailable");
+        invokeMock.mockResolvedValue(null as never);
+        await plugin.checkPermission();
+        expect(plugin.needsPermissionSetup()).toBe(false);
+        expect(plugin.permissionError()).toBe("");
+        plugin.schedulePermissionCheck();
+        expect(plugin.permissionTimer).toBeNull();
+    });
+
+    test("each permission requests access once before opening Settings", async () => {
+        invokeMock.mockResolvedValue({
+            accessibility: false,
+            inputMonitoring: false,
+            listenerRunning: false
+        } as never);
+        await plugin.requestPermission("accessibility");
+        await plugin.requestPermission("inputMonitoring");
+        await plugin.requestPermission("accessibility");
+        await plugin.requestPermission("inputMonitoring");
+        expect(invokeMock.mock.calls).toEqual([
+            [IPC_COMMAND.RequestMacosPermission, { permission: "accessibility" }],
+            [IPC_COMMAND.GetMacosPermissionStatus],
+            [IPC_COMMAND.RequestMacosPermission, { permission: "inputMonitoring" }],
+            [IPC_COMMAND.GetMacosPermissionStatus],
+            [IPC_COMMAND.OpenMacosPermissionSettings, { permission: "accessibility" }],
+            [IPC_COMMAND.GetMacosPermissionStatus],
+            [IPC_COMMAND.OpenMacosPermissionSettings, { permission: "inputMonitoring" }],
+            [IPC_COMMAND.GetMacosPermissionStatus]
+        ]);
+    });
+
+    test("permission review remains usable when persistence is unavailable", () => {
+        const read = jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+            throw new Error("Storage unavailable");
+        });
+        const write = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+            throw new Error("Storage unavailable");
+        });
+        const remove = jest.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+            throw new Error("Storage unavailable");
+        });
+        try {
+            plugin.restorePermissionReview();
+            plugin.setPermissionReviewOpen(true);
+            expect(plugin.permissionReviewOpen()).toBe(true);
+            plugin.setPermissionReviewOpen(false);
+            expect(plugin.permissionReviewOpen()).toBe(false);
+        } finally {
+            read.mockRestore();
+            write.mockRestore();
+            remove.mockRestore();
+        }
+    });
+
+    test("concurrent permission checks share a request and ignore late results", async () => {
+        let resolveStatus: (value: unknown) => void = () => {};
+        invokeMock.mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    resolveStatus = resolve;
+                })
+        );
+        const first = plugin.checkPermission();
+        const second = plugin.checkPermission();
+        expect(invokeMock).toHaveBeenCalledTimes(1);
+        plugin.destroyed = true;
+        resolveStatus({ accessibility: true, inputMonitoring: true, listenerRunning: true });
+        await Promise.all([first, second]);
+        expect(plugin.permissionChecked()).toBe(false);
+        plugin.schedulePermissionCheck();
+        expect(plugin.permissionTimer).toBeNull();
     });
 
     test("formatKeyBinding returns correct names", () => {

@@ -1,0 +1,101 @@
+<t>
+    <t t-set="status" t-value="this.app.macosPermissions()" />
+    <t t-set="permissionsGranted" t-value="status &amp;&amp; status.accessibility &amp;&amp; status.inputMonitoring" />
+    <section t-if="this.app.needsPermissionSetup()" class="permission-summary" aria-labelledby="permission-title">
+        <div class="permission-summary__heading">
+            <span class="icon" aria-hidden="true">keyboard</span>
+            <h2 id="permission-title" t-out="permissionsGranted ? 'Restore push-to-talk' : 'Set up push-to-talk'" />
+        </div>
+        <p t-out="permissionsGranted ? 'Keyboard capture needs attention.' : 'Enable your shortcut outside Odoo.'" />
+        <button class="btn btn--primary" t-ref="this.reviewButton" t-on-click="() => this.openDetails()">
+            Review permissions
+            <span class="icon" aria-hidden="true">arrow_forward</span>
+        </button>
+    </section>
+    <dialog class="permission-dialog" t-ref="this.dialog"
+        t-att-class="{ 'permission-dialog--inline': !this.hasNativeDialog }"
+        t-att-role="this.hasNativeDialog ? 'dialog' : 'region'"
+        aria-labelledby="permission-dialog-title" aria-describedby="permission-dialog-description"
+        t-on-cancel="(event) => this.onDialogCancel(event)"
+        t-on-click="(event) => this.onDialogClick(event)">
+        <div class="permission-dialog__heading">
+            <h2 id="permission-dialog-title">Push-to-talk permissions</h2>
+            <button class="permission-dialog__close" aria-label="Close permission details"
+                t-on-click="() => this.closeDetails()">
+                <span class="icon" aria-hidden="true">close</span>
+            </button>
+        </div>
+        <p id="permission-dialog-description" class="permission-dialog__description"
+            t-out="this.app.permissionGranted() ? 'Your shortcut is ready to use outside Odoo.' : 'Allow these macOS permissions to use your shortcut anywhere.'" />
+        <t t-if="status">
+            <div class="permission-rows">
+                <section class="permission-row" aria-labelledby="accessibility-title">
+                    <div>
+                        <h3 id="accessibility-title">Accessibility</h3>
+                        <div class="permission-status" t-att-class="{ 'is-granted': status.accessibility }"
+                            t-out="status.accessibility ? 'Granted' : 'Required'" />
+                    </div>
+                    <div class="permission-row__actions">
+                        <button t-if="!status.accessibility" class="btn btn--primary"
+                            t-att-aria-label="this.app.permissionRequested().accessibility ? 'Open Accessibility settings' : 'Request Accessibility access'"
+                            t-att-disabled="this.app.permissionActionPending()"
+                            t-on-click="() => this.app.requestPermission('accessibility')"
+                            t-out="this.app.permissionRequested().accessibility ? 'Open Settings' : 'Request access'" />
+                        <button t-else="" class="btn permission-settings" aria-label="Open Accessibility settings" title="Open Accessibility settings"
+                            t-att-disabled="this.app.permissionActionPending()"
+                            t-on-click="() => this.app.openPermissionSettings('accessibility')">
+                            <span class="icon" aria-hidden="true">settings</span>
+                        </button>
+                    </div>
+                </section>
+                <section class="permission-row" aria-labelledby="input-monitoring-title">
+                    <div>
+                        <h3 id="input-monitoring-title">Input Monitoring</h3>
+                        <div class="permission-status" t-att-class="{ 'is-granted': status.inputMonitoring }"
+                            t-out="status.inputMonitoring ? 'Granted' : 'Required'" />
+                    </div>
+                    <div class="permission-row__actions">
+                        <button t-if="!status.inputMonitoring" class="btn btn--primary"
+                            t-att-aria-label="this.app.permissionRequested().inputMonitoring ? 'Open Input Monitoring settings' : 'Request Input Monitoring access'"
+                            t-att-disabled="this.app.permissionActionPending()"
+                            t-on-click="() => this.app.requestPermission('inputMonitoring')"
+                            t-out="this.app.permissionRequested().inputMonitoring ? 'Open Settings' : 'Request access'" />
+                        <button t-else="" class="btn permission-settings" aria-label="Open Input Monitoring settings" title="Open Input Monitoring settings"
+                            t-att-disabled="this.app.permissionActionPending()"
+                            t-on-click="() => this.app.openPermissionSettings('inputMonitoring')">
+                            <span class="icon" aria-hidden="true">settings</span>
+                        </button>
+                    </div>
+                </section>
+            </div>
+            <p t-if="this.app.permissionSettingsTarget() &amp;&amp; !status[this.app.permissionSettingsTarget()]"
+                class="permission-next-step" role="status">
+                In <t t-out="this.app.permissionSettingsTarget() === 'accessibility' ? 'Accessibility' : 'Input Monitoring'" />, turn on Discuss Companion. If it’s missing, use + to add it from Applications.
+            </p>
+            <p t-elif="(this.app.permissionRequested().accessibility &amp;&amp; !status.accessibility) || (this.app.permissionRequested().inputMonitoring &amp;&amp; !status.inputMonitoring)"
+                class="permission-next-step" role="status">
+                Follow the macOS prompt, or use Open Settings if no prompt appears.
+            </p>
+            <div t-if="this.app.permissionGranted()" class="permission-success">
+                <p role="status"><span class="icon" aria-hidden="true">check_circle</span> Both permissions granted. Keyboard capture active.</p>
+                <button class="btn btn--primary" t-on-click="() => this.closeDetails()">Done</button>
+            </div>
+            <div t-elif="permissionsGranted" class="permission-capture-status">
+                <p role="status">Permissions granted. Waiting for keyboard capture…</p>
+                <button class="btn btn--ghost" t-att-disabled="this.app.permissionActionPending()"
+                    t-on-click="() => this.app.retryKeyboardListener()">Retry keyboard capture</button>
+            </div>
+            <details t-if="!this.app.permissionGranted()" class="permission-guidance">
+                <summary>Already enabled? It may be an old app entry.</summary>
+                <p>After an update, macOS may keep an entry for the old app. Quit and reopen Companion first. If access is still missing, remove only Discuss Companion from the affected list, then use + to add it from Applications again. Reopen it if macOS asks.</p>
+            </details>
+        </t>
+        <p t-elif="!this.app.permissionError()" role="status">Checking permissions…</p>
+        <div t-if="this.app.permissionError()" class="permission-error" role="alert">
+            <p t-out="this.app.permissionError()" />
+            <button class="btn btn--ghost" t-on-click="() => this.app.checkPermission()">Check again</button>
+        </div>
+        <p t-if="this.app.permissionActionError() &amp;&amp; !this.app.permissionGranted()" class="permission-error" role="alert" t-out="this.app.permissionActionError()" />
+        <p class="permission-dialog__footnote">Status updates automatically after you change a permission.</p>
+    </dialog>
+</t>

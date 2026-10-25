@@ -9,7 +9,7 @@
     </div>
     <div class="header-controls">
         <div
-            t-if="this.app.features()?.ptt &amp;&amp; !this.app.permissionGranted()"
+            t-if="this.app.features()?.ptt &amp;&amp; !this.app.needsPermissionSetup() &amp;&amp; !this.app.permissionGranted()"
             class="status-item"
             title="Accessibility permission required for push to talk">
             <div class="status-dot"></div>

@@ -42,6 +42,10 @@ export const IPC_COMMAND = {
     GetFeatures: "get_features",
     GetAppVisibilityMode: "get_app_visibility_mode",
     SetAppVisibilityMode: "set_app_visibility_mode",
+    GetMacosPermissionStatus: "get_macos_permission_status",
+    RequestMacosPermission: "request_macos_permission",
+    OpenMacosPermissionSettings: "open_macos_permission_settings",
+    RetryKeyboardListener: "retry_keyboard_listener",
     IsAccessibilityGranted: "is_accessibility_granted",
     IsExtensionConnected: "is_extension_connected",
     ShowMainWindow: "show_main_window",
@@ -73,3 +77,10 @@ export const APP_VISIBILITY_MODE = {
     DockOnly: "dockOnly"
 } as const;
 export type AppVisibilityMode = (typeof APP_VISIBILITY_MODE)[keyof typeof APP_VISIBILITY_MODE];
+
+export type MacosPermission = "accessibility" | "inputMonitoring";
+export type MacosPermissionStatus = {
+    accessibility: boolean;
+    inputMonitoring: boolean;
+    listenerRunning: boolean;
+};

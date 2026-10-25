@@ -20,7 +20,9 @@ import {
     type CallCommand,
     type ChannelEvent,
     IPC_COMMAND,
-    type AppVisibilityMode
+    type AppVisibilityMode,
+    type MacosPermission,
+    type MacosPermissionStatus
 } from "./ipc_types";
 
 // PTT
@@ -236,4 +238,21 @@ export async function setupChannel(onEvent: (event: ChannelEvent) => void) {
     };
 
     await invoke(IPC_COMMAND.EstablishChannel, { channel });
+}
+
+// Permission status checks never prompt. Only an explicit request may ask for consent.
+export async function getMacosPermissionStatus(): Promise<MacosPermissionStatus | null> {
+    return invoke(IPC_COMMAND.GetMacosPermissionStatus);
+}
+
+export async function requestMacosPermission(permission: MacosPermission): Promise<void> {
+    await invoke(IPC_COMMAND.RequestMacosPermission, { permission });
+}
+
+export async function openMacosPermissionSettings(permission: MacosPermission): Promise<void> {
+    await invoke(IPC_COMMAND.OpenMacosPermissionSettings, { permission });
+}
+
+export async function retryKeyboardListener(): Promise<void> {
+    await invoke(IPC_COMMAND.RetryKeyboardListener);
 }
