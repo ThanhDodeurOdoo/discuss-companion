@@ -11,6 +11,7 @@
     align-items: stretch;
     gap: var(--space-6);
     min-width: 0;
+    min-height: 0;
 }
 
 .key-display {

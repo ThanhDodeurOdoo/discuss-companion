@@ -1,3 +1,5 @@
+pub mod permissions;
+
 use std::sync::{Arc, atomic::AtomicBool};
 
 use anyhow::Result;

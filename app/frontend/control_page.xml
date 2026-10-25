@@ -1,6 +1,7 @@
 <div class="ptt-control prevent-select">
+    <PermissionPage t-if="this.app.features()?.ptt &amp;&amp; (this.app.needsPermissionSetup() || this.app.permissionReviewOpen())" />
     <button
-        t-if="this.app.features()?.ptt"
+        t-if="this.app.features()?.ptt &amp;&amp; !this.app.needsPermissionSetup()"
         class="key-display"
         t-att-class="{ 'recording': this.app.isRecording(), 'pressed': this.app.isPressed() }"
         t-on-click="() => this.app.toggleRecording()">
