@@ -247,6 +247,19 @@ Follow the [Odoo commit message guidelines](https://www.odoo.com/documentation/1
 
 ## Deployment & Distribution
 
+### Release
+
+From the repository root on `master`, bump the version and push its tag to start the app release:
+
+```bash
+npm run bump patch
+git add package*.json app/backend/Cargo.* extension/manifest*.json
+version=$(node -p "require('./package.json').version")
+git commit -m "[REL] app: release $version"
+git tag "$version"
+git push --atomic origin master "refs/tags/$version"
+```
+
 ### Build for Production
 ```bash
 npm run build         # Packed extensions + app bundle
