@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,7 +27,9 @@ const TARGET_KIND = Object.freeze({
 
 const PATHS = Object.freeze({
     packageJson: "package.json",
+    packageLock: "package-lock.json",
     cargoToml: "app/backend/Cargo.toml",
+    cargoLock: "app/backend/Cargo.lock",
     manifestChrome: "extension/manifest.json",
     manifestFirefox: "extension/manifest.firefox.json"
 });
@@ -335,17 +338,35 @@ async function main() {
         }
     }
 
-    for (const target of scopeTargets) {
-        const filePath = path.join(ROOT, target.path);
-        const contents = contentsByPath.get(target.path);
-        const nextVersion = scopeNextVersions.get(target.scope);
-        const updated = writeVersion(target, contents, nextVersion);
-        if (updated !== contents) {
-            await writeFile(filePath, updated, ENCODING_UTF8);
-        }
+    const lockfilePaths = scopeNextVersions.has(SCOPE.app)
+        ? [PATHS.packageLock, PATHS.cargoLock]
+        : [];
+    for (const filePath of lockfilePaths) {
+        contentsByPath.set(filePath, await readFile(path.join(ROOT, filePath), ENCODING_UTF8));
     }
-
-    const filesList = scopeTargets.map((target) => target.path).join(", ");
+    try {
+        for (const target of scopeTargets) {
+            const filePath = path.join(ROOT, target.path);
+            const contents = contentsByPath.get(target.path);
+            const nextVersion = scopeNextVersions.get(target.scope);
+            const updated = writeVersion(target, contents, nextVersion);
+            if (updated !== contents) {
+                await writeFile(filePath, updated, ENCODING_UTF8);
+            }
+        }
+        if (lockfilePaths.length > 0) {
+            const options = { cwd: ROOT, stdio: "inherit" };
+            execSync("npm install --package-lock-only", options);
+            execSync("cargo update --workspace --manifest-path app/backend/Cargo.toml", options);
+        }
+    } catch (error) {
+        // A failed lockfile refresh must not make a retry bump the version again.
+        for (const [filePath, contents] of contentsByPath) {
+            await writeFile(path.join(ROOT, filePath), contents, ENCODING_UTF8);
+        }
+        throw error;
+    }
+    const filesList = [...scopeTargets.map((target) => target.path), ...lockfilePaths].join(", ");
     if (scope === SCOPE.all && !enforceAllSync) {
         for (const [scopeKey, currentVersion] of scopeVersions.entries()) {
             const nextVersion = scopeNextVersions.get(scopeKey);
