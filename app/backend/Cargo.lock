@@ -868,7 +868,7 @@ dependencies = [
 
 [[package]]
 name = "discuss-companion"
-version = "0.13.2"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "core-foundation",
